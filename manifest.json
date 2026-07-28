@@ -19,35 +19,35 @@
       "path": "docs/ds_mdt_doj.html",
       "status": "coming soon",
       "description": "Department of Justice terminal for judges, prosecutors, and defense attorneys. Warrant review, motions, hearings, verdicts, court orders, and client management.",
-      "tags": ["QBCore", "FiveM", "Escrow", "Requires ds_mdt"]
+      "tags": ["QBCore", "FiveM", "Escrow", "Requires ds_mdt", "Escrow"]
     },
     {
       "name": "Enhanced QB Police Job",
       "path": "docs/qb_policejob.html",
       "status": "coming soon",
       "description": "Full-featured Enhanced police job with armory, garage, evidence collection, ANPR, fingerprint DB, file cabinet, weapon registry, security cameras, and dispatch exports.",
-      "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory"]
+      "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory", "Escrow"]
     },
     {
       "name": "DS Prison Creator",
       "path": "docs/ds_prisoncreator.html",
       "status": "coming soon",
       "description": "Complete in-game jail & prison builder — cells, doors, cameras, outfits, canteen, commissary, visitor check-in, court transport, and full officer management UI.",
-      "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory"]
+      "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory", "Escrow"]
     },
     {
       "name": "DS Notify",
       "path": "docs/ds_notify.html",
       "status": "release",
       "description": "Standalone toast notification system used across all DS Customs & GunSmoke resources. One renderer, one style, zero duplication. No SQL, no dependencies.",
-      "tags": ["QBCore", "FiveM", "Free"]
+      "tags": ["QBCore", "FiveM", "Escrow"]
     },
     {
       "name": "GS Business Banking",
       "path": "docs/gs_businessbanking.html",
       "status": "release",
       "description": "Shared business bank accounts for every QBCore job. NPC banker terminals, grade-restricted access, and a full server export & callback API.",
-      "tags": ["QBCore", "FiveM", "ds_notify"]
+      "tags": ["QBCore", "FiveM", "ds_notify", "Escrow"]
     }
   ]
 }
