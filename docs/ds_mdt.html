@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS MDT — DS Customs Docs</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span>DS</span> Customs Docs</a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://dscustoms.tebex.io" target="_blank" rel="noopener">Tebex Store</a>
+    <a class="topbar-link" href="https://github.com/DSCustoms" target="_blank" rel="noopener">GitHub</a>
+  </header>
+
+  <div class="shell">
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <main class="content">
+
+      <div class="doc-header">
+        <h1>DS MDT</h1>
+        <p class="subtitle">Full-featured Mobile Data Terminal for law enforcement — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.0.0</span>
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-red">Escrow</span>
+          <span class="badge badge-purple">ds_notify</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Requirements ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="requirements">1 — Requirements</h2>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Resource</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>qb-core</code></td><td>Required framework. Must start before ds_mdt.</td></tr>
+            <tr><td><code>oxmysql</code></td><td>Required for all database operations.</td></tr>
+            <tr><td><code>ds_notify</code></td><td>Required for all in-game toast notifications (BOLO alerts, warrant broadcasts, panic alerts, etc.).</td></tr>
+            <tr><td><code>qb-policejob</code></td><td>Provides duty status, callsign, and rank via QBCore player metadata. Not a hard dependency but expected for full functionality.</td></tr>
+            <tr><td><code>ds_mdt_doj</code> <em>(optional)</em></td><td>Required only when <code>Config.UseDOJWarrants = true</code>. Officers submit warrant requests; judges approve/deny from the DOJ MDT.</td></tr>
+            <tr><td><code>ds_prisoncreator</code> <em>(optional)</em></td><td>Required only when <code>Config.UsePrisonCreator = true</code>. Adds an Inmates tab with sentence pause/resume controls.</td></tr>
+            <tr><td><code>gs-businessbanking</code> <em>or</em> <code>qb-management</code> <em>(optional)</em></td><td>One of these is needed if you want citation fines deposited into a job account. See <code>Config.CitationBanking</code>.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- ── 2. Escrow ────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="escrow">2 — Escrow &amp; Open Files</h2>
+        <p>DS MDT is protected with <strong>FiveM Escrow</strong>. Only <code>config.lua</code> is excluded — everything else is encrypted.</p>
+        <div class="escrow-row">
+          <div class="escrow-card open-card">
+            <h4 style="color:var(--green)">Open — editable by you</h4>
+            <ul>
+              <li><code>config.lua</code></li>
+            </ul>
+          </div>
+          <div class="escrow-card closed-card">
+            <h4 style="color:var(--red)">Encrypted — Escrow protected</h4>
+            <ul>
+              <li><code>client/main.lua</code></li>
+              <li><code>server/*.lua</code></li>
+              <li><code>bridge/banking.lua</code></li>
+              <li><code>html/*</code></li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout tip">All job roles, rank thresholds, citation types, dispatch codes, map locations, and integration toggles are configured entirely inside the open <code>config.lua</code>.</div>
+      </div>
+
+      <!-- ── 3. Installation ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">3 — Installation</h2>
+
+        <h3 class="entry-title" id="install-sql">Database Setup</h3>
+        <p>Choose <strong>one</strong> SQL file from the <code>sql/</code> folder.</p>
+        <h4>Fresh install</h4>
+        <p>Run <code>sql/install.sql</code>. Creates all ds_mdt tables. Safe to re-run (all statements use <code>IF NOT EXISTS</code>).</p>
+        <h4>Existing ds_mdt install</h4>
+        <p>Run <code>sql/alter.sql</code>. Adds columns and tables introduced in v1.1–v1.8 without touching existing data.</p>
+
+        <p>Tables created by <code>install.sql</code>:</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Table</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>mdt_cases</code></td><td>Investigation case files with status tracking</td></tr>
+            <tr><td><code>mdt_reports</code></td><td>Incident, arrest, traffic, and general reports linked to cases</td></tr>
+            <tr><td><code>mdt_statements</code></td><td>Witness / suspect / victim statements linked to reports or cases</td></tr>
+            <tr><td><code>mdt_warrants</code></td><td>Active, cleared, and expired warrants</td></tr>
+            <tr><td><code>mdt_warrant_requests</code></td><td>DOJ warrant review queue (used when <code>Config.UseDOJWarrants = true</code>)</td></tr>
+            <tr><td><code>mdt_bolos</code></td><td>Person and vehicle BOLOs with auto-expiry</td></tr>
+            <tr><td><code>mdt_dispatch_calls</code></td><td>Dispatch calls with 10-codes, locations, and status</td></tr>
+            <tr><td><code>mdt_dispatch_units</code></td><td>Officer assignments to dispatch calls</td></tr>
+            <tr><td><code>mdt_unit_status</code></td><td>Live officer unit status board (10-8, 10-7, 10-6, panic)</td></tr>
+            <tr><td><code>mdt_ia_complaints</code></td><td>Internal affairs complaints</td></tr>
+            <tr><td><code>mdt_citations</code></td><td>Traffic and civil citations with fine amounts and payment status</td></tr>
+            <tr><td><code>mdt_case_evidence</code></td><td>Links qb-policejob evidence lockers to MDT cases and warrants</td></tr>
+            <tr><td><code>mdt_weapons_license</code></td><td>ds_mdt-managed weapons license registry</td></tr>
+            <tr><td><code>mdt_911p_alerts</code></td><td>Live /911p civilian call blips on the MDT map</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3 class="entry-title" id="install-items">Items</h3>
+        <p>Register both items in your QBCore shared items file:</p>
+        <pre><code><span class="c">-- MDT Tablet — given to officers; opens the MDT when used</span>
+<span class="p">['mdt_tablet']</span> = {
+    <span class="p">name</span>        = <span class="s">'mdt_tablet'</span>,
+    <span class="p">label</span>       = <span class="s">'MDT Tablet'</span>,
+    <span class="p">weight</span>      = <span class="n">500</span>,
+    <span class="p">type</span>        = <span class="s">'item'</span>,
+    <span class="p">image</span>       = <span class="s">'mdt_tablet.png'</span>,
+    <span class="p">unique</span>      = <span class="n">true</span>,
+    <span class="p">useable</span>     = <span class="n">true</span>,
+    <span class="p">shouldClose</span> = <span class="n">true</span>,
+    <span class="p">description</span> = <span class="s">'Law enforcement MDT tablet.'</span>,
+},
+
+<span class="c">-- Citation — given to citizens when an officer issues one; unique+useable</span>
+<span class="p">['mdt_citation']</span> = {
+    <span class="p">name</span>        = <span class="s">'mdt_citation'</span>,
+    <span class="p">label</span>       = <span class="s">'Citation'</span>,
+    <span class="p">weight</span>      = <span class="n">10</span>,
+    <span class="p">type</span>        = <span class="s">'item'</span>,
+    <span class="p">image</span>       = <span class="s">'mdt_citation.png'</span>,
+    <span class="p">unique</span>      = <span class="n">true</span>,
+    <span class="p">useable</span>     = <span class="n">true</span>,
+    <span class="p">shouldClose</span> = <span class="n">true</span>,
+    <span class="p">description</span> = <span class="s">'A traffic or civil citation.'</span>,
+},</code></pre>
+        <div class="callout warn">Both items must be <code>unique = true</code> and <code>useable = true</code>. Set <code>Config.CitationItem = false</code> to disable item-based citations entirely.</div>
+
+        <h3 class="entry-title" id="install-cfg">server.cfg Start Order</h3>
+        <pre><code>ensure qb-core
+ensure oxmysql
+ensure ds_notify
+ensure qb-policejob
+ensure ds_mdt
+ensure ds_mdt_doj   <span class="c"># only if Config.UseDOJWarrants = true</span>
+</code></pre>
+      </div>
+
+      <!-- ── 4. Configuration ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">4 — Configuration — config.lua</h2>
+
+        <h4>Access</h4>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>Config.MDTItem</code></td><td><code>'mdt_tablet'</code></td><td>Inventory item name that opens the MDT. Set to <code>false</code> to disable item-based access.</td></tr>
+            <tr><td><code>Config.CitationItem</code></td><td><code>'mdt_citation'</code></td><td>Item given to citizens when an officer issues a citation. Must be <code>unique</code> and <code>useable</code>. Set to <code>false</code> to disable.</td></tr>
+            <tr><td><code>Config.MDTCommand</code></td><td><code>'mdt'</code></td><td>Chat command that also opens the MDT.</td></tr>
+            <tr><td><code>Config.AllowedJobTypes</code></td><td><code>{ 'leo' }</code></td><td>Array of QBCore <code>job.type</code> values whose members can open the MDT.</td></tr>
+            <tr><td><code>Config.MinGrade</code></td><td><code>0</code></td><td>Minimum job grade required to open the MDT at all.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>Citation fine banking</h4>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Config.CitationBanking</th><th>Behaviour</th></tr></thead>
+          <tbody>
+            <tr><td><code>'gs-businessbanking'</code></td><td>Deposits fine into the issuing officer's job account via <code>exports['gs-businessbanking']:Deposit(jobName, amount)</code>.</td></tr>
+            <tr><td><code>'qb-management'</code></td><td>Deposits into the QBCore society <code>boss_accounts</code> table for the officer's job.</td></tr>
+            <tr><td><code>'qb-banking'</code></td><td>Fine is removed from the citizen and deposited nowhere (government fine / evaporates).</td></tr>
+            <tr><td><code>false</code></td><td>Banking disabled — fine is still deducted from the citizen.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>Integrations</h4>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>Config.UseDOJWarrants</code></td><td><code>true</code></td><td>When <code>true</code>, officers submit warrant requests instead of issuing directly. Judges in ds_mdt_doj review and approve/deny. Requires ds_mdt_doj to be running.</td></tr>
+            <tr><td><code>Config.UsePrisonCreator</code></td><td><code>true</code></td><td>When <code>true</code>, an Inmates tab appears with sentence pause/resume controls. Requires ds_prisoncreator.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>Rank-gated features</h4>
+        <p>All thresholds are job grade levels from qb-policejob (0 = Cadet, 1 = Officer, 2 = Senior Officer, etc.). Edit freely to match your grade table.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Config.Ranks key</th><th>Default</th><th>Gate</th></tr></thead>
+          <tbody>
+            <tr><td><code>CreateWarrant</code></td><td>1</td><td>Minimum grade to create / request warrants</td></tr>
+            <tr><td><code>ClearWarrant</code></td><td>2</td><td>Minimum grade to clear active warrants</td></tr>
+            <tr><td><code>CreateBOLO</code></td><td>1</td><td>Minimum grade to create BOLOs</td></tr>
+            <tr><td><code>InternalAffairs</code></td><td>4</td><td>Minimum grade to view the IA tab</td></tr>
+            <tr><td><code>EditAnyReport</code></td><td>3</td><td>Minimum grade to edit another officer's report</td></tr>
+            <tr><td><code>ViewRoster</code></td><td>0</td><td>Minimum grade to view the full employee roster</td></tr>
+            <tr><td><code>ManageCases</code></td><td>1</td><td>Minimum grade to create and manage cases</td></tr>
+            <tr><td><code>Dispatch</code></td><td>0</td><td>Minimum grade to use the Dispatch tab</td></tr>
+            <tr><td><code>AssignOfficer</code></td><td>2</td><td>Minimum grade to assign officers to dispatch calls</td></tr>
+            <tr><td><code>AssignCallsign</code></td><td>3</td><td>Minimum grade to manage callsigns</td></tr>
+            <tr><td><code>GrantWeaponsLicense</code></td><td>2</td><td>Minimum grade to grant a weapons license</td></tr>
+            <tr><td><code>RevokeWeaponsLicense</code></td><td>2</td><td>Minimum grade to revoke a weapons license</td></tr>
+            <tr><td><code>RevokeDriverLicense</code></td><td>1</td><td>Minimum grade to revoke a driver's license</td></tr>
+            <tr><td><code>RestoreDriverLicense</code></td><td>2</td><td>Minimum grade to restore a driver's license</td></tr>
+            <tr><td><code>IssueCitation</code></td><td>0</td><td>Minimum grade to issue a citation</td></tr>
+            <tr><td><code>PauseSentence</code></td><td>2</td><td>Minimum grade to pause/resume a prison sentence (requires <code>UsePrisonCreator</code>)</td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>Other settings</h4>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>Config.BOLOExpiry</code></td><td><code>86400</code></td><td>Seconds before an active BOLO is automatically cleared. Set to <code>0</code> to disable auto-expiry.</td></tr>
+            <tr><td><code>Config.CallExpiry</code></td><td><code>3600</code></td><td>Seconds after which Code 4 dispatch calls are automatically removed.</td></tr>
+            <tr><td><code>Config.Alert911pExpiry</code></td><td><code>600</code></td><td>Seconds before a raw /911p alert blip is auto-cleared from the Live Map. Set to <code>0</code> to keep until manually dismissed.</td></tr>
+            <tr><td><code>Config.BlipRefreshInterval</code></td><td><code>5000</code></td><td>Milliseconds between live officer position refreshes on the MDT map.</td></tr>
+            <tr><td><code>Config.DefaultTheme</code></td><td><code>'dark'</code></td><td><code>'dark'</code> or <code>'light'</code>.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>Customisable lists</h4>
+        <p>These tables live in <code>config.lua</code> and are sent to the NUI on open — edit freely.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Config key</th><th>Shape</th><th>Used for</th></tr></thead>
+          <tbody>
+            <tr><td><code>Config.DeptBadges</code></td><td><code>{ [jobName] = 'BADGE' }</code></td><td>Blue pill shown in the MDT sidebar. Falls back to <code>'MDT'</code>.</td></tr>
+            <tr><td><code>Config.CitationTypes</code></td><td><code>{ code, label }</code></td><td>Dropdown on the Issue Citation form.</td></tr>
+            <tr><td><code>Config.CallCodes</code></td><td><code>{ code, label }</code></td><td>10-code dropdown in the Create Dispatch Call form.</td></tr>
+            <tr><td><code>Config.MapLocations</code></td><td><code>{ name, type, x, y, z }</code></td><td>Permanent blips on the Live Map. <code>type</code>: <code>'pd'</code>, <code>'hospital'</code>, <code>'garage'</code>.</td></tr>
+            <tr><td><code>Config.PauseReasons</code></td><td><code>{ code, label }</code></td><td>Dropdown reasons for pausing a prison sentence.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- ── 5. MDT Features ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="features">5 — MDT Features</h2>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Tab / Feature</th><th>Description</th><th>Rank gate</th></tr></thead>
+          <tbody>
+            <tr><td>Citizen Search</td><td>Look up any citizen by name or CID. View licenses, warrants, citations, and case links.</td><td>None (all officers)</td></tr>
+            <tr><td>Reports</td><td>Create, edit, and view incident / arrest / traffic / general reports. Link to cases.</td><td><code>EditAnyReport</code> for others' reports</td></tr>
+            <tr><td>Warrants</td><td>Issue warrants directly (if <code>UseDOJWarrants = false</code>) or submit requests for DOJ review.</td><td><code>CreateWarrant</code> · <code>ClearWarrant</code></td></tr>
+            <tr><td>BOLOs</td><td>Post person or vehicle BOLOs. Auto-expire after <code>Config.BOLOExpiry</code> seconds. All on-duty LEOs are notified via ds_notify.</td><td><code>CreateBOLO</code></td></tr>
+            <tr><td>Cases</td><td>Open investigation case files. Attach reports, statements, evidence lockers, and warrants.</td><td><code>ManageCases</code></td></tr>
+            <tr><td>Dispatch</td><td>Create, update, and Code-4 dispatch calls. Assign officers. Live 911p alert blips.</td><td><code>Dispatch</code> · <code>AssignOfficer</code></td></tr>
+            <tr><td>Live Map</td><td>Leaflet.js map showing all on-duty officer positions (live blips), static locations, and 911p alert blips.</td><td>None</td></tr>
+            <tr><td>Roster</td><td>View all employees including offline officers. Assign callsigns.</td><td><code>ViewRoster</code> · <code>AssignCallsign</code></td></tr>
+            <tr><td>Unit Board</td><td>Live status board (10-8, 10-7, 10-6, panic). Officers update their own status from the MDT.</td><td>None</td></tr>
+            <tr><td>Licenses</td><td>Grant, revoke, or restore weapons and driver licenses on a citizen profile.</td><td><code>GrantWeaponsLicense</code> / <code>Revoke*</code> / <code>Restore*</code></td></tr>
+            <tr><td>Citations</td><td>Issue a citation to a citizen from their profile. Fine deposited via <code>Config.CitationBanking</code>.</td><td><code>IssueCitation</code></td></tr>
+            <tr><td>Internal Affairs</td><td>File and manage IA complaints against officers.</td><td><code>InternalAffairs</code></td></tr>
+            <tr><td>Inmates</td><td>View active prisoners. Pause or resume sentence timers.</td><td><code>PauseSentence</code> (requires <code>UsePrisonCreator</code>)</td></tr>
+            <tr><td>Clock In / Out</td><td>Toggle on/off duty from the MDT login screen via QBCore <code>SetJobDuty</code>.</td><td>None</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- ── 6. Developer API ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="developer-api">6 — Developer API</h2>
+
+        <h3 class="entry-title" id="server-exports">Server Exports</h3>
+        <p>Call these from any server-side script.</p>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>IsMDTAllowed(Player)</code> <span class="ret">boolean</span></h3>
+        <p>Returns <code>true</code> if the given QBCore Player object has a job type in <code>Config.AllowedJobTypes</code> and meets <code>Config.MinGrade</code>.</p>
+        <pre><code><span class="k">local</span> Player = exports[<span class="s">'qb-core'</span>]:GetPlayer(source)
+<span class="k">if</span> exports[<span class="s">'ds_mdt'</span>]:IsMDTAllowed(Player) <span class="k">then</span>
+    <span class="c">-- player is an authorised officer</span>
+<span class="k">end</span></code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>NotifyAllOfficers(msg, ntype, duration)</code></h3>
+        <p>Sends a ds_notify toast to every on-duty LEO on the server.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Param</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>msg</code></td><td>string</td><td>Notification text</td></tr>
+            <tr><td><code>ntype</code></td><td>string</td><td><code>'info'</code> · <code>'success'</code> · <code>'error'</code> · <code>'warning'</code></td></tr>
+            <tr><td><code>duration</code></td><td>number|nil</td><td>Duration in ms (optional)</td></tr>
+          </tbody>
+        </table></div>
+        <pre><code>exports[<span class="s">'ds_mdt'</span>]:NotifyAllOfficers(<span class="s">'All units respond to Pillbox.'</span>, <span class="s">'error'</span>, <span class="n">6000</span>)</code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>ApproveWarrantRequest(requestId, judgeInfo)</code> <span class="ret">boolean, number|string</span></h3>
+        <p>Called by <strong>ds_mdt_doj</strong> when a judge approves a warrant request. Converts the request into a live <code>mdt_warrants</code> row, notifies the requesting officer and all on-duty LEOs, and returns <code>true, warrantId</code> on success.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Param</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>requestId</code></td><td>number</td><td>ID of the <code>mdt_warrant_requests</code> row</td></tr>
+            <tr><td><code>judgeInfo</code></td><td>table</td><td><code>{ citizenid, name }</code> of the approving judge</td></tr>
+          </tbody>
+        </table></div>
+        <pre><code><span class="k">local</span> ok, warrantId = exports[<span class="s">'ds_mdt'</span>]:ApproveWarrantRequest(requestId, {
+    <span class="p">citizenid</span> = <span class="s">'JUD-001'</span>,
+    <span class="p">name</span>      = <span class="s">'Judge Smith'</span>,
+})</code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>DenyWarrantRequest(requestId, reason, judgeInfo)</code> <span class="ret">boolean</span></h3>
+        <p>Called by <strong>ds_mdt_doj</strong> when a judge denies a warrant request. Marks the request denied, records the reason, and notifies the requesting officer.</p>
+        <pre><code><span class="k">local</span> ok = exports[<span class="s">'ds_mdt'</span>]:DenyWarrantRequest(requestId, <span class="s">'Insufficient probable cause.'</span>, {
+    <span class="p">citizenid</span> = <span class="s">'JUD-001'</span>,
+    <span class="p">name</span>      = <span class="s">'Judge Smith'</span>,
+})</code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>GetPendingWarrantRequests()</code> <span class="ret">table[]</span></h3>
+        <p>Returns all <code>mdt_warrant_requests</code> rows with <code>status = 'pending'</code>. Called by ds_mdt_doj to populate the warrant review queue.</p>
+        <pre><code><span class="k">local</span> requests = exports[<span class="s">'ds_mdt'</span>]:GetPendingWarrantRequests()
+<span class="k">for</span> _, r <span class="k">in</span> ipairs(requests) <span class="k">do</span>
+    print(r.id, r.suspect_name, r.charges)
+<span class="k">end</span></code></pre>
+
+        <h3 class="entry-title" id="server-events">Net Events</h3>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>ds_mdt:server:setUnitStatus</code> <code style="color:var(--muted);font-size:12px">(status)</code></h3>
+        <p>Officers fire this from the MDT to update their live unit status. Valid values: <code>'10-8'</code>, <code>'10-7'</code>, <code>'10-6'</code>, <code>'panic'</code>, <code>'off-duty'</code>. Panic automatically triggers a ds_notify alert to all on-duty officers.</p>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>ds_mdt:server:clockIn</code> / <code>ds_mdt:server:clockOut</code></h3>
+        <p>Toggle on/off duty from the MDT login screen via QBCore <code>SetJobDuty</code>. Also fires <code>ds_mdt:client:dutyStateChanged</code> back to the player.</p>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>ds_mdt:server:requestWarrant</code> <code style="color:var(--muted);font-size:12px">(data)</code></h3>
+        <p>Submits a warrant request to the DOJ review queue when <code>Config.UseDOJWarrants = true</code>. Fires the <code>ds_mdt_doj:warrantRequestReceived</code> server event to notify all on-duty judges.</p>
+        <p><code>data</code> fields: <code>citizenid</code>, <code>suspectName</code>, <code>charges</code>, <code>details</code>, <code>caseNumber</code>.</p>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>ds_mdt:server:prisonPauseSentence</code> <code style="color:var(--muted);font-size:12px">(citizenid, reason)</code></h3>
+        <h3 class="entry-title"><code>ds_mdt:server:prisonResumeSentence</code> <code style="color:var(--muted);font-size:12px">(citizenid)</code></h3>
+        <p>Pause or resume a prisoner's sentence via <code>exports['ds_prisoncreator']</code>. Only registered when <code>Config.UsePrisonCreator = true</code>. Rank-gated by <code>Config.Ranks.PauseSentence</code>.</p>
+
+        <h3 class="entry-title" id="client-events">Net Events — Server → Client</h3>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Event</th><th>Payload</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>ds_mdt:client:openMDT</code></td><td>—</td><td>Opens the MDT NUI for the target player</td></tr>
+            <tr><td><code>ds_mdt:client:openCitationUI</code></td><td><code>citationId</code></td><td>Opens the citation-view overlay for the citizen who used the citation item</td></tr>
+            <tr><td><code>ds_mdt:client:dutyStateChanged</code></td><td><code>bool</code></td><td>Tells the NUI to transition to/from the duty login screen</td></tr>
+            <tr><td><code>ds_mdt:client:unitStatusUpdated</code></td><td>unit table</td><td>Broadcasts a single officer's status change to all open MDTs</td></tr>
+            <tr><td><code>ds_mdt:client:warrantsUpdated</code></td><td>—</td><td>Tells all open MDTs to refresh the warrants list</td></tr>
+            <tr><td><code>ds_mdt:client:warrantRequestsUpdated</code></td><td>—</td><td>Tells all open MDTs to refresh the warrant requests list</td></tr>
+            <tr><td><code>ds_mdt:client:mapPositionUpdate</code></td><td>—</td><td>Nudges the NUI Live Map to re-fetch officer blips (fires every ~3 s server-side)</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- ── 7. DOJ Warrant Integration ──────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="doj-integration">7 — DOJ Warrant Integration</h2>
+        <p>When <code>Config.UseDOJWarrants = true</code>, the warrant workflow changes:</p>
+        <ol style="padding-left:22px;line-height:2">
+          <li>Officer opens the MDT → <strong>Warrants</strong> tab → <strong>Request Warrant</strong>.</li>
+          <li>Server inserts a row into <code>mdt_warrant_requests</code> and fires <code>ds_mdt_doj:warrantRequestReceived</code>.</li>
+          <li>On-duty judges in ds_mdt_doj receive a ds_notify alert and see the request in their <strong>Warrant Requests</strong> tab.</li>
+          <li>Judge approves → <code>exports['ds_mdt']:ApproveWarrantRequest()</code> is called → real warrant created → officer notified.</li>
+          <li>Judge denies → <code>exports['ds_mdt']:DenyWarrantRequest()</code> is called → officer notified with reason.</li>
+        </ol>
+        <div class="callout">Both ds_mdt and ds_mdt_doj must be running for this flow to work. When <code>UseDOJWarrants = false</code>, officers issue warrants directly and ds_mdt_doj is never involved.</div>
+      </div>
+
+      <!-- ── 8. FAQ ────────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="faq">8 — FAQ &amp; Troubleshooting</h2>
+
+        <h4>Officers can't open the MDT</h4>
+        <p>Check that their <code>PlayerData.job.type</code> matches an entry in <code>Config.AllowedJobTypes</code> and their grade meets <code>Config.MinGrade</code>. The <code>IsMDTAllowed</code> export can be used to test this from another resource.</p>
+
+        <h4>Citations aren't giving the citizen an item</h4>
+        <p>Confirm <code>Config.CitationItem</code> matches an item registered in <code>QBCore.Shared.Items</code> with <code>unique = true</code> and <code>useable = true</code>.</p>
+
+        <h4>Citation fines aren't going to the job account</h4>
+        <p>Set <code>Config.CitationBanking</code> to the correct backend. Ensure the backing resource (<code>gs-businessbanking</code> or <code>qb-management</code>) is started <em>before</em> ds_mdt in <code>server.cfg</code>.</p>
+
+        <h4>Warrant requests aren't reaching the DOJ</h4>
+        <p>Check <code>Config.UseDOJWarrants = true</code> and that ds_mdt_doj is started and running. ds_mdt fires the server-side event <code>ds_mdt_doj:warrantRequestReceived</code> — if ds_mdt_doj isn't loaded, the event handler is never registered.</p>
+
+        <h4>Live Map doesn't show officer blips</h4>
+        <p>Officers must be on-duty (<code>job.onduty = true</code>). Blips refresh every <code>Config.BlipRefreshInterval</code> ms. Verify qb-policejob is setting <code>onduty</code> correctly in player metadata.</p>
+
+        <h4>mdt_case_evidence or mdt_warrant_requests table missing</h4>
+        <p>Run <code>sql/alter.sql</code>. These tables were added in v1.1 and v1.8 respectively and are not in the original install for pre-v1.1 installs.</p>
+      </div>
+
+      <footer class="site-footer"><p>&copy; DS Customs. All rights reserved.</p></footer>
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+  <script src="../script.js"></script>
+</body>
+</html>

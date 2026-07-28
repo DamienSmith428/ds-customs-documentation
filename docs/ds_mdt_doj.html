@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS MDT DOJ — DS Customs Docs</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span>DS</span> Customs Docs</a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://dscustoms.tebex.io" target="_blank" rel="noopener">Tebex Store</a>
+    <a class="topbar-link" href="https://github.com/DSCustoms" target="_blank" rel="noopener">GitHub</a>
+  </header>
+
+  <div class="shell">
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <main class="content">
+
+      <div class="doc-header">
+        <h1>DS MDT — DOJ</h1>
+        <p class="subtitle">Department of Justice terminal for judges, prosecutors, and defense attorneys — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.0.0</span>
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-red">Escrow</span>
+          <span class="badge badge-purple">ds_notify</span>
+          <span class="badge badge-blue">Requires ds_mdt</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ──────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS MDT DOJ is the legal-system companion to DS MDT. It gives judges, prosecutors, and defense attorneys their own dedicated terminal with a role-based access model. The two resources share a database: ds_mdt_doj reads case files, reports, statements, and evidence from ds_mdt's tables and writes its own DOJ-specific tables for motions, hearings, verdicts, court orders, and case assignments.</p>
+        <div class="callout">ds_mdt_doj <strong>requires ds_mdt to be running</strong>. It calls three exports on ds_mdt (<code>ApproveWarrantRequest</code>, <code>DenyWarrantRequest</code>, <code>GetPendingWarrantRequests</code>) and reads ds_mdt's tables directly.</div>
+
+        <h4>Three roles</h4>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Role</th><th>Key abilities</th></tr></thead>
+          <tbody>
+            <tr><td><strong>judge</strong></td><td>Approve/deny warrant requests, issue court orders, schedule hearings, record verdicts, assign counsel, share police reports/statements with defense.</td></tr>
+            <tr><td><strong>prosecution</strong></td><td>File motions, respond to defense motions, view assigned case reports. DAs can also request warrants on behalf of police (rank-gated).</td></tr>
+            <tr><td><strong>defense</strong></td><td>File motions, respond to prosecution motions, view police reports/statements <em>only when explicitly shared by the judge</em> on their assigned case.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- ── 2. Requirements ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="requirements">2 — Requirements</h2>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Resource</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>qb-core</code></td><td>Required framework.</td></tr>
+            <tr><td><code>oxmysql</code></td><td>Required for all database operations.</td></tr>
+            <tr><td><code>ds_notify</code></td><td>Required for in-game notifications (warrant alerts, hearing notifications, court order alerts).</td></tr>
+            <tr><td><code>ds_mdt</code></td><td><strong>Required.</strong> Exposes <code>ApproveWarrantRequest</code>, <code>DenyWarrantRequest</code>, and <code>GetPendingWarrantRequests</code>. Also owns the shared tables this resource reads.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- ── 3. Escrow ────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="escrow">3 — Escrow &amp; Open Files</h2>
+        <div class="escrow-row">
+          <div class="escrow-card open-card">
+            <h4 style="color:var(--green)">Open — editable by you</h4>
+            <ul>
+              <li><code>config.lua</code></li>
+            </ul>
+          </div>
+          <div class="escrow-card closed-card">
+            <h4 style="color:var(--red)">Encrypted — Escrow protected</h4>
+            <ul>
+              <li><code>client/main.lua</code></li>
+              <li><code>server/*.lua</code></li>
+              <li><code>html/*</code></li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout tip">All job-to-role mappings, rank thresholds, motion types, court order types, verdict types, hearing types, and courthouse locations are configured in the open <code>config.lua</code>.</div>
+      </div>
+
+      <!-- ── 4. Installation ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">4 — Installation</h2>
+
+        <h3 class="entry-title" id="install-sql">Database Setup</h3>
+        <p>Run <strong>ds_mdt's</strong> <code>sql/install.sql</code> first if you haven't already. Then run ds_mdt_doj's own SQL file.</p>
+        <h4>Fresh install</h4>
+        <p>Run <code>sql/install.sql</code>. Creates all ds_mdt_doj tables. Safe to re-run.</p>
+        <h4>Existing install</h4>
+        <p>Run <code>sql/alter.sql</code>. Adds tables introduced in v1.1–v1.3 without touching existing data.</p>
+
+        <p>Tables created by ds_mdt_doj's <code>install.sql</code>:</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Table</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>mdt_doj_case_assignments</code></td><td>Tracks which attorneys are assigned to each case and in what role (prosecution/defense)</td></tr>
+            <tr><td><code>mdt_doj_motions</code></td><td>Motions filed by prosecutors or defense attorneys; judges rule on them</td></tr>
+            <tr><td><code>mdt_doj_motion_responses</code></td><td>Opposition responses to motions before a ruling is made</td></tr>
+            <tr><td><code>mdt_doj_court_orders</code></td><td>Orders issued by judges to specific parties on a case</td></tr>
+            <tr><td><code>mdt_doj_court_order_compliance</code></td><td>Per-party compliance tracking for court orders</td></tr>
+            <tr><td><code>mdt_doj_hearings</code></td><td>Scheduled hearings with type, location, time, and status</td></tr>
+            <tr><td><code>mdt_doj_verdicts</code></td><td>Verdicts recorded by judges, linked to hearings and cases</td></tr>
+            <tr><td><code>mdt_doj_shared_reports</code></td><td>Tracks which ds_mdt police reports judges have shared with defense counsel</td></tr>
+            <tr><td><code>mdt_doj_shared_statements</code></td><td>Tracks which ds_mdt statements judges have shared with defense counsel</td></tr>
+            <tr><td><code>mdt_doj_case_notes</code></td><td>Timestamped docket notes on a case; judges can pin entries</td></tr>
+            <tr><td><code>mdt_doj_clients</code></td><td>Private attorney–client relationship records (visible only to the owning attorney)</td></tr>
+            <tr><td><code>mdt_doj_client_meetings</code></td><td>Scheduled meetings for attorney–client records</td></tr>
+            <tr><td><code>mdt_doj_unit_status</code></td><td>Live status board for on-duty DOJ members (available, in-chambers, in-court)</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3 class="entry-title" id="install-item">DOJ Tablet Item</h3>
+        <pre><code><span class="p">['doj_tablet']</span> = {
+    <span class="p">name</span>        = <span class="s">'doj_tablet'</span>,
+    <span class="p">label</span>       = <span class="s">'DOJ Tablet'</span>,
+    <span class="p">weight</span>      = <span class="n">500</span>,
+    <span class="p">type</span>        = <span class="s">'item'</span>,
+    <span class="p">image</span>       = <span class="s">'doj_tablet.png'</span>,
+    <span class="p">unique</span>      = <span class="n">true</span>,
+    <span class="p">useable</span>     = <span class="n">true</span>,
+    <span class="p">shouldClose</span> = <span class="n">true</span>,
+    <span class="p">description</span> = <span class="s">'Department of Justice terminal.'</span>,
+},</code></pre>
+        <div class="callout warn">The item name must match <code>Config.MDTItem</code> (default: <code>'doj_tablet'</code>). Set <code>Config.MDTItem = false</code> to disable item-based access.</div>
+
+        <h3 class="entry-title" id="install-cfg">server.cfg Start Order</h3>
+        <pre><code>ensure qb-core
+ensure oxmysql
+ensure ds_notify
+ensure ds_mdt       <span class="c"># must start BEFORE ds_mdt_doj</span>
+ensure ds_mdt_doj
+</code></pre>
+      </div>
+
+      <!-- ── 5. Configuration ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">5 — Configuration — config.lua</h2>
+
+        <h4>Access</h4>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>Config.MDTItem</code></td><td><code>'doj_tablet'</code></td><td>Item that opens the DOJ terminal. Set to <code>false</code> to disable.</td></tr>
+            <tr><td><code>Config.MDTCommand</code></td><td><code>'doj'</code></td><td>Chat command to open the terminal.</td></tr>
+            <tr><td><code>Config.MinGrade</code></td><td><code>0</code></td><td>Minimum job grade required to open the terminal.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>Job → Role mapping (Config.JobRoles)</h4>
+        <p>Maps QBCore <code>job.name</code> values to one of three roles. Any job not listed is denied access.</p>
+        <pre><code>Config.JobRoles = {
+    <span class="c">-- Judges</span>
+    <span class="p">['judge']</span>            = <span class="s">'judge'</span>,
+    <span class="p">['doj']</span>              = <span class="s">'judge'</span>,
+    <span class="c">-- Prosecutors</span>
+    <span class="p">['prosecutor']</span>       = <span class="s">'prosecution'</span>,
+    <span class="p">['districtattorney']</span> = <span class="s">'prosecution'</span>,
+    <span class="p">['ada']</span>              = <span class="s">'prosecution'</span>,
+    <span class="c">-- Defense</span>
+    <span class="p">['defense']</span>          = <span class="s">'defense'</span>,
+    <span class="p">['publicdefender']</span>   = <span class="s">'defense'</span>,
+    <span class="p">['attorney']</span>         = <span class="s">'defense'</span>,
+}</code></pre>
+
+        <h4>Rank-gated features (Config.Ranks)</h4>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Default</th><th>Gate</th></tr></thead>
+          <tbody>
+            <tr><td><code>ApproveWarrant</code></td><td>0</td><td>Minimum judge grade to approve/deny warrant requests</td></tr>
+            <tr><td><code>IssueCourtOrder</code></td><td>1</td><td>Minimum judge grade to issue a court order</td></tr>
+            <tr><td><code>ScheduleHearing</code></td><td>1</td><td>Minimum judge grade to schedule a hearing</td></tr>
+            <tr><td><code>RecordVerdict</code></td><td>1</td><td>Minimum judge grade to record a verdict</td></tr>
+            <tr><td><code>RuleOnMotion</code></td><td>1</td><td>Minimum judge grade to rule on a motion</td></tr>
+            <tr><td><code>AssignCounsel</code></td><td>1</td><td>Minimum judge grade to assign attorneys to a case</td></tr>
+            <tr><td><code>ShareReport</code></td><td>0</td><td>Minimum judge grade to share a police report with defense</td></tr>
+            <tr><td><code>ViewRoster</code></td><td>0</td><td>Minimum grade to view the full DOJ roster</td></tr>
+            <tr><td><code>FileMotionProsecutor</code></td><td>0</td><td>Minimum prosecution grade to file a motion</td></tr>
+            <tr><td><code>RespondMotion</code></td><td>0</td><td>Minimum grade to respond to an opposing motion</td></tr>
+            <tr><td><code>RequestWarrantDA</code></td><td>1</td><td>Minimum prosecution grade to request a warrant on behalf of police</td></tr>
+            <tr><td><code>FileMotionDefense</code></td><td>0</td><td>Minimum defense grade to file a motion</td></tr>
+            <tr><td><code>ViewSharedReports</code></td><td>0</td><td>Minimum defense grade to view judge-shared police reports</td></tr>
+            <tr><td><code>AcceptCase</code></td><td>0</td><td>Minimum defense grade to accept a case assignment</td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>Notification settings</h4>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>Config.NotifyOnHearingScheduled</code></td><td><code>true</code></td><td>Push a ds_notify alert to all on-duty DOJ members when a hearing is scheduled.</td></tr>
+            <tr><td><code>Config.NotifyOnCourtOrder</code></td><td><code>true</code></td><td>Push a ds_notify alert to the target attorney when a court order is issued.</td></tr>
+            <tr><td><code>Config.NotifyOfficerOnWarrantDecision</code></td><td><code>true</code></td><td>Notify the requesting officer when their warrant request is approved or denied.</td></tr>
+            <tr><td><code>Config.RequestHistoryDays</code></td><td><code>14</code></td><td>Days to show resolved warrant requests in the history view. Older entries are hidden (not deleted).</td></tr>
+            <tr><td><code>Config.DefaultTheme</code></td><td><code>'dark'</code></td><td><code>'dark'</code> or <code>'light'</code>.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>Customisable lists</h4>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Config key</th><th>Shape</th><th>Used for</th></tr></thead>
+          <tbody>
+            <tr><td><code>Config.DeptBadges</code></td><td><code>{ [jobName] = 'BADGE' }</code></td><td>Pill in the DOJ terminal sidebar. Falls back to <code>'DOJ'</code>.</td></tr>
+            <tr><td><code>Config.MotionTypes</code></td><td><code>{ code, label, side }</code></td><td>Motion type dropdown. <code>side</code>: <code>'both'</code>, <code>'defense'</code>, or <code>'prosecution'</code> controls visibility.</td></tr>
+            <tr><td><code>Config.CourtOrderTypes</code></td><td><code>{ code, label }</code></td><td>Court order type dropdown (judge only).</td></tr>
+            <tr><td><code>Config.VerdictTypes</code></td><td><code>{ code, label }</code></td><td>Verdict type dropdown (judge only).</td></tr>
+            <tr><td><code>Config.HearingTypes</code></td><td><code>{ code, label }</code></td><td>Hearing type dropdown.</td></tr>
+            <tr><td><code>Config.CourthouseLocations</code></td><td>string[]</td><td>Location dropdown on the schedule hearing form.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- ── 6. DOJ Terminal Features ─────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="features">6 — Terminal Features</h2>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Tab / Feature</th><th>Available to</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>Warrant Requests</td><td>Judge, Prosecution</td><td>Review pending warrant requests from ds_mdt. Judges approve or deny with a written ruling. Full linked case detail shown on review.</td></tr>
+            <tr><td>Active Warrants</td><td>All roles</td><td>Read-only view of active warrants from ds_mdt's <code>mdt_warrants</code> table.</td></tr>
+            <tr><td>Cases</td><td>All roles</td><td>Browse all cases from ds_mdt. View reports, statements, evidence. Judges can share individual reports/statements with defense counsel.</td></tr>
+            <tr><td>Case Assignments</td><td>Judge</td><td>Assign prosecution and defense attorneys to a case.</td></tr>
+            <tr><td>Motions</td><td>Prosecution, Defense</td><td>File motions on assigned cases. Opposing party can respond before the judge rules. Judges grant or deny with a written ruling.</td></tr>
+            <tr><td>Court Orders</td><td>Judge</td><td>Issue orders to prosecution, defense, both parties, or the defendant. Target receives a ds_notify alert.</td></tr>
+            <tr><td>Hearings</td><td>Judge (schedule), All (view)</td><td>Schedule hearings by type, location, and time. All on-duty DOJ members are notified on creation.</td></tr>
+            <tr><td>Verdicts</td><td>Judge</td><td>Record verdicts on completed hearings. Linked to suspect CID, charges, sentence, and case.</td></tr>
+            <tr><td>Docket Notes</td><td>All roles (on assigned cases)</td><td>Add timestamped notes to a case docket. Judges can pin important entries.</td></tr>
+            <tr><td>Clients</td><td>Prosecution, Defense</td><td>Private attorney–client relationship tracker. Only the owning attorney and judges can see records. Includes meeting scheduler.</td></tr>
+            <tr><td>Roster / Unit Board</td><td>All roles</td><td>View on-duty DOJ members and their current status (available, in-chambers, in-court).</td></tr>
+            <tr><td>Clock In / Out</td><td>All roles</td><td>Toggle duty status from the login screen via QBCore <code>SetJobDuty</code>.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- ── 7. Developer API ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="developer-api">7 — Developer API</h2>
+
+        <h3 class="entry-title" id="server-exports">Server Exports</h3>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>GetDOJRole(Player)</code> <span class="ret">string|nil</span></h3>
+        <p>Returns the role string (<code>'judge'</code>, <code>'prosecution'</code>, <code>'defense'</code>) for the given QBCore Player, or <code>nil</code> if the player has no DOJ role or doesn't meet <code>Config.MinGrade</code>.</p>
+        <pre><code><span class="k">local</span> Player = exports[<span class="s">'qb-core'</span>]:GetPlayer(source)
+<span class="k">local</span> role   = exports[<span class="s">'ds_mdt_doj'</span>]:GetDOJRole(Player)
+<span class="k">if</span> role == <span class="s">'judge'</span> <span class="k">then</span>
+    <span class="c">-- player is a judge</span>
+<span class="k">end</span></code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>IsDOJAllowed(Player)</code> <span class="ret">boolean</span></h3>
+        <p>Returns <code>true</code> if the player has any DOJ role at the required minimum grade. Shorthand for <code>GetDOJRole(Player) ~= nil</code>.</p>
+        <pre><code><span class="k">if</span> exports[<span class="s">'ds_mdt_doj'</span>]:IsDOJAllowed(Player) <span class="k">then</span>
+    <span class="c">-- player can access the DOJ terminal</span>
+<span class="k">end</span></code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>NotifyAllDOJ(msg, ntype, duration)</code></h3>
+        <p>Sends a ds_notify toast to every on-duty DOJ member (all three roles).</p>
+        <pre><code>exports[<span class="s">'ds_mdt_doj'</span>]:NotifyAllDOJ(<span class="s">'Court is now in session.'</span>, <span class="s">'info'</span>, <span class="n">5000</span>)</code></pre>
+
+        <h3 class="entry-title" id="server-events">Net Events — Client → Server</h3>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>ds_mdt_doj:server:approveWarrantRequest</code> <code style="color:var(--muted);font-size:12px">(requestId, judgeNotes)</code></h3>
+        <p>Judge approves a warrant request. Calls <code>exports['ds_mdt']:ApproveWarrantRequest()</code> internally. Rank-gated by <code>Config.Ranks.ApproveWarrant</code>.</p>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>ds_mdt_doj:server:denyWarrantRequest</code> <code style="color:var(--muted);font-size:12px">(requestId, reason)</code></h3>
+        <p>Judge denies a warrant request with a written reason. Calls <code>exports['ds_mdt']:DenyWarrantRequest()</code> internally. A denial reason is required.</p>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>ds_mdt_doj:server:clockIn</code> / <code>ds_mdt_doj:server:clockOut</code></h3>
+        <p>Toggle duty status. On clock-in, a row is upserted into <code>mdt_doj_unit_status</code>. On clock-out, the row is deleted. Fires <code>ds_mdt_doj:client:unitStatusUpdated</code> and <code>ds_mdt_doj:client:rosterUpdated</code> to all open terminals.</p>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>ds_mdt_doj:server:setUnitStatus</code> <code style="color:var(--muted);font-size:12px">(status)</code></h3>
+        <p>Updates a DOJ member's unit status. Valid values: <code>'available'</code>, <code>'in-chambers'</code>, <code>'in-court'</code>, <code>'off-duty'</code>.</p>
+
+        <h3 class="entry-title" id="server-hooks">Server Event (incoming from ds_mdt)</h3>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>ds_mdt_doj:warrantRequestReceived</code> <code style="color:var(--muted);font-size:12px">(requestId, data)</code></h3>
+        <p>Fired by ds_mdt's server when an officer submits a warrant request. ds_mdt_doj handles this by notifying all on-duty judges via ds_notify and broadcasting a live refresh to all open DOJ terminals.</p>
+        <p><code>data</code> fields: <code>citizenid</code>, <code>suspectName</code>, <code>charges</code>, <code>details</code>, <code>caseNumber</code>, <code>requestedByCitizenid</code>, <code>requestedByName</code>.</p>
+        <div class="callout">This event is fired server-side by ds_mdt and received server-side by ds_mdt_doj. No client involvement. If you want to hook into warrant submissions from a third resource, add a handler for <code>ds_mdt_doj:warrantRequestReceived</code> in your own server script.</div>
+
+        <h3 class="entry-title" id="client-events">Net Events — Server → Client</h3>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Event</th><th>Payload</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>ds_mdt_doj:client:openMDT</code></td><td>—</td><td>Opens the DOJ terminal NUI</td></tr>
+            <tr><td><code>ds_mdt_doj:client:dutyStateChanged</code></td><td><code>bool</code></td><td>Transitions NUI to/from login screen</td></tr>
+            <tr><td><code>ds_mdt_doj:client:unitStatusUpdated</code></td><td>unit table</td><td>Refreshes the Unit Board on all open terminals</td></tr>
+            <tr><td><code>ds_mdt_doj:client:rosterUpdated</code></td><td>—</td><td>Tells open terminals to refresh the roster list</td></tr>
+            <tr><td><code>ds_mdt_doj:client:warrantsUpdated</code></td><td>—</td><td>Tells open terminals to refresh the warrant requests/active warrants lists</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- ── 8. Cross-resource data flow ─────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="data-flow">8 — Cross-Resource Data Flow</h2>
+        <p>Understanding what each resource owns helps avoid confusion when reading the database.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Table</th><th>Owned by</th><th>ds_mdt_doj access</th></tr></thead>
+          <tbody>
+            <tr><td><code>mdt_cases</code></td><td>ds_mdt</td><td>Read only — browse case files, join on case_number</td></tr>
+            <tr><td><code>mdt_reports</code></td><td>ds_mdt</td><td>Read only — display in case detail; judges share with defense</td></tr>
+            <tr><td><code>mdt_statements</code></td><td>ds_mdt</td><td>Read only — display in case detail; judges share with defense</td></tr>
+            <tr><td><code>mdt_case_evidence</code></td><td>ds_mdt</td><td>Read only — shown in warrant request detail view</td></tr>
+            <tr><td><code>mdt_warrants</code></td><td>ds_mdt</td><td>Read only — active warrant list; written via <code>ApproveWarrantRequest</code> export</td></tr>
+            <tr><td><code>mdt_warrant_requests</code></td><td>ds_mdt</td><td>Read only — warrant review queue; updated via <code>Approve/DenyWarrantRequest</code> exports</td></tr>
+            <tr><td><code>mdt_doj_*</code></td><td>ds_mdt_doj</td><td>Full read/write ownership</td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout warn">ds_mdt_doj never writes directly to any ds_mdt table. All writes to ds_mdt's data go through the exported functions (<code>ApproveWarrantRequest</code>, <code>DenyWarrantRequest</code>) which live in ds_mdt's own server code.</div>
+      </div>
+
+      <!-- ── 9. FAQ ────────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="faq">9 — FAQ &amp; Troubleshooting</h2>
+
+        <h4>DOJ members can't open the terminal</h4>
+        <p>Check that the player's <code>PlayerData.job.name</code> is listed in <code>Config.JobRoles</code> and their grade meets <code>Config.MinGrade</code>. Use <code>exports['ds_mdt_doj']:GetDOJRole(Player)</code> to debug.</p>
+
+        <h4>Warrant requests aren't appearing in the DOJ terminal</h4>
+        <p>Confirm <code>Config.UseDOJWarrants = true</code> in ds_mdt's <code>config.lua</code> and that ds_mdt is started before ds_mdt_doj. The <code>ds_mdt_doj:warrantRequestReceived</code> handler must be registered before requests come in.</p>
+
+        <h4>Defense attorneys can see all police reports</h4>
+        <p>Defense attorneys only see reports that a judge has explicitly shared on their assigned case via the <strong>Share Report</strong> button in the case view. If they are seeing everything, check the role classification in <code>Config.JobRoles</code> — the job may be mapped to <code>'judge'</code> or <code>'prosecution'</code> instead of <code>'defense'</code>.</p>
+
+        <h4>Motions aren't showing the correct types for each side</h4>
+        <p>Each entry in <code>Config.MotionTypes</code> has a <code>side</code> field: <code>'both'</code>, <code>'defense'</code>, or <code>'prosecution'</code>. The NUI filters the dropdown based on the logged-in member's role. Verify the <code>side</code> values in your config.</p>
+
+        <h4>Court order notifications aren't firing</h4>
+        <p>Check <code>Config.NotifyOnCourtOrder = true</code> and that <code>ds_notify</code> is running. The target attorney must be on-duty and online for the notification to fire. If they are offline, the order still saves but no in-game notification is sent.</p>
+
+        <h4>mdt_doj_clients or mdt_doj_case_notes table missing</h4>
+        <p>Run <code>sql/alter.sql</code>. These tables were added in v1.1 and are not in the original install for pre-v1.1 installs.</p>
+      </div>
+
+      <footer class="site-footer"><p>&copy; DS Customs. All rights reserved.</p></footer>
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+  <script src="../script.js"></script>
+</body>
+</html>

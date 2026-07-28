@@ -5,6 +5,18 @@
       "path": "docs/ds_garages.html",
       "description": "Overhauled garage system with live camera preview, ped attendants, and cinematic UI.",
       "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory", "Escrow"]
+    },
+    {
+      "name": "DS MDT",
+      "path": "docs/ds_mdt.html",
+      "description": "Full-featured Mobile Data Terminal for law enforcement. Reports, warrants, BOLOs, dispatch, live map, citations, licenses, and more.",
+      "tags": ["QBCore", "FiveM", "Escrow"]
+    },
+    {
+      "name": "DS MDT — DOJ",
+      "path": "docs/ds_mdt_doj.html",
+      "description": "Department of Justice terminal for judges, prosecutors, and defense attorneys. Warrant review, motions, hearings, verdicts, court orders, and client management.",
+      "tags": ["QBCore", "FiveM", "Escrow", "Requires ds_mdt"]
     }
   ]
 }
