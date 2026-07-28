@@ -1,0 +1,10 @@
+{
+  "resources": [
+    {
+      "name": "DS Garages",
+      "path": "docs/ds_garages.html",
+      "description": "Overhauled garage system with live camera preview, ped attendants, and cinematic UI.",
+      "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory", "Escrow"]
+    }
+  ]
+}
