@@ -34,6 +34,20 @@
       "status": "coming soon",
       "description": "Complete in-game jail & prison builder — cells, doors, cameras, outfits, canteen, commissary, visitor check-in, court transport, and full officer management UI.",
       "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory"]
+    },
+    {
+      "name": "DS Notify",
+      "path": "docs/ds_notify.html",
+      "status": "release",
+      "description": "Standalone toast notification system used across all DS Customs & GunSmoke resources. One renderer, one style, zero duplication. No SQL, no dependencies.",
+      "tags": ["QBCore", "FiveM", "Free"]
+    },
+    {
+      "name": "GS Business Banking",
+      "path": "docs/gs_businessbanking.html",
+      "status": "release",
+      "description": "Shared business bank accounts for every QBCore job. NPC banker terminals, grade-restricted access, and a full server export & callback API.",
+      "tags": ["QBCore", "FiveM", "ds_notify"]
     }
   ]
 }

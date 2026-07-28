@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GS Business Banking — DS Customs Docs</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span>DS</span> Customs Docs</a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>GS Business Banking</h1>
+        <p class="subtitle">Standalone shared business bank account system — NPC banker, grade-restricted access, and a full server export API — by GunSmoke Creations</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.0.0</span>
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-blue">FiveM</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-purple">ds_notify</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>GS Business Banking provides every QBCore job on your server with a shared, database-backed bank account. Banker NPC peds spawn at configurable world locations. Authorised employees can deposit and withdraw funds through a clean NUI panel. Any other resource can read and write balances through simple server-side exports or QBCore callbacks.</p>
+        <div class="callout tip">Every QBCore shared job gets a bank account row created automatically on resource start — no manual SQL inserts required.</div>
+      </div>
+
+      <!-- ── 2. Requirements ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="requirements">2 — Requirements</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Resource</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>qb-core</code></td><td>Required framework. Provides player data, money functions, and the jobs table.</td></tr>
+              <tr><td><code>oxmysql</code></td><td>Required for all database operations.</td></tr>
+              <tr><td><code>qb-target</code></td><td>Required for the banker NPC interaction prompt.</td></tr>
+              <tr><td><code>ds_notify</code></td><td>Required for all in-game toast notifications.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 3. Installation ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">3 — Installation</h2>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Place the <code>gs-businessbanking</code> folder inside your resources directory.</li>
+          <li>Add to your <code>server.cfg</code> <strong>after</strong> qb-core, oxmysql, qb-target, and ds_notify:</li>
+        </ol>
+        <pre><code>ensure qb-core
+ensure oxmysql
+ensure qb-target
+ensure ds_notify
+ensure gs-businessbanking
+</code></pre>
+        <ol start="3" style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Optionally import <code>sql/gs_business_accounts.sql</code> — the resource also creates the table automatically on first start if it does not exist.</li>
+          <li>Open <code>config.lua</code> and customise banker locations, allowed grades, and jobs (see §4).</li>
+        </ol>
+        <div class="callout">To declare the dependency in a job resource add <code>dependency 'gs-businessbanking'</code> to that resource's <code>fxmanifest.lua</code>.</div>
+      </div>
+
+      <!-- ── 4. Configuration ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">4 — Configuration — config.lua</h2>
+        <p>All settings are in <code>config.lua</code>, which is open and unencrypted (excluded from escrow).</p>
+
+        <h3 class="entry-title" id="config-peds">Banker NPC Models — <code>BBConfig.BankerPeds</code></h3>
+        <p>A list of ped model names. Each bank location spawns <strong>one randomly-chosen</strong> ped from this list. Any valid GTA V ped model name works.</p>
+        <pre><code>BBConfig.BankerPeds = {
+    <span class="s">"IG_Bankman"</span>,
+    <span class="s">"U_M_M_BankMan"</span>,
+}</code></pre>
+
+        <h3 class="entry-title" id="config-locations">Bank Locations — <code>BBConfig.BankLocations</code></h3>
+        <p>Each entry spawns one banker NPC. <code>coords</code> is a <code>vector4</code> (x, y, z, heading). <code>label</code> is the text shown in the <code>qb-target</code> interaction prompt.</p>
+        <pre><code>BBConfig.BankLocations = {
+    {
+        coords = vector4(<span class="n">243.51</span>, <span class="n">226.35</span>, <span class="n">106.29</span>, <span class="n">169.84</span>),  <span class="c">-- Downtown Maze Bank</span>
+        label  = <span class="s">"Business Banker"</span>
+    },
+    {
+        coords = vector4(<span class="n">-112.35</span>, <span class="n">6469.2</span>, <span class="n">31.63</span>, <span class="n">45.0</span>),   <span class="c">-- Paleto Savings</span>
+        label  = <span class="s">"Business Banker"</span>
+    },
+    {
+        coords = vector4(<span class="n">1175.22</span>, <span class="n">2706.75</span>, <span class="n">38.09</span>, <span class="n">180.0</span>), <span class="c">-- Sandy Shores Bank</span>
+        label  = <span class="s">"Business Banker"</span>
+    },
+}</code></pre>
+        <p>Add or remove entries freely. Each location gets its own independently-spawned ped.</p>
+
+        <h3 class="entry-title" id="config-initjobs">Jobs to Initialise — <code>BBConfig.InitJobs</code></h3>
+        <p>Job names listed here are guaranteed to have a bank account row created on every server/resource start. <strong>This is optional</strong> — all QBCore shared jobs are scanned and initialised automatically. Use this list only as a safety net for jobs you want guaranteed even before QBCore finishes loading.</p>
+        <pre><code>BBConfig.InitJobs = {
+    <span class="c">-- "mechanic",   ← uncomment if needed</span>
+}</code></pre>
+
+        <h3 class="entry-title" id="config-grades">Per-Job Allowed Grades — <code>BBConfig.JobGrades</code></h3>
+        <p>Controls which job grade levels are permitted to access the business bank — both via the in-game NPC terminal and via the exports. Any grade level listed will be permitted to deposit and withdraw. Jobs not listed fall back to <code>BBConfig.DefaultAllowedGrades</code>.</p>
+        <pre><code>BBConfig.JobGrades = {
+    [<span class="s">"whitewidow"</span>] = { <span class="n">4</span> },          <span class="c">-- grade 4 only</span>
+    [<span class="s">"police"</span>]     = { <span class="n">3</span>, <span class="n">4</span>, <span class="n">5</span> },    <span class="c">-- grades 3, 4, and 5</span>
+    [<span class="s">"mechanic"</span>]   = { <span class="n">3</span>, <span class="n">4</span> },       <span class="c">-- grades 3 and 4</span>
+}</code></pre>
+
+        <h3 class="entry-title" id="config-default-grades">Default Allowed Grades — <code>BBConfig.DefaultAllowedGrades</code></h3>
+        <p>Fallback grade list used for any job that is <strong>not</strong> listed in <code>BBConfig.JobGrades</code>.</p>
+        <pre><code>BBConfig.DefaultAllowedGrades = { <span class="n">4</span> }  <span class="c">-- grade 4 for all unlisted jobs</span></code></pre>
+        <div class="callout warn">If a player's grade is not in the allowed list for their job, the banker will show an error notification and the NUI will not open.</div>
+      </div>
+
+      <!-- ── 5. In-game NPC Terminal ─────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="npc-terminal">5 — In-game NPC Banker Terminal</h2>
+        <p>Banker peds spawn at each <code>BBConfig.BankLocations</code> entry 2 seconds after the resource starts. Each ped is:</p>
+        <ul style="padding-left:20px;line-height:2;margin-bottom:12px">
+          <li>Invincible and frozen in place.</li>
+          <li>Running the <code>WORLD_HUMAN_STAND_IMPATIENT</code> scenario.</li>
+          <li>Wrapped with a <code>qb-target</code> box zone at 2.5 metre range with the label from <code>BBConfig.BankLocations[n].label</code>.</li>
+        </ul>
+
+        <h4>Access flow</h4>
+        <ol style="padding-left:20px;line-height:2;margin-bottom:12px">
+          <li>Player looks at the banker and selects the target prompt.</li>
+          <li>Client checks the player's job grade against <code>BBConfig.JobGrades</code> (or <code>DefaultAllowedGrades</code>). If insufficient, an error notification is shown and the menu does not open.</li>
+          <li>Server validates the job and grade a second time, then fetches a fresh balance directly from the database and sends it to the client.</li>
+          <li>The NUI banking panel opens showing the current business account balance, the player's cash, and the player's bank balance.</li>
+          <li>The player enters an amount, selects <strong>Cash</strong> or <strong>Bank</strong>, and clicks <strong>Deposit</strong> or <strong>Withdraw</strong>. The transaction is processed server-side and the UI balance updates in real time.</li>
+        </ol>
+
+        <div class="callout">Banker peds are cleaned up automatically when the resource stops or restarts — no orphaned entities.</div>
+      </div>
+
+      <!-- ── 6. Server Exports ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="server-exports">6 — Server Exports</h2>
+        <p>All exports are <strong>server-side</strong>. Call from any other server-side script in any resource.</p>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>GetBalance(jobName)</code> <span class="ret">number</span></h3>
+        <p>Returns the cached balance for a job. Safe to call any time after resource startup (the cache is warm by the time any player connects). Returns <code>0</code> if the job is not found or the cache is empty.</p>
+        <div class="callout warn"><strong>Synchronous</strong> — returns from the in-memory cache, not directly from the database. For a guaranteed-fresh read use the <code>gs-businessbanking:getBalance</code> QBCore callback instead (see §7).</div>
+        <pre><code><span class="k">local</span> balance = exports[<span class="s">'gs-businessbanking'</span>]:GetBalance(<span class="s">"whitewidow"</span>)
+print(<span class="s">"Business account: $"</span> .. balance)</code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>Deposit(jobName, amount)</code> <span class="ret">boolean</span></h3>
+        <p>Adds funds to a job's account unconditionally. Returns <code>true</code> if the deposit was queued, <code>false</code> if <code>amount</code> is invalid (<code>&lt;= 0</code> or non-numeric).</p>
+        <div class="callout">This does <strong>not</strong> remove money from a player. It only adds to the business balance. Use it for sale proceeds, billing payments, fines deposited to a job account, etc.</div>
+        <pre><code><span class="c">-- A customer just paid — put the revenue in the business account</span>
+<span class="k">local</span> ok = exports[<span class="s">'gs-businessbanking'</span>]:Deposit(<span class="s">"whitewidow"</span>, <span class="n">500</span>)
+<span class="k">if not</span> ok <span class="k">then</span> print(<span class="s">"Deposit failed — invalid amount"</span>) <span class="k">end</span></code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>Withdraw(jobName, amount)</code> <span class="ret">boolean</span></h3>
+        <p>Removes funds from a job's account. Returns <code>false</code> if <code>amount</code> is invalid. The withdrawal is silently rejected internally if the balance is insufficient (no error return — use the <code>gs-businessbanking:transaction</code> callback for guaranteed-result writes).</p>
+        <div class="callout">This does <strong>not</strong> give money to a player. It only reduces the business balance. Pair it with <code>Player.Functions.AddMoney</code> if you need to transfer funds to a player.</div>
+        <pre><code>exports[<span class="s">'gs-businessbanking'</span>]:Withdraw(<span class="s">"whitewidow"</span>, <span class="n">200</span>)</code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>AddFunds(jobName, amount)</code> <span class="ret">boolean</span></h3>
+        <p>Alias for <code>Deposit</code>. Provided for naming consistency in job resources.</p>
+        <pre><code>exports[<span class="s">'gs-businessbanking'</span>]:AddFunds(<span class="s">"whitewidow"</span>, <span class="n">1000</span>)</code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>FetchBalance(jobName, cb)</code> <span class="ret">void (async)</span></h3>
+        <p>Always reads directly from the database, then syncs the in-memory cache. <code>cb(balance)</code> is called asynchronously with the live value. Use this wherever you need a guaranteed-fresh balance (e.g. when opening a management UI).</p>
+        <pre><code>exports[<span class="s">'gs-businessbanking'</span>]:FetchBalance(<span class="s">"whitewidow"</span>, <span class="k">function</span>(balance)
+    print(<span class="s">"Live balance from DB: $"</span> .. balance)
+<span class="k">end</span>)</code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>IsGradeAllowed(jobName, grade)</code> <span class="ret">boolean</span></h3>
+        <p>Returns <code>true</code> if the given grade level is permitted to access the specified job's account, according to <code>BBConfig.JobGrades</code> (or <code>BBConfig.DefaultAllowedGrades</code> as the fallback). Lets other resources gate their own UIs without duplicating the config logic.</p>
+        <pre><code><span class="k">local</span> Player  = QBCore.Functions.GetPlayer(source)
+<span class="k">local</span> allowed = exports[<span class="s">'gs-businessbanking'</span>]:IsGradeAllowed(
+    Player.PlayerData.job.name,
+    Player.PlayerData.job.grade.level
+)
+<span class="k">if not</span> allowed <span class="k">then</span>
+    <span class="c">-- block access</span>
+<span class="k">end</span></code></pre>
+      </div>
+
+      <!-- ── 7. QBCore Callbacks ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="qbcore-callbacks">7 — QBCore Callbacks</h2>
+        <p>These callbacks are the preferred API for job resources that need to interact with balances from their own server scripts. Both callbacks verify the player's job and grade before acting, and always use the database as the source of truth.</p>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>gs-businessbanking:getBalance</code></h3>
+        <p>Returns a fresh balance for the player's current job. The player's job must match <code>jobName</code> and their grade must be allowed.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>cb key</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>ok</code></td><td>boolean</td><td><code>true</code> = authorised and balance returned</td></tr>
+            <tr><td><code>balance</code></td><td>number</td><td>Current account balance (0 when <code>ok = false</code>)</td></tr>
+          </tbody>
+        </table></div>
+        <pre><code>QBCore.Functions.TriggerCallback(<span class="s">'gs-businessbanking:getBalance'</span>, <span class="k">function</span>(result)
+    <span class="k">if</span> result.ok <span class="k">then</span>
+        print(<span class="s">"Account balance: $"</span> .. result.balance)
+    <span class="k">end</span>
+<span class="k">end</span>, <span class="s">"whitewidow"</span>)</code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>gs-businessbanking:transaction</code></h3>
+        <p>Performs a deposit or withdrawal, validates the player's job and grade, checks that sufficient funds exist, and moves money between the player and the business account atomically. Use this when you need a guaranteed result with proper error messaging.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Parameter</th><th>Type</th><th>Values</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>jobName</code></td><td>string</td><td>Any job name</td><td>The job account to transact against.</td></tr>
+            <tr><td><code>direction</code></td><td>string</td><td><code>'deposit'</code> / <code>'withdraw'</code></td><td>Direction of the transaction.</td></tr>
+            <tr><td><code>amount</code></td><td>number</td><td>Positive integer</td><td>Amount in dollars.</td></tr>
+            <tr><td><code>payMethod</code></td><td>string</td><td><code>'cash'</code> / <code>'bank'</code></td><td>Player money source/destination for the deposit/withdrawal.</td></tr>
+          </tbody>
+        </table></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>cb key</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>ok</code></td><td>boolean</td><td><code>true</code> = transaction completed successfully</td></tr>
+            <tr><td><code>msg</code></td><td>string</td><td>Human-readable result message</td></tr>
+            <tr><td><code>msgType</code></td><td>string</td><td><code>'success'</code> or <code>'error'</code></td></tr>
+            <tr><td><code>balance</code></td><td>number</td><td>Updated account balance (only present on success)</td></tr>
+          </tbody>
+        </table></div>
+        <pre><code>QBCore.Functions.TriggerCallback(
+    <span class="s">'gs-businessbanking:transaction'</span>,
+    <span class="k">function</span>(result)
+        <span class="k">if</span> result.ok <span class="k">then</span>
+            print(result.msg, <span class="s">"New balance: $"</span> .. result.balance)
+        <span class="k">else</span>
+            print(<span class="s">"Transaction failed:"</span>, result.msg)
+        <span class="k">end</span>
+    <span class="k">end</span>,
+    <span class="s">"whitewidow"</span>,  <span class="c">-- jobName</span>
+    <span class="s">"deposit"</span>,    <span class="c">-- direction</span>
+    <span class="n">500</span>,           <span class="c">-- amount</span>
+    <span class="s">"cash"</span>         <span class="c">-- payMethod</span>
+)</code></pre>
+      </div>
+
+      <!-- ── 8. Wiring into a Job Resource ──────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="integration">8 — Wiring Into a Job Resource</h2>
+
+        <h3 class="entry-title" id="int-manifest">Step 1 — Declare the dependency</h3>
+        <p>In your job resource's <code>fxmanifest.lua</code>:</p>
+        <pre><code>dependency <span class="s">'gs-businessbanking'</span></code></pre>
+
+        <h3 class="entry-title" id="int-deposit">Step 2 — Deposit revenue when a sale is made</h3>
+        <pre><code>RegisterNetEvent(<span class="s">'yourjob:buyItem'</span>, <span class="k">function</span>(itemName, amount)
+    <span class="k">local</span> src    = source
+    <span class="k">local</span> Player = QBCore.Functions.GetPlayer(src)
+    <span class="k">if not</span> Player <span class="k">then return end</span>
+
+    <span class="k">local</span> price      = <span class="n">500</span>
+    <span class="k">local</span> totalPrice = price * amount
+
+    <span class="k">if not</span> Player.Functions.RemoveMoney(<span class="s">"cash"</span>, totalPrice) <span class="k">then</span>
+        exports[<span class="s">'ds_notify'</span>]:NotifyClient(src, <span class="s">"Not enough cash!"</span>, <span class="s">"error"</span>)
+        <span class="k">return</span>
+    <span class="k">end</span>
+
+    exports[<span class="s">'gs-businessbanking'</span>]:Deposit(<span class="s">"yourjob"</span>, totalPrice)
+    <span class="c">-- Give item to player...</span>
+<span class="k">end</span>)</code></pre>
+
+        <h3 class="entry-title" id="int-balance">Step 3 — Read the balance for a management menu</h3>
+        <pre><code>QBCore.Functions.CreateCallback(<span class="s">"yourjob:getBankBalance"</span>, <span class="k">function</span>(source, cb)
+    <span class="k">local</span> Player = QBCore.Functions.GetPlayer(source)
+    <span class="k">if not</span> Player <span class="k">then</span> cb({ ok = <span class="n">false</span>, balance = <span class="n">0</span> }) <span class="k">return end</span>
+
+    <span class="k">if not</span> exports[<span class="s">'gs-businessbanking'</span>]:IsGradeAllowed(
+        <span class="s">"yourjob"</span>, Player.PlayerData.job.grade.level
+    ) <span class="k">then</span>
+        cb({ ok = <span class="n">false</span>, balance = <span class="n">0</span> })
+        <span class="k">return</span>
+    <span class="k">end</span>
+
+    <span class="k">local</span> balance = exports[<span class="s">'gs-businessbanking'</span>]:GetBalance(<span class="s">"yourjob"</span>)
+    cb({ ok = <span class="n">true</span>, balance = balance })
+<span class="k">end</span>)</code></pre>
+
+        <h3 class="entry-title" id="int-transaction">Step 4 — Handle a deposit/withdraw from your HR menu</h3>
+        <pre><code>QBCore.Functions.CreateCallback(<span class="s">"yourjob:bankTransaction"</span>, <span class="k">function</span>(source, cb, direction, amount, payMethod)
+    <span class="k">local</span> src    = source
+    <span class="k">local</span> Player = QBCore.Functions.GetPlayer(src)
+    <span class="k">if not</span> Player <span class="k">then</span> cb({ ok = <span class="n">false</span>, msg = <span class="s">"Player not found"</span> }) <span class="k">return end</span>
+
+    <span class="k">if not</span> exports[<span class="s">'gs-businessbanking'</span>]:IsGradeAllowed(
+        <span class="s">"yourjob"</span>, Player.PlayerData.job.grade.level
+    ) <span class="k">then</span>
+        cb({ ok = <span class="n">false</span>, msg = <span class="s">"No permission"</span> })
+        <span class="k">return</span>
+    <span class="k">end</span>
+
+    amount = tonumber(amount)
+    <span class="k">if not</span> amount <span class="k">or</span> amount &lt;= <span class="n">0</span> <span class="k">then</span>
+        cb({ ok = <span class="n">false</span>, msg = <span class="s">"Invalid amount"</span> })
+        <span class="k">return</span>
+    <span class="k">end</span>
+
+    <span class="k">if</span> direction == <span class="s">"deposit"</span> <span class="k">then</span>
+        <span class="k">local</span> money = Player.PlayerData.money[payMethod] <span class="k">or</span> <span class="n">0</span>
+        <span class="k">if</span> money &lt; amount <span class="k">then</span>
+            cb({ ok = <span class="n">false</span>, msg = (<span class="s">"Not enough %s"</span>):format(payMethod) })
+            <span class="k">return</span>
+        <span class="k">end</span>
+        Player.Functions.RemoveMoney(payMethod, amount)
+        exports[<span class="s">'gs-businessbanking'</span>]:Deposit(<span class="s">"yourjob"</span>, amount)
+        cb({ ok = <span class="n">true</span>, msg = (<span class="s">"Deposited $%d"</span>):format(amount),
+             balance = exports[<span class="s">'gs-businessbanking'</span>]:GetBalance(<span class="s">"yourjob"</span>) })
+
+    <span class="k">elseif</span> direction == <span class="s">"withdraw"</span> <span class="k">then</span>
+        <span class="k">local</span> bal = exports[<span class="s">'gs-businessbanking'</span>]:GetBalance(<span class="s">"yourjob"</span>)
+        <span class="k">if</span> bal &lt; amount <span class="k">then</span>
+            cb({ ok = <span class="n">false</span>, msg = (<span class="s">"Not enough funds (have $%d)"</span>):format(bal) })
+            <span class="k">return</span>
+        <span class="k">end</span>
+        exports[<span class="s">'gs-businessbanking'</span>]:Withdraw(<span class="s">"yourjob"</span>, amount)
+        Player.Functions.AddMoney(payMethod, amount)
+        cb({ ok = <span class="n">true</span>, msg = (<span class="s">"Withdrew $%d"</span>):format(amount),
+             balance = exports[<span class="s">'gs-businessbanking'</span>]:GetBalance(<span class="s">"yourjob"</span>) })
+    <span class="k">end</span>
+<span class="k">end</span>)</code></pre>
+
+        <h3 class="entry-title" id="int-config">Step 5 — Add the job to config.lua</h3>
+        <pre><code>BBConfig.JobGrades = {
+    [<span class="s">"yourjob"</span>] = { <span class="n">3</span>, <span class="n">4</span> },   <span class="c">-- grades 3 and 4 can deposit/withdraw</span>
+}</code></pre>
+      </div>
+
+      <!-- ── 9. Database ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="database">9 — Database</h2>
+        <p>The resource uses a single table: <code>gs_business_accounts</code>. It is created automatically on resource start via <code>CREATE TABLE IF NOT EXISTS</code>.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>job_name</code></td><td><code>VARCHAR(50)</code> PK</td><td>QBCore job name — primary key.</td></tr>
+              <tr><td><code>balance</code></td><td><code>BIGINT</code></td><td>Current account balance in dollars. Default <code>0</code>.</td></tr>
+              <tr><td><code>allowed_grades</code></td><td><code>VARCHAR(100)</code></td><td>Comma-separated permitted grade levels, e.g. <code>'3,4'</code>. Set from config at account creation.</td></tr>
+              <tr><td><code>updated_at</code></td><td><code>INT</code></td><td>Unix timestamp of the last balance change.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">Rows are created automatically for every QBCore job on resource start. You never need to insert rows manually. Existing rows are never overwritten — only the balance and updated_at columns change during normal operation.</div>
+
+        <h4>Caching behaviour</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export / Callback</th><th>Source of truth</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>GetBalance</code></td><td>In-memory cache</td><td>Synchronous. Safe after startup. Not guaranteed-fresh if DB was edited externally.</td></tr>
+              <tr><td><code>FetchBalance</code></td><td>Database (async)</td><td>Always reads from DB. Use when opening a UI.</td></tr>
+              <tr><td><code>gs-businessbanking:getBalance</code> callback</td><td>Database (async)</td><td>Preferred for job resource management menus.</td></tr>
+              <tr><td><code>gs-businessbanking:transaction</code> callback</td><td>Database (async)</td><td>Atomic deposit/withdraw with full validation and error messaging.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 10. Net Events Reference ───────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="net-events">10 — Net Events Reference</h2>
+        <p>These are internal net events used by the NUI terminal. You can also fire them from other resources to open the banking UI for a player.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Event</th><th>Direction</th><th>Payload</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>gs-businessbanking:server:OpenBankingMenu</code></td><td>Client → Server</td><td><code>jobName</code></td><td>Server validates job+grade, fetches DB balance, fires <code>OpenBankingUI</code> back to the client.</td></tr>
+              <tr><td><code>gs-businessbanking:client:OpenBankingUI</code></td><td>Server → Client</td><td><code>{ jobName, balance, playerCash, playerBank }</code></td><td>Opens the NUI panel with the provided data.</td></tr>
+              <tr><td><code>gs-businessbanking:server:Transaction</code></td><td>Client → Server</td><td><code>jobName, direction, amount, payMethod</code></td><td>Processes a deposit or withdrawal from the NUI panel.</td></tr>
+              <tr><td><code>gs-businessbanking:client:UpdateBalance</code></td><td>Server → Client</td><td><code>newBalance</code></td><td>Pushes the updated balance to the open NUI after a transaction.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 11. File Structure ──────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="file-structure">11 — File Structure</h2>
+        <pre><code>gs-businessbanking/
+├── fxmanifest.lua     <span class="c">← Resource manifest</span>
+├── config.lua         <span class="c">← All operator settings (open, editable)</span>
+├── client.lua         <span class="c">← Banker ped spawn, qb-target interaction, NUI bridge</span>
+├── server.lua         <span class="c">← Exports, QBCore callbacks, net events, DB bootstrap</span>
+├── html/
+│   ├── index.html     <span class="c">← NUI banking panel</span>
+│   ├── style.css      <span class="c">← Panel styles</span>
+│   └── script.js      <span class="c">← Panel logic (open/close, transactions, balance update)</span>
+└── sql/
+    └── gs_business_accounts.sql  <span class="c">← Optional manual SQL (auto-runs on start)</span></code></pre>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+
+  <script src="../script.js"></script>
+</body>
+</html>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Notify — DS Customs Docs</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span>DS</span> Customs Docs</a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS Notify</h1>
+        <p class="subtitle">Standalone toast notification system — one renderer, one style, zero duplication — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.0.0</span>
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-blue">FiveM</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-green">No SQL</span>
+          <span class="badge badge-green">Free</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS Notify is a single, self-contained notification resource that any other resource on your server can use. It renders toast notifications in a consistent style — top, center, or bottom of the screen — without every script shipping its own NUI overlay.</p>
+        <div class="callout tip">DS Notify has no server-side database calls and no hard dependencies. It works out of the box — drop it in, ensure it, done.</div>
+      </div>
+
+      <!-- ── 2. Installation ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">2 — Installation</h2>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Place the <code>ds_notify</code> folder inside your resources directory.</li>
+          <li>Add <code>ensure ds_notify</code> to your <code>server.cfg</code> <strong>before</strong> any resource that depends on it.</li>
+          <li>Done — no SQL, no further configuration required.</li>
+        </ol>
+        <pre><code><span class="c"># server.cfg</span>
+ensure ds_notify
+ensure qb-policejob     <span class="c"># any resource that uses ds_notify</span>
+ensure gs-businessbanking
+</code></pre>
+        <div class="callout">To declare the load-order dependency in another resource, add <code>dependency 'ds_notify'</code> to that resource's <code>fxmanifest.lua</code>.</div>
+      </div>
+
+      <!-- ── 3. Configuration ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">3 — Configuration — config.lua</h2>
+        <p>The only setting is toast position. <code>config.lua</code> is open and unencrypted.</p>
+        <pre><code>Config.Position = <span class="s">'bottom-right'</span>
+</code></pre>
+        <h4>Valid position values</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Value</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>'top-left'</code></td><td>Top left corner</td></tr>
+              <tr><td><code>'top-center'</code></td><td>Top center</td></tr>
+              <tr><td><code>'top-right'</code></td><td>Top right corner</td></tr>
+              <tr><td><code>'center-left'</code></td><td>Middle-left edge</td></tr>
+              <tr><td><code>'center-right'</code></td><td>Middle-right edge</td></tr>
+              <tr><td><code>'bottom-left'</code></td><td>Bottom left corner</td></tr>
+              <tr><td><code>'bottom-center'</code></td><td>Bottom center</td></tr>
+              <tr><td><code>'bottom-right'</code></td><td>Bottom right corner <em>(default)</em></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Multiple notifications stack vertically in the chosen corner. Older toasts slide out automatically after their duration expires.</p>
+      </div>
+
+      <!-- ── 4. Notification Types ───────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="types">4 — Notification Types</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>ntype</th><th>Colour</th><th>Use for</th></tr></thead>
+            <tbody>
+              <tr><td><code>'success'</code></td><td style="color:var(--green)">Green</td><td>Completed actions, positive outcomes. <em>Default when omitted.</em></td></tr>
+              <tr><td><code>'error'</code></td><td style="color:var(--red)">Red</td><td>Failures, permission denials, invalid input.</td></tr>
+              <tr><td><code>'info'</code></td><td style="color:var(--accent)">Blue</td><td>Neutral information, loading states, countdowns.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 5. Parameters ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="parameters">5 — Parameters</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>message</code></td><td>string</td><td>Yes</td><td>—</td><td>The text displayed in the toast.</td></tr>
+              <tr><td><code>ntype</code></td><td>string</td><td>No</td><td><code>'success'</code></td><td>Visual style. One of <code>'success'</code>, <code>'error'</code>, <code>'info'</code>.</td></tr>
+              <tr><td><code>duration</code></td><td>number</td><td>No</td><td><code>3500</code></td><td>How long the toast stays visible, in <strong>milliseconds</strong>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 6. Client-side Usage ────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="client-usage">6 — Client-side Usage</h2>
+        <p>Call from any <strong>client-side</strong> Lua script in your resource.</p>
+
+        <h3 class="entry-title" id="client-export">Export (recommended)</h3>
+        <pre><code><span class="c">-- Minimal — type defaults to 'success', duration defaults to 3500 ms</span>
+exports[<span class="s">'ds_notify'</span>]:Notify(<span class="s">"You collected a bag!"</span>)
+
+<span class="c">-- With type</span>
+exports[<span class="s">'ds_notify'</span>]:Notify(<span class="s">"You don't have enough cash"</span>, <span class="s">"error"</span>)
+exports[<span class="s">'ds_notify'</span>]:Notify(<span class="s">"Loading..."</span>, <span class="s">"info"</span>)
+
+<span class="c">-- With custom duration (6 seconds)</span>
+exports[<span class="s">'ds_notify'</span>]:Notify(<span class="s">"This stays longer"</span>, <span class="s">"info"</span>, <span class="n">6000</span>)</code></pre>
+
+        <h3 class="entry-title" id="client-event">Local event</h3>
+        <p>Any client-side script can fire a notification as a local event — useful when you don't want to declare a dependency but ds_notify is running:</p>
+        <pre><code>TriggerEvent(<span class="s">'ds_notify:notify'</span>, <span class="s">"Job started!"</span>, <span class="s">"success"</span>)
+TriggerEvent(<span class="s">'ds_notify:notify'</span>, <span class="s">"Access denied"</span>, <span class="s">"error"</span>, <span class="n">4000</span>)</code></pre>
+      </div>
+
+      <!-- ── 7. Server-side Usage ────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="server-usage">7 — Server-side Usage</h2>
+        <p>Call from any <strong>server-side</strong> Lua script to push a notification to one or all players.</p>
+
+        <h3 class="entry-title" id="server-export-client"><code>NotifyClient(src, message, ntype?, duration?)</code> <span class="ret">void</span></h3>
+        <p>Sends a notification to a single connected player.</p>
+        <pre><code>exports[<span class="s">'ds_notify'</span>]:NotifyClient(source, <span class="s">"You were hired!"</span>, <span class="s">"success"</span>)
+exports[<span class="s">'ds_notify'</span>]:NotifyClient(source, <span class="s">"Transaction declined"</span>, <span class="s">"error"</span>)
+exports[<span class="s">'ds_notify'</span>]:NotifyClient(source, <span class="s">"Processing..."</span>, <span class="s">"info"</span>, <span class="n">6000</span>)</code></pre>
+
+        <h3 class="entry-title" id="server-export-all"><code>NotifyAll(message, ntype?, duration?)</code> <span class="ret">void</span></h3>
+        <p>Sends a notification to every currently connected player.</p>
+        <pre><code>exports[<span class="s">'ds_notify'</span>]:NotifyAll(<span class="s">"Server restart in 5 minutes!"</span>, <span class="s">"info"</span>)
+exports[<span class="s">'ds_notify'</span>]:NotifyAll(<span class="s">"Maintenance complete"</span>, <span class="s">"success"</span>, <span class="n">8000</span>)</code></pre>
+
+        <h3 class="entry-title" id="server-net-event">Net events (alternative to exports)</h3>
+        <pre><code><span class="c">-- Single player by source</span>
+TriggerClientEvent(<span class="s">'ds_notify:notify'</span>, source, <span class="s">"You were promoted!"</span>, <span class="s">"success"</span>)
+
+<span class="c">-- All players (pass -1 as the target)</span>
+TriggerClientEvent(<span class="s">'ds_notify:notify'</span>, <span class="n">-1</span>, <span class="s">"Server event starting!"</span>, <span class="s">"info"</span>)</code></pre>
+      </div>
+
+      <!-- ── 8. NUI / JavaScript Usage ──────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="nui-usage">8 — NUI / JavaScript Usage</h2>
+        <p>NUI frames are sandboxed per resource — JavaScript inside your resource's HTML cannot call ds_notify directly. The correct pattern routes through a NUI callback in your own resource's client Lua.</p>
+
+        <h3 class="entry-title" id="nui-step1">Step 1 — Add to your resource's <code>client.lua</code></h3>
+        <pre><code>RegisterNUICallback(<span class="s">'dsNotify'</span>, <span class="k">function</span>(data, cb)
+    exports[<span class="s">'ds_notify'</span>]:Notify(data.message, data.ntype, data.duration)
+    cb(<span class="s">'ok'</span>)
+<span class="k">end</span>)</code></pre>
+
+        <h3 class="entry-title" id="nui-step2">Step 2 — Add a helper to your resource's <code>script.js</code></h3>
+        <pre><code><span class="k">function</span> <span class="f">dsNotify</span>(message, type, duration) {
+    fetch(<span class="s">`https://${GetParentResourceName()}/dsNotify`</span>, {
+        method:  <span class="s">'POST'</span>,
+        headers: { <span class="s">'Content-Type'</span>: <span class="s">'application/json'</span> },
+        body: JSON.stringify({
+            message:  message  || <span class="s">''</span>,
+            ntype:    type     || <span class="s">'success'</span>,
+            duration: duration || <span class="n">3500</span>
+        })
+    }).catch(() => {});
+}</code></pre>
+
+        <h3 class="entry-title" id="nui-step3">Step 3 — Call it anywhere in your JS</h3>
+        <pre><code>dsNotify(<span class="s">"Added item to cart"</span>, <span class="s">"success"</span>, <span class="n">2200</span>);
+dsNotify(<span class="s">"Enter a valid amount"</span>, <span class="s">"error"</span>);
+dsNotify(<span class="s">"Loading inventory..."</span>, <span class="s">"info"</span>, <span class="n">5000</span>);</code></pre>
+      </div>
+
+      <!-- ── 9. Quick Reference ──────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="quick-reference">9 — Quick Reference</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Where</th><th>Method</th><th>Signature</th></tr></thead>
+            <tbody>
+              <tr><td>Client</td><td>Export</td><td><code>exports['ds_notify']:Notify(msg, type?, duration?)</code></td></tr>
+              <tr><td>Client</td><td>Local event</td><td><code>TriggerEvent('ds_notify:notify', msg, type?, duration?)</code></td></tr>
+              <tr><td>Server</td><td>Export — one player</td><td><code>exports['ds_notify']:NotifyClient(src, msg, type?, duration?)</code></td></tr>
+              <tr><td>Server</td><td>Export — all players</td><td><code>exports['ds_notify']:NotifyAll(msg, type?, duration?)</code></td></tr>
+              <tr><td>Server</td><td>Net event — one player</td><td><code>TriggerClientEvent('ds_notify:notify', src, msg, type?, duration?)</code></td></tr>
+              <tr><td>Server</td><td>Net event — all players</td><td><code>TriggerClientEvent('ds_notify:notify', -1, msg, type?, duration?)</code></td></tr>
+              <tr><td>NUI / JS</td><td>Via NUI callback</td><td><code>dsNotify(msg, type?, duration?)</code> — see §8 above</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 10. File Structure ──────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="file-structure">10 — File Structure</h2>
+        <pre><code>ds_notify/
+├── fxmanifest.lua     <span class="c">← Resource manifest</span>
+├── config.lua         <span class="c">← Position setting (open, editable)</span>
+├── client.lua         <span class="c">← Notify() export + ds_notify:notify event handler</span>
+├── server.lua         <span class="c">← NotifyClient() and NotifyAll() server exports</span>
+└── html/
+    ├── index.html     <span class="c">← NUI root — toast container</span>
+    ├── style.css      <span class="c">← Toast styles (position, colours, animations)</span>
+    └── script.js      <span class="c">← NUI message handler; creates and removes toasts</span></code></pre>
+      </div>
+
+      <!-- ── 11. Notes ───────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="notes">11 — Notes</h2>
+        <ul style="padding-left:20px;line-height:2.2">
+          <li><code>duration</code> is optional in every call — omit it to use the default <strong>3 500 ms</strong>.</li>
+          <li>Multiple notifications stack in the configured corner. Each auto-dismisses independently.</li>
+          <li>DS Notify has <strong>no database calls</strong> and <strong>no QBCore dependency</strong>. It is purely a UI bridge.</li>
+          <li>The resource is Escrow-protected except for <code>config.lua</code>, which is fully open.</li>
+        </ul>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+
+  <script src="../script.js"></script>
+</body>
+</html>
