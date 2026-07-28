@@ -178,12 +178,49 @@ a:hover { text-decoration: underline; }
 }
 .resource-card:hover { border-color: var(--accent); background: var(--surface2); text-decoration: none; }
 
+/* coming-soon card — muted, no hover lift, not clickable */
+.resource-card.card-coming-soon {
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: none;
+  border-style: dashed;
+}
+
+.card-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
 .card-name {
   font-size: 15px;
   font-weight: 700;
   color: var(--text);
-  margin-bottom: 6px;
 }
+
+/* status pills on cards */
+.card-status {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.card-status--release {
+  background: var(--green-dim);
+  color: var(--green);
+  border: 1px solid #2ea04326;
+}
+.card-status--soon {
+  background: var(--orange-dim);
+  color: var(--orange);
+  border: 1px solid #d2992240;
+}
+
 .card-desc {
   font-size: 12.5px;
   color: var(--muted);

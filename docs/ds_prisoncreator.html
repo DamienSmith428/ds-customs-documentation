@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Prison Creator — DS Customs Docs</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span>DS</span> Customs Docs</a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS Prison Creator</h1>
+        <p class="subtitle">Complete database-driven jail &amp; prison creation, management, and sentencing system — all configured in-game — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.0.0</span>
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-purple">qs-inventory</span>
+          <span class="badge badge-purple">ox_inventory</span>
+          <span class="badge badge-purple">qb-inventory</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS Prison Creator allows server administrators to build fully functional jails and prisons <strong>directly in-game</strong> without touching any configuration files after initial setup. Every jail, cell, door, camera, outfit, and shop location is managed through a NUI admin menu.</p>
+        <p>Officers can book suspects, manage active sentences, escort prisoners, and view live CCTV feeds — all from the <code>/sendjail</code> NUI panel. Prisoners experience a real-time countdown HUD, yard time cycles, prison outfits, a canteen shop, and a commissary kiosk, with all data persisted to MySQL.</p>
+        <div class="callout tip">Every jail, cell, door, camera, outfit, canteen, commissary, check-in zone, and transport vehicle is configured entirely in-game through the <code>/prisoncreator</code> menu — no file editing required after initial setup.</div>
+      </div>
+
+      <!-- ── 2. Requirements ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="requirements">2 — Requirements</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Resource</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>qb-core</code></td><td>Required framework. Must start before ds_prisoncreator.</td></tr>
+              <tr><td><code>oxmysql</code></td><td>Required for all database operations.</td></tr>
+              <tr><td><code>PolyZone</code></td><td>Required for polygon zone detection (cells, check-in zones).</td></tr>
+              <tr><td><code>ds_notify</code></td><td>Required for all in-game notifications.</td></tr>
+              <tr><td><code>qs-inventory</code> <em>or</em> <code>ox_inventory</code> <em>or</em> <code>qb-inventory</code></td><td>One inventory must be running. Auto-detected at startup (ox → qs → qb). Force one via <code>Config.InventorySystem</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 3. Installation ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">3 — Installation</h2>
+
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Copy the <code>ds_prisoncreator</code> folder into your server's <code>resources</code> directory.</li>
+          <li>Import <code>sql/install.sql</code> into your database. This creates all 22 required tables. The script is idempotent (<code>CREATE TABLE IF NOT EXISTS</code>) — safe to re-run.</li>
+          <li>If upgrading from an older version, also run <code>sql/update.sql</code>.</li>
+          <li>Add <code>ensure ds_prisoncreator</code> to your <code>server.cfg</code>.</li>
+          <li>Open <code>config.lua</code> and add your FiveM identifier to <code>Config.Admins</code>.</li>
+          <li>Optionally configure your Discord webhook URL(s) in <code>Config.Logging</code>.</li>
+          <li>Restart the resource or reboot the server.</li>
+        </ol>
+
+        <h3 class="entry-title" id="install-cfg">server.cfg Start Order</h3>
+        <pre><code>ensure qb-core
+ensure oxmysql
+ensure PolyZone
+ensure ds_notify
+ensure qs-inventory   <span class="c"># or ox_inventory / qb-inventory</span>
+ensure ds_prisoncreator
+</code></pre>
+      </div>
+
+      <!-- ── 4. Configuration ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">4 — Configuration — config.lua</h2>
+        <p>All operator settings are in <code>config.lua</code>. After initial setup, day-to-day configuration is done via the in-game <code>/prisoncreator</code> menu.</p>
+
+        <h4>Admins</h4>
+        <p>Only players whose FiveM identifiers are in <code>Config.Admins</code> can open the <code>/prisoncreator</code> menu.</p>
+        <pre><code>Config.Admins = {
+    <span class="s">'fivem:XXXXXXX'</span>,        <span class="c">-- your FiveM identifier</span>
+    <span class="c">-- 'license:abc123...',  -- or a license identifier</span>
+}</code></pre>
+        <div class="callout">The server console (<code>src == 0</code>) is always treated as an admin regardless of this list.</div>
+
+        <h4>Commands</h4>
+        <pre><code>Config.SetupCommand    = <span class="s">'prisoncreator'</span>  <span class="c">-- opens admin creator menu</span>
+Config.SendJailCommand = <span class="s">'sendjail'</span>       <span class="c">-- officers use to book suspects</span></code></pre>
+
+        <h4>Inventory System</h4>
+        <pre><code>Config.InventorySystem = <span class="s">'auto'</span>
+<span class="c">-- Options: 'auto' | 'ox' | 'qs' | 'qb'</span></code></pre>
+        <p><code>'auto'</code> detects the first running inventory (ox → qs → qb). Force a specific one if auto-detection picks the wrong resource.</p>
+
+        <h4>General</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.NearbyPlayerRadius</code></td><td><code>15.0</code></td><td>Metres — radius used to populate the <code>/sendjail</code> suspect dropdown.</td></tr>
+              <tr><td><code>Config.CellSpawnHeading</code></td><td><code>0.0</code></td><td>Heading (degrees) applied when a prisoner is teleported into a cell.</td></tr>
+              <tr><td><code>Config.CellReturnBuffer</code></td><td><code>1.5</code></td><td>Extra metres of Z tolerance before snapping a prisoner back inside their cell zone.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Yard Time</h4>
+        <p>Controls the global locked/unlocked door cycle. Set <code>Enabled = false</code> to keep all cells permanently locked for every sentence.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Enabled</code></td><td><code>true</code></td><td>Enable the yard-time open/close cycle.</td></tr>
+              <tr><td><code>LockedDuration</code></td><td><code>5 × 60</code></td><td>Seconds cell doors stay locked between yard times.</td></tr>
+              <tr><td><code>UnlockedDuration</code></td><td><code>35 × 60</code></td><td>Seconds cell doors stay unlocked (yard time window).</td></tr>
+              <tr><td><code>WarningBeforeLock</code></td><td><code>2 × 60</code></td><td>Seconds before re-lock to begin warning prisoners.</td></tr>
+              <tr><td><code>ReminderInterval</code></td><td><code>20</code></td><td>Seconds between repeated warnings during the warning window.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Door Freeze Distance</h4>
+        <pre><code>Config.DoorFreezeDistance = <span class="n">3.0</span>  <span class="c">-- metres; increase if doors flicker in large cells</span></code></pre>
+
+        <h4>Transport Vehicles</h4>
+        <p>Vehicles available in the <code>/prisoncreator</code> Transpo tab dropdown. Add or remove entries freely.</p>
+        <pre><code>Config.TransportVehicles = {
+    { model = <span class="s">'pbus'</span>,    label = <span class="s">'Police Prison Bus'</span>  },
+    { model = <span class="s">'policet'</span>, label = <span class="s">'Police Transporter'</span> },
+    { model = <span class="s">'riot'</span>,    label = <span class="s">'Police Riot Van'</span>    },
+    <span class="c">-- add or remove entries freely</span>
+}</code></pre>
+
+        <h4>UI &amp; HUD</h4>
+        <pre><code>Config.MenuTitle        = <span class="s">'DS_CUSTOMS PRISON CELL CREATOR'</span>
+Config.TimerHudPosition = <span class="s">'top-right'</span>  <span class="c">-- prisoner sentence HUD position</span></code></pre>
+
+        <h4>Sentence Pause Reasons</h4>
+        <p>Shown in the reason dropdown on each inmate card in <code>/sendjail</code>. Mark exactly one entry with <code>isTransfer = true</code> to enable the facility-transfer workflow.</p>
+        <pre><code>Config.PauseReasons = {
+    { code = <span class="s">'COURT_TRANSPORT'</span>,  label = <span class="s">'Court Transport'</span>                        },
+    { code = <span class="s">'MEDICAL_HOLD'</span>,     label = <span class="s">'Medical Hold'</span>                           },
+    { code = <span class="s">'TRANSFER'</span>,         label = <span class="s">'Facility Transfer'</span>, isTransfer = <span class="n">true</span>  },
+    <span class="c">-- add / remove entries freely</span>
+}</code></pre>
+      </div>
+
+      <!-- ── 5. Admin Setup Guide ────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="admin-setup">5 — Admin Setup Guide</h2>
+        <p>Open the creator with <code>/prisoncreator</code>. The NUI menu is divided into tabs. Every change saves to the database immediately with no restart required.</p>
+
+        <h3 class="entry-title" id="setup-jail">Creating a Jail</h3>
+        <ol style="padding-left:20px;line-height:2;margin-bottom:14px">
+          <li>In the <strong>Jails</strong> tab, type a unique name and click <strong>Create Jail</strong>.</li>
+          <li>A jail row appears. Expand it to access its sub-tabs: Cells, Doors, Cameras, Canteen, Commissary, Check-In/Out, Transpo, and Jobs.</li>
+          <li>Set a <strong>Release Location</strong> — stand where released prisoners should spawn and click <strong>Set Release Location</strong>.</li>
+        </ol>
+
+        <h3 class="entry-title" id="setup-cells">Drawing Cell Zones</h3>
+        <ol style="padding-left:20px;line-height:2;margin-bottom:14px">
+          <li>Expand a jail, go to the <strong>Cells</strong> sub-tab, enter a cell name, and click <strong>Draw Cell Zone</strong>.</li>
+          <li>A 3D drawing tool activates. Use the controls below to trace the cell perimeter.</li>
+        </ol>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr><td><code>W / A / S / D</code></td><td>Move the placement ball (camera-relative)</td></tr>
+              <tr><td><code>R</code></td><td>Move ball up</td></tr>
+              <tr><td><code>Q</code></td><td>Move ball down</td></tr>
+              <tr><td><code>Shift</code></td><td>4× speed modifier</td></tr>
+              <tr><td><code>Mouse</code></td><td>Orbit camera around the ball</td></tr>
+              <tr><td><code>Scroll</code></td><td>Zoom in / out</td></tr>
+              <tr><td><code>E</code></td><td>Place a point at the ball's current position</td></tr>
+              <tr><td><code>Backspace</code></td><td>Remove the last placed point</td></tr>
+              <tr><td><code>Enter</code></td><td>Finish drawing (minimum 3 points required)</td></tr>
+              <tr><td><code>Escape</code></td><td>Cancel</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Place at least 3 points tracing the floor perimeter. Press <code>Enter</code> to save. The Z range is calculated automatically with ± padding from your placed points.</p>
+
+        <h3 class="entry-title" id="setup-doors">Assigning Cell Doors</h3>
+        <ol style="padding-left:20px;line-height:2;margin-bottom:14px">
+          <li>Under <strong>Cells</strong>, click <strong>Set Door</strong> on a cell row.</li>
+          <li>A crosshair tool activates — aim at the door prop and press <code>E</code> to capture its coords and model hash automatically.</li>
+          <li>Select the door animation type: <code>door</code> (swing), <code>sliding</code>, or <code>garage</code>.</li>
+        </ol>
+
+        <h3 class="entry-title" id="setup-officer-doors">Officer Doors &amp; Terminals</h3>
+        <p><strong>Officer doors</strong> are facility-level doors that officers lock/unlock with <code>E</code> in-world. They persist their locked state in the database. Double doors are supported — select <em>Double Door</em> pair type and assign two door props sequentially; both always toggle together via a shared <code>pair_id</code>.</p>
+        <p><strong>Available door types:</strong> <code>door</code>, <code>double</code>, <code>sliding</code>, <code>doublesliding</code>, <code>garage</code></p>
+        <p><strong>Terminals</strong> — physical kiosks in the world. Officers approach and press <code>E</code> to open a door control panel for that terminal. Doors can be assigned to a specific terminal or left unassigned (appears on all terminals for the jail). Add terminals via <strong>Doors</strong> tab → <strong>Add Terminal</strong>.</p>
+
+        <h3 class="entry-title" id="setup-cameras">CCTV Cameras</h3>
+        <ol style="padding-left:20px;line-height:2;margin-bottom:14px">
+          <li>In the <strong>Cameras</strong> tab, enter a camera name and click <strong>Add Camera</strong>. Your current ped position and rotation are saved as the camera viewpoint.</li>
+          <li>Officers view cameras through <code>/sendjail</code> → <strong>Cameras</strong> tab. Cycle with left/right arrows or <code>A</code>/<code>D</code>.</li>
+        </ol>
+
+        <h3 class="entry-title" id="setup-outfits">Prison Outfits</h3>
+        <ol style="padding-left:20px;line-height:2;margin-bottom:14px">
+          <li>Put on the desired outfit on your character, then go to the top-level <strong>Outfits</strong> tab and click <strong>Save Male Outfit</strong> or <strong>Save Female Outfit</strong>.</li>
+          <li>A snapshot of every GTA ped component and prop value is saved as raw JSON — no clothing resource dependency.</li>
+        </ol>
+        <p>When a prisoner is booked, the gender-appropriate outfit is applied. Their original clothing is saved to <code>ds_prison_clothing_holds</code> and fully restored on release.</p>
+
+        <h3 class="entry-title" id="setup-canteen">Canteen &amp; Commissary</h3>
+        <p><strong>Canteen</strong> — a shop where prisoners spend commissary funds:</p>
+        <ol style="padding-left:20px;line-height:2;margin-bottom:12px">
+          <li>In the jail's <strong>Canteen</strong> tab, add items from the QBCore shared items list with a price.</li>
+          <li>Add <strong>shop locations</strong> — stand at the in-world counter and click <strong>Add Location</strong>. Prisoners see a prompt within 3 metres.</li>
+        </ol>
+        <p><strong>Commissary</strong> — a kiosk where prisoners deposit cash into their account:</p>
+        <ol style="padding-left:20px;line-height:2;margin-bottom:12px">
+          <li>In the jail's <strong>Commissary</strong> tab, add kiosk locations the same way. Commissary funds are global (not per-jail).</li>
+        </ol>
+
+        <h3 class="entry-title" id="setup-checkin">Check-In / Check-Out Zones</h3>
+        <p>Automatically strips and restores visitor (non-prisoner, non-officer) inventories at prison entry/exit points.</p>
+        <ol style="padding-left:20px;line-height:2;margin-bottom:12px">
+          <li>Draw a polygon zone in the <strong>Check-In/Out</strong> tab (same controls as cell zones).</li>
+          <li>Set the type: <strong>Check-In</strong> strips items on entry; <strong>Check-Out</strong> restores items on entry.</li>
+        </ol>
+        <div class="callout">Police job players are always exempt from inventory stripping in check-in zones.</div>
+
+        <h3 class="entry-title" id="setup-transport">Transport Vehicles</h3>
+        <ol style="padding-left:20px;line-height:2;margin-bottom:12px">
+          <li>In the jail's <strong>Transpo</strong> tab, select a vehicle model from the dropdown (populated from <code>Config.TransportVehicles</code>).</li>
+          <li>Set the <strong>spawn point</strong> (where the van spawns) and the <strong>park point</strong> (where honking despawns it).</li>
+        </ol>
+        <p>The van spawns server-side and is visible to all players. Honk at the park point to despawn it after dropping off the prisoner.</p>
+
+        <h3 class="entry-title" id="setup-jobs">Police Jobs &amp; Per-Jail Access</h3>
+        <p><strong>Global Police Jobs</strong> (top-level <strong>Police Jobs</strong> tab) — defines which QBCore jobs can use <code>/sendjail</code> at all. Changes reload the in-memory cache immediately.</p>
+        <p><strong>Per-Jail Access</strong> (jail <strong>Jobs</strong> sub-tab) — defines which police jobs can access a specific jail's inmates, doors, cameras, and transport. An officer's job must appear in <em>both</em> lists.</p>
+
+        <h3 class="entry-title" id="setup-contraband">Contraband / Confiscated Items</h3>
+        <ol style="padding-left:20px;line-height:2;margin-bottom:12px">
+          <li>In the top-level <strong>Confiscated Items</strong> tab, search for an item by name, set a penalty time, and click <strong>Add</strong>.</li>
+        </ol>
+        <p>At booking, the prisoner's inventory is scanned. <strong>Contraband</strong> items are permanently destroyed and their penalty seconds are added to the sentence. <strong>All other items</strong> are stripped and held in <code>ds_prison_inventory_holds</code>, then fully returned on release. A Discord log embed is fired for each booking that finds contraband.</p>
+      </div>
+
+      <!-- ── 6. Officer Guide ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="officer-guide">6 — Officer Guide — /sendjail</h2>
+        <p>Open the booking menu with <code>/sendjail</code>. Your job must be in the <strong>Global Police Jobs</strong> list.</p>
+
+        <h3 class="entry-title" id="officer-booking">Booking a Suspect</h3>
+        <ol style="padding-left:20px;line-height:2;margin-bottom:12px">
+          <li>Click the <strong>Book</strong> tab.</li>
+          <li>Select a <strong>suspect</strong> from the nearby players dropdown (within <code>Config.NearbyPlayerRadius</code> metres).</li>
+          <li>Select a <strong>jail</strong> from the dropdown (only jails your job can access appear).</li>
+          <li>Enter the sentence duration (hours / minutes / seconds).</li>
+          <li>Click <strong>Send to Jail</strong>.</li>
+        </ol>
+        <p>The server verifies access, finds a random unoccupied cell, scans for contraband, teleports the prisoner, applies the prison outfit, starts the countdown HUD, and logs to Discord.</p>
+
+        <h3 class="entry-title" id="officer-inmates">Inmate Management</h3>
+        <p>The <strong>Inmates</strong> tab shows all active sentences for jails your job can access.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Action</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Extend / Reduce Sentence</strong></td><td>Add or subtract time. The prisoner's HUD updates in real time.</td></tr>
+              <tr><td><strong>Return to Cell</strong></td><td>Teleport the prisoner back to their cell centroid. Optionally apply a per-cell lockdown override.</td></tr>
+              <tr><td><strong>Early Release</strong></td><td>Immediately release, teleport to the release location, and return all held inventory.</td></tr>
+              <tr><td><strong>Cell Override (Escort)</strong></td><td>Unlock the prisoner's cell and disable containment checks for escorting. Toggle again to clear.</td></tr>
+              <tr><td><strong>Hold Sentence</strong></td><td>Pause the countdown. Select a reason from <code>Config.PauseReasons</code>. The card shows a blue "SENTENCE PAUSED" banner.</td></tr>
+              <tr><td><strong>Resume Sentence</strong></td><td>Resumes the timer and extends <code>release_at</code> by exactly the pause duration so no time is lost.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="officer-transfer">Facility Transfer Workflow</h3>
+        <ol style="padding-left:20px;line-height:2;margin-bottom:12px">
+          <li>On the inmate card, select the <code>isTransfer = true</code> reason from the dropdown. A <strong>Target Facility</strong> dropdown appears.</li>
+          <li>Select the destination jail and click <strong>⏸ HOLD SENTENCE</strong>. The prisoner's timer pauses and escort mode activates.</li>
+          <li>Transport the prisoner to the new facility.</li>
+          <li>Open the <strong>Inmates</strong> tab and click <strong>▶ RESUME SENTENCE</strong>. The server places the prisoner in the first available cell at the new jail, restores remaining sentence time, and logs the transfer.</li>
+        </ol>
+
+        <h3 class="entry-title" id="officer-history">History Tab</h3>
+        <p>Search historical sentence records across all jails (shared criminal record — not scoped to your job's jails). Filter by player name and/or jail. Returns up to 100 most-recent records.</p>
+
+        <h3 class="entry-title" id="officer-warden">Warden Log</h3>
+        <p>Accessible to the <strong>highest-grade officer</strong> of a job. Displays an audit trail of all officer management actions — early releases, sentence adjustments, cell returns, override activations — filterable by jail and date range. Returns up to 200 entries.</p>
+
+        <h3 class="entry-title" id="officer-cctv">CCTV Viewer</h3>
+        <p>The <strong>Cameras</strong> tab shows all cameras for your accessible jails. Click a camera to view a live feed via a scripted camera native. Cycle with left/right arrows or <code>A</code>/<code>D</code>. Press <code>Escape</code> or the Exit button to return.</p>
+      </div>
+
+      <!-- ── 7. Prisoner Experience ──────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="prisoner-experience">7 — Prisoner Experience</h2>
+
+        <h3 class="entry-title" id="prisoner-hud">Sentence Timer HUD</h3>
+        <p>A real-time countdown is shown at <code>Config.TimerHudPosition</code>. The HUD displays:</p>
+        <ul style="padding-left:20px;line-height:2;margin-bottom:12px">
+          <li>Sentence time remaining (HH:MM:SS)</li>
+          <li>Current yard-time phase and time until the next cycle change</li>
+          <li>Jail and cell name</li>
+          <li>Escort mode indicator (when override is active)</li>
+        </ul>
+        <p>The timer ticks entirely client-side using an anchor + elapsed time pattern. The server pushes the authoritative seconds on booking, resync, and any sentence adjustment.</p>
+
+        <h3 class="entry-title" id="prisoner-yard">Yard Time Cycle</h3>
+        <p>The server runs a global 1-second loop alternating between <strong>locked</strong> and <strong>unlocked</strong> phases.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Phase</th><th>Behaviour</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Locked</strong></td><td>Cell doors are frozen shut. Prisoners outside their cell zone are snapped back automatically.</td></tr>
+              <tr><td><strong>Unlocked (Yard Time)</strong></td><td>Cell doors open. Prisoners can move freely around the facility.</td></tr>
+              <tr><td><strong>Warning</strong></td><td>Last <code>WarningBeforeLock</code> seconds of yard time. Prisoners receive a reminder every <code>ReminderInterval</code> seconds to return to their cell.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="prisoner-containment">Cell Containment</h3>
+        <p>Two containment loops run client-side at all times:</p>
+        <ul style="padding-left:20px;line-height:2;margin-bottom:12px">
+          <li><strong>Prisoner containment (1 s):</strong> When the cycle is locked, if the prisoner is outside their PolyZone (with <code>Config.CellReturnBuffer</code> Z tolerance) and no escort override is active, they are teleported back to the cell centroid with a screen fade.</li>
+          <li><strong>Universal containment (100 ms):</strong> For non-prisoners (officers, civilians) when the cycle is locked — if they enter a locked cell zone they are instantly ejected 2 metres past the cell door, making the boundary feel like a wall.</li>
+        </ul>
+
+        <h3 class="entry-title" id="prisoner-canteen">Canteen &amp; Commissary</h3>
+        <ul style="padding-left:20px;line-height:2;margin-bottom:12px">
+          <li><strong>Canteen:</strong> Within 3 metres of a canteen location a prompt appears to open the shop. Items purchased deduct from the commissary balance.</li>
+          <li><strong>Commissary kiosk:</strong> Within 3 metres of a kiosk a prompt appears to deposit cash. Cash is removed from wallet and added to the global commissary account.</li>
+        </ul>
+
+        <h3 class="entry-title" id="prisoner-escort">Escort / Override Mode</h3>
+        <p>When an officer activates <strong>Cell Override</strong>, a <code>ds_prison_cell_overrides</code> row is inserted, the prisoner's containment checks are disabled, and their cell door unlocks. When the override is cleared, the row is deleted and normal cycle rules re-apply.</p>
+      </div>
+
+      <!-- ── 8. Visitor Check-In ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="visitor-checkin">8 — Visitor Check-In System</h2>
+        <p>When a non-police player enters a <strong>check-in zone</strong>, all their inventory items are removed and saved to <code>ds_prison_visitor_inventory</code>. When they enter a <strong>check-out zone</strong> in the same jail, all items are returned and the hold record is deleted.</p>
+        <div class="callout">If a check-in zone is deleted by an admin, all held inventories for that zone are immediately returned to online players before the zone row is removed.</div>
+      </div>
+
+      <!-- ── 9. Court Transport ──────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="court-transport">9 — Court Transport (Sentence Pause / Resume)</h2>
+        <p>The transport system allows a prisoner's sentence timer to be frozen during court attendance, then resumed with <code>release_at</code> extended by exactly the pause duration — no time is lost.</p>
+
+        <p>Configure the transport van, spawn point, and park point for each jail in the <strong>Transpo</strong> tab of <code>/prisoncreator</code>.</p>
+
+        <p>While paused:</p>
+        <ul style="padding-left:20px;line-height:2;margin-bottom:12px">
+          <li>The prisoner's HUD timer freezes.</li>
+          <li>Their cell door unlocks automatically (a cell override row is inserted).</li>
+          <li>The transport is logged to Discord and the Warden Log.</li>
+        </ul>
+
+        <p>When resumed:</p>
+        <ul style="padding-left:20px;line-height:2;margin-bottom:12px">
+          <li>The pause duration is calculated and added back to <code>release_at</code> via <code>DATE_ADD</code>.</li>
+          <li>The cell override is cleared and the door re-locks.</li>
+          <li>The prisoner's HUD resumes ticking.</li>
+        </ul>
+      </div>
+
+      <!-- ── 10. Discord Logging ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="discord-logging">10 — Discord Logging</h2>
+        <pre><code>Config.Logging = {
+    Mode      = <span class="s">'single'</span>,     <span class="c">-- 'single' | 'multi' | 'disabled'</span>
+    BotName   = <span class="s">'DS_Customs Prison Log'</span>,
+    BotAvatar = <span class="s">''</span>,           <span class="c">-- optional image URL</span>
+
+    Single = {
+        WebhookURL = <span class="s">'https://discord.com/api/webhooks/...'</span>,
+    },
+
+    Multi = {
+        Jails        = <span class="s">''</span>,  <span class="c">-- jail/prison created, deleted, release location set</span>
+        Cells        = <span class="s">''</span>,  <span class="c">-- cell created, deleted, door set</span>
+        Jobs         = <span class="s">''</span>,  <span class="c">-- global police job list + per-jail access changes</span>
+        Sentencing   = <span class="s">''</span>,  <span class="c">-- player sent to jail, released</span>
+        Confiscation = <span class="s">''</span>,  <span class="c">-- contraband found at booking + list changes</span>
+        Cameras      = <span class="s">''</span>,  <span class="c">-- camera added / deleted</span>
+        CellOverride = <span class="s">''</span>,  <span class="c">-- escort override activated / cleared</span>
+        Canteen      = <span class="s">''</span>,  <span class="c">-- canteen items and locations added/removed</span>
+        Commissary   = <span class="s">''</span>,  <span class="c">-- inmate deposits funds</span>
+    },
+}</code></pre>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Mode</th><th>Behaviour</th></tr></thead>
+            <tbody>
+              <tr><td><code>'single'</code></td><td>All categories post to one webhook URL.</td></tr>
+              <tr><td><code>'multi'</code></td><td>Each category gets its own webhook. Any blank URL silently skips that category (one console warning per category).</td></tr>
+              <tr><td><code>'disabled'</code></td><td>No Discord logging.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 11. Database Tables ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="database">11 — Database Tables</h2>
+        <p>All tables use <code>InnoDB</code> with <code>utf8mb4</code>. Foreign keys use <code>ON DELETE CASCADE</code> so deleting a jail removes all its cells, doors, cameras, and records automatically.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Table</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>ds_prison_jails</code></td><td>Jail/prison definitions (name, release coords)</td></tr>
+              <tr><td><code>ds_prison_cells</code></td><td>Cell polygon zones with door info</td></tr>
+              <tr><td><code>ds_prison_police_jobs</code></td><td>Global list of jobs that can use <code>/sendjail</code></td></tr>
+              <tr><td><code>ds_prison_jail_jobs</code></td><td>Per-jail allowed job access</td></tr>
+              <tr><td><code>ds_prison_records</code></td><td>Sentencing records (active and historical)</td></tr>
+              <tr><td><code>ds_prison_confiscated_items</code></td><td>Contraband item list with penalty seconds</td></tr>
+              <tr><td><code>ds_prison_inventory_holds</code></td><td>Non-contraband items held during sentence</td></tr>
+              <tr><td><code>ds_prison_clothing_holds</code></td><td>Prisoner's original outfit saved at booking</td></tr>
+              <tr><td><code>ds_prison_outfits</code></td><td>Configured male/female prison outfits</td></tr>
+              <tr><td><code>ds_prison_cell_lockdowns</code></td><td>Per-prisoner officer-imposed lockdowns</td></tr>
+              <tr><td><code>ds_prison_cell_overrides</code></td><td>Per-prisoner escort override flags</td></tr>
+              <tr><td><code>ds_prison_cameras</code></td><td>CCTV camera positions per jail</td></tr>
+              <tr><td><code>ds_prison_door_terminals</code></td><td>Door control terminal locations per jail</td></tr>
+              <tr><td><code>ds_prison_doors</code></td><td>Officer-controllable doors (supports pairs)</td></tr>
+              <tr><td><code>ds_prison_warden_log</code></td><td>Audit trail of officer management actions</td></tr>
+              <tr><td><code>ds_prison_canteen_items</code></td><td>Items for sale in each jail's canteen</td></tr>
+              <tr><td><code>ds_prison_commissary_accounts</code></td><td>Per-citizenid commissary fund balances</td></tr>
+              <tr><td><code>ds_prison_canteen_locations</code></td><td>In-world canteen shop interaction points</td></tr>
+              <tr><td><code>ds_prison_commissary_locations</code></td><td>In-world commissary kiosk interaction points</td></tr>
+              <tr><td><code>ds_prison_checkin_zones</code></td><td>Visitor check-in/check-out polygon zones</td></tr>
+              <tr><td><code>ds_prison_visitor_inventory</code></td><td>Held visitor inventories per check-in zone</td></tr>
+              <tr><td><code>ds_prison_sentence_pauses</code></td><td>Active court transport pauses</td></tr>
+              <tr><td><code>ds_prison_transport</code></td><td>Per-jail transport vehicle and coord config</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 12. Developer API ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="developer-api">12 — Developer API</h2>
+        <p>These are <strong>server-side</strong> exports callable from any other resource on your server.</p>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>PauseSentence(citizenid, pausedBy)</code> <span class="ret">boolean, string</span></h3>
+        <p>Pauses a prisoner's sentence timer. Idempotent — calling on an already-paused sentence is a no-op.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Return</th><th>message value</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code>true</code></td><td><code>'paused'</code></td><td>Sentence paused successfully</td></tr>
+            <tr><td><code>false</code></td><td><code>'already_paused'</code></td><td>Sentence was already paused</td></tr>
+            <tr><td><code>false</code></td><td><code>'No active sentence found for ...'</code></td><td>No active sentence for this citizenid</td></tr>
+          </tbody>
+        </table></div>
+        <pre><code><span class="k">local</span> ok, msg = exports[<span class="s">'ds_prisoncreator'</span>]:PauseSentence(<span class="s">'CITIZEN123'</span>, <span class="s">'Judge Smith'</span>)
+<span class="k">if not</span> ok <span class="k">then</span> print(msg) <span class="k">end</span></code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>ResumeSentence(citizenid)</code> <span class="ret">boolean, string</span></h3>
+        <p>Resumes a paused sentence, calculating the exact pause duration and extending <code>release_at</code> by that amount so no sentence time is lost.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Return</th><th>message value</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code>true</code></td><td><code>'resumed'</code></td><td>Sentence resumed successfully</td></tr>
+            <tr><td><code>false</code></td><td><code>'not_paused'</code></td><td>Sentence is not currently paused</td></tr>
+            <tr><td><code>false</code></td><td><code>'No active sentence found for ...'</code></td><td>No active sentence for this citizenid</td></tr>
+          </tbody>
+        </table></div>
+        <pre><code><span class="k">local</span> ok, msg = exports[<span class="s">'ds_prisoncreator'</span>]:ResumeSentence(<span class="s">'CITIZEN123'</span>)
+<span class="k">if not</span> ok <span class="k">then</span> print(msg) <span class="k">end</span></code></pre>
+
+        <h3 class="entry-title" id="mdt-integration">MDT Integration (Net Event)</h3>
+        <p>Any MDT or dispatch resource can open the booking menu for an officer without requiring them to type <code>/sendjail</code>:</p>
+        <pre><code><span class="c">-- Server-side — trigger on behalf of an officer by their server ID:</span>
+TriggerClientEvent(<span class="s">'ds_prisoncreator:server:openSendJailForPlayer'</span>, officerServerId)
+
+<span class="c">-- Or trigger as the officer themselves:</span>
+TriggerServerEvent(<span class="s">'ds_prisoncreator:server:openSendJailForPlayer'</span>)</code></pre>
+        <div class="callout">The same police job guard applies — if the triggering player's job is not in the global police jobs list, the event is rejected.</div>
+      </div>
+
+      <!-- ── 13. File Structure ──────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="file-structure">13 — File Structure</h2>
+        <pre><code>ds_prisoncreator/
+├── config.lua                  <span class="c">← All server operator settings (open)</span>
+├── fxmanifest.lua
+├── README.md
+│
+├── client/
+│   ├── main.lua                <span class="c">← NUI callbacks, admin &amp; officer menu entry</span>
+│   ├── timer.lua               <span class="c">← Sentence HUD, yard-time, containment loops</span>
+│   ├── zones.lua               <span class="c">← 3D cell drawing tool (orbit camera + points)</span>
+│   ├── doors.lua               <span class="c">← Cell door freeze/unfreeze management</span>
+│   ├── officer_doors.lua       <span class="c">← Officer door interaction &amp; terminal kiosk</span>
+│   ├── cameras.lua             <span class="c">← CCTV viewer (scripted camera, cycling)</span>
+│   ├── canteen.lua             <span class="c">← Canteen shop &amp; commissary deposit prompts</span>
+│   ├── checkin.lua             <span class="c">← Check-in/check-out zone client handling</span>
+│   ├── outfits.lua             <span class="c">← Prison outfit apply/restore via ped natives</span>
+│   ├── transport.lua           <span class="c">← Transport van spawn, park, honk-to-despawn</span>
+│   ├── locationsetter.lua      <span class="c">← In-world coord capture</span>
+│   └── utils.lua               <span class="c">← Shared client helpers</span>
+│
+├── server/
+│   ├── main.lua                <span class="c">← Command registration, admin check</span>
+│   ├── jails.lua               <span class="c">← Jail/cell CRUD, police job management</span>
+│   ├── prisoners.lua           <span class="c">← Sentencing, release loop, yard-time cycle</span>
+│   ├── doors.lua               <span class="c">← Officer door CRUD, lock/unlock</span>
+│   ├── cameras.lua             <span class="c">← CCTV camera CRUD</span>
+│   ├── canteen.lua             <span class="c">← Canteen &amp; commissary CRUD</span>
+│   ├── checkin.lua             <span class="c">← Check-in/out zone CRUD, inventory strip/restore</span>
+│   ├── confiscation.lua        <span class="c">← Contraband list CRUD, inventory scan at booking</span>
+│   ├── outfits.lua             <span class="c">← Outfit save/clear, clothing hold save/restore</span>
+│   ├── transport.lua           <span class="c">← Court transport pause/resume, vehicle, exports</span>
+│   ├── inventory.lua           <span class="c">← Inventory abstraction layer (ox / qs / qb)</span>
+│   ├── webhook.lua             <span class="c">← Discord embed logging</span>
+│   └── utils.lua               <span class="c">← IsAdmin, IsPoliceJob, FormatHMS, PolyCentroid</span>
+│
+├── html/
+│   ├── index.html              <span class="c">← NUI root</span>
+│   ├── style.css
+│   └── app.js                  <span class="c">← NUI logic (admin creator, sendjail, cameras)</span>
+│
+└── sql/
+    ├── install.sql             <span class="c">← Full schema, safe to re-run</span>
+    └── update.sql              <span class="c">← Migration patches for existing installs</span></code></pre>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+
+  <script src="../script.js"></script>
+</body>
+</html>

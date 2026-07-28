@@ -3,20 +3,37 @@
     {
       "name": "DS Garages",
       "path": "docs/ds_garages.html",
+      "status": "release",
       "description": "Overhauled garage system with live camera preview, ped attendants, and cinematic UI.",
       "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory", "Escrow"]
     },
     {
       "name": "DS MDT",
       "path": "docs/ds_mdt.html",
+      "status": "coming soon",
       "description": "Full-featured Mobile Data Terminal for law enforcement. Reports, warrants, BOLOs, dispatch, live map, citations, licenses, and more.",
       "tags": ["QBCore", "FiveM", "Escrow"]
     },
     {
       "name": "DS MDT — DOJ",
       "path": "docs/ds_mdt_doj.html",
+      "status": "coming soon",
       "description": "Department of Justice terminal for judges, prosecutors, and defense attorneys. Warrant review, motions, hearings, verdicts, court orders, and client management.",
       "tags": ["QBCore", "FiveM", "Escrow", "Requires ds_mdt"]
+    },
+    {
+      "name": "QB Police Job",
+      "path": "docs/qb_policejob.html",
+      "status": "coming soon",
+      "description": "Full-featured police job with armory, garage, evidence collection, ANPR, fingerprint DB, file cabinet, weapon registry, security cameras, and dispatch exports.",
+      "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory"]
+    },
+    {
+      "name": "DS Prison Creator",
+      "path": "docs/ds_prisoncreator.html",
+      "status": "coming soon",
+      "description": "Complete in-game jail & prison builder — cells, doors, cameras, outfits, canteen, commissary, visitor check-in, court transport, and full officer management UI.",
+      "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory"]
     }
   ]
 }

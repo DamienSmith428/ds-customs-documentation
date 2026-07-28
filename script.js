@@ -115,9 +115,16 @@
 
     grid.innerHTML = '';
     resources.forEach(function (r) {
+      const isComingSoon = r.status === 'coming soon';
+
       const a = document.createElement('a');
-      a.href      = r.path;
-      a.className = 'resource-card';
+      a.href      = isComingSoon ? '#' : r.path;
+      a.className = 'resource-card' + (isComingSoon ? ' card-coming-soon' : '');
+      if (isComingSoon) a.setAttribute('aria-disabled', 'true');
+
+      const statusPill = r.status
+        ? `<span class="card-status ${isComingSoon ? 'card-status--soon' : 'card-status--release'}">${isComingSoon ? 'Coming Soon' : 'Released'}</span>`
+        : '';
 
       const tags = (r.tags || []).map(function (t) {
         const cls = ({ QBCore:'badge-green', FiveM:'badge-blue',
@@ -128,7 +135,10 @@
       }).join('');
 
       a.innerHTML = `
-        <div class="card-name">${r.name}</div>
+        <div class="card-name-row">
+          <span class="card-name">${r.name}</span>
+          ${statusPill}
+        </div>
         <div class="card-desc">${r.description || ''}</div>
         ${tags ? `<div class="card-tags">${tags}</div>` : ''}
       `;

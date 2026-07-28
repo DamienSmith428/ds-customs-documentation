@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QB Police Job — DS Customs Docs</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span>DS</span> Customs Docs</a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>QB Police Job</h1>
+        <p class="subtitle">Full-featured police job resource — duty toggling, armory, garage, evidence, ANPR, fingerprints, file cabinet, weapon registry, and more — by Kakarot / GunSmoke</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.3.5</span>
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-purple">qs-inventory</span>
+          <span class="badge badge-purple">ox_inventory</span>
+          <span class="badge badge-purple">qb-inventory</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Requirements ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="requirements">1 — Requirements</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Resource</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>qb-core</code></td><td>Required framework. Must start before qb-policejob.</td></tr>
+              <tr><td><code>oxmysql</code></td><td>Required for all database operations (stash, evidence, fingerprints, weapon registry, file cabinet).</td></tr>
+              <tr><td><code>PolyZone</code></td><td>Required for zone-based interactions (duty points, impound, stash, radar triggers).</td></tr>
+              <tr><td><code>qs-inventory</code> <em>or</em> <code>ox_inventory</code> <em>or</em> <code>qb-inventory</code></td><td>One inventory must be running. Auto-detected at startup in priority order: ox → qs → qb.</td></tr>
+              <tr><td><code>LegacyFuel</code> <em>(or custom)</em></td><td>Configurable via <code>Config.FuelResource</code>. Must expose <code>GetFuel()</code> and <code>SetFuel()</code>.</td></tr>
+              <tr><td><code>ds_notify</code> <em>(optional)</em></td><td>Set <code>Config.UseDSNotify = true</code> to use ds_notify for all notifications. Falls back to QBCore notifications automatically.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 2. Installation ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">2 — Installation</h2>
+
+        <h3 class="entry-title" id="install-cfg">server.cfg Start Order</h3>
+        <pre><code>ensure qb-core
+ensure oxmysql
+ensure PolyZone
+ensure qs-inventory   <span class="c"># or ox_inventory / qb-inventory</span>
+ensure LegacyFuel     <span class="c"># or your fuel resource</span>
+ensure qb-policejob
+</code></pre>
+
+        <h3 class="entry-title" id="install-items">Required Items</h3>
+        <p>Ensure the following items are registered in your QBCore shared items (<code>qb-core/shared/items.lua</code>). These are referenced by the resource at runtime.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Item</th><th>Used for</th></tr></thead>
+            <tbody>
+              <tr><td><code>handcuffs</code></td><td>Handcuffing suspects (configurable via <code>Config.HandCuffItem</code>)</td></tr>
+              <tr><td><code>empty_evidence_bag</code></td><td>Collecting blood, casings, and DNA samples</td></tr>
+              <tr><td><code>filled_evidence_bag</code></td><td>Filled by evidence collection</td></tr>
+              <tr><td><code>police_stormram</code></td><td>Used to breach doors (armory loadout item)</td></tr>
+              <tr><td><code>mdt_tablet</code></td><td>MDT loadout tablet item (links to ds_mdt)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 3. Configuration ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">3 — Configuration — config.lua</h2>
+        <p>All global settings live in <code>config.lua</code>, which is fully open and unencrypted.</p>
+
+        <h4>General</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.UseTarget</code></td><td><code>false</code></td><td>Reads the <code>UseTarget</code> convar. Set to <code>true</code> in server.cfg to enable target-based interactions instead of proximity prompts.</td></tr>
+              <tr><td><code>Config.Inventory</code></td><td><code>'auto'</code></td><td>Inventory bridge. <code>'auto'</code> detects ox → qs → qb at runtime. Force with <code>'ox'</code>, <code>'qs'</code>, or <code>'qb'</code>.</td></tr>
+              <tr><td><code>Config.UseDSNotify</code></td><td><code>true</code></td><td>Use <code>ds_notify</code> for all notifications. Falls back to QBCore notifications if ds_notify is not running.</td></tr>
+              <tr><td><code>Config.MaxSpikes</code></td><td><code>5</code></td><td>Maximum spike strips an officer can have deployed at once.</td></tr>
+              <tr><td><code>Config.HandCuffItem</code></td><td><code>'handcuffs'</code></td><td>Item name for handcuffs.</td></tr>
+              <tr><td><code>Config.LicenseRank</code></td><td><code>2</code></td><td>Minimum job grade level required to grant/revoke licenses via <code>/grantlicense</code> and <code>/revokelicense</code>.</td></tr>
+              <tr><td><code>Config.PoliceHelicopter</code></td><td><code>'POLMAV'</code></td><td>Vehicle spawn name of the police helicopter used in the heli system.</td></tr>
+              <tr><td><code>Config.FuelResource</code></td><td><code>'LegacyFuel'</code></td><td>Resource name of your fuel script. Must expose <code>GetFuel(veh)</code> and <code>SetFuel(veh, level)</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Locations</h4>
+        <p>All in-world interaction points are defined in <code>Config.Locations</code>. Each key is an array of <code>vector3</code> or <code>vector4</code> coords.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>duty</code></td><td><code>vector3[]</code></td><td>On/off duty interaction points.</td></tr>
+              <tr><td><code>stash</code></td><td><code>vector3[]</code></td><td>Police evidence stash locations.</td></tr>
+              <tr><td><code>impound</code></td><td><code>vector3[]</code></td><td>Vehicle impound lot locations.</td></tr>
+              <tr><td><code>helicopter</code></td><td><code>vector4[]</code></td><td>Helicopter spawn points (position + heading).</td></tr>
+              <tr><td><code>trash</code></td><td><code>vector3[]</code></td><td>Evidence disposal bin locations.</td></tr>
+              <tr><td><code>fingerprint</code></td><td><code>vector3[]</code></td><td>In-world fingerprinting station for suspects.</td></tr>
+              <tr><td><code>fingerprint_db</code></td><td><code>vector3[]</code></td><td>AFIS fingerprint database terminal. Officers press <code>E</code> to open.</td></tr>
+              <tr><td><code>file_cabinet</code></td><td><code>vector3[]</code></td><td>Records filing cabinet terminal. Officers press <code>E</code> to open.</td></tr>
+              <tr><td><code>evidence</code></td><td><code>vector3[]</code></td><td>Evidence locker locations.</td></tr>
+              <tr><td><code>stations</code></td><td><code>table[]</code></td><td>Named police stations. Each entry: <code>{ label, coords = vector4 }</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Ammo Labels</h4>
+        <p>Maps GTA ammo type names to human-readable strings for evidence bag labels and ballistic reports.</p>
+        <pre><code>Config.AmmoLabels = {
+    <span class="p">AMMO_PISTOL</span>  = <span class="s">'9x19mm parabellum bullet'</span>,
+    <span class="p">AMMO_RIFLE</span>   = <span class="s">'7.62x39mm bullet'</span>,
+    <span class="p">AMMO_SHOTGUN</span> = <span class="s">'12-gauge bullet'</span>,
+    <span class="p">AMMO_SNIPER</span>  = <span class="s">'Large caliber bullet'</span>,
+    <span class="c">-- ... see config.lua for all entries</span>
+}</code></pre>
+
+        <h4>Deployable Objects</h4>
+        <p>Defines placeable police objects for the <code>/pobject</code> command.</p>
+        <pre><code>Config.Objects = {
+    <span class="p">cone</span>     = { model = <span class="n">`prop_roadcone02a`</span>,       freeze = <span class="n">false</span> },
+    <span class="p">barrier</span>  = { model = <span class="n">`prop_barrier_work06a`</span>,  freeze = <span class="n">true</span>  },
+    <span class="p">roadsign</span> = { model = <span class="n">`prop_snow_sign_road_06g`</span>, freeze = <span class="n">true</span>  },
+    <span class="p">tent</span>     = { model = <span class="n">`prop_gazebo_03`</span>,         freeze = <span class="n">true</span>  },
+    <span class="p">light</span>    = { model = <span class="n">`prop_worklight_03b`</span>,     freeze = <span class="n">true</span>  },
+}</code></pre>
+      </div>
+
+      <!-- ── 4. Garage ───────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="garage">4 — Police Garage — Config.Garage</h2>
+        <p>The garage system spawns NPC attendant peds at each location. Officers approach the ped and press the prompt to open the garage UI. Vehicles are filtered by <code>minGrade</code> so cadets see different options than senior officers.</p>
+
+        <h4>Garage Location Schema</h4>
+        <pre><code>Config.Garage.locations = {
+    {
+        <span class="p">coords</span>      = vector4(<span class="n">444.94</span>, <span class="n">-1012.18</span>, <span class="n">28.55</span>, <span class="n">183.6</span>),  <span class="c">-- ped position + heading</span>
+        <span class="p">spawn</span>       = vector4(<span class="n">443.78</span>, <span class="n">-1019.92</span>, <span class="n">28.61</span>, <span class="n">89.01</span>), <span class="c">-- vehicle spawn point</span>
+        <span class="p">park</span>        = vector3(<span class="n">452.19</span>, <span class="n">-1007.57</span>, <span class="n">27.25</span>),         <span class="c">-- drive in to park</span>
+        <span class="p">badge</span>       = <span class="s">'LSPD'</span>,                                        <span class="c">-- UI header badge</span>
+        <span class="c">-- optional overrides:</span>
+        <span class="p">model</span>       = <span class="s">'s_m_y_cop_01'</span>,
+        <span class="p">scenario</span>    = <span class="s">'WORLD_HUMAN_COP_IDLES'</span>,
+        <span class="p">radius</span>      = <span class="n">2.5</span>,
+        <span class="p">parkRadius</span>  = <span class="n">10.0</span>,
+    },
+}</code></pre>
+
+        <h4>Garage Vehicle Schema</h4>
+        <pre><code>Config.Garage.vehicles = {
+    { model = <span class="s">'police'</span>,  label = <span class="s">'Police Car 1'</span>,  minGrade = <span class="n">0</span> },
+    { model = <span class="s">'police2'</span>, label = <span class="s">'Police Car 2'</span>,  minGrade = <span class="n">0</span> },
+    { model = <span class="s">'sheriff'</span>, label = <span class="s">'Sheriff Car 1'</span>, minGrade = <span class="n">0</span> },
+    <span class="c">-- minGrade 0 = all ranks, 1 = officer and above, 2 = senior and above</span>
+}</code></pre>
+
+        <h4>Shared Ped Defaults</h4>
+        <p>Applied to every garage location unless overridden per-entry in <code>Config.Garage.pedDefaults</code>.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>model</code></td><td><code>'s_m_y_cop_01'</code></td><td>Ped model</td></tr>
+              <tr><td><code>scenario</code></td><td><code>'WORLD_HUMAN_COP_IDLES'</code></td><td>Ped animation scenario</td></tr>
+              <tr><td><code>radius</code></td><td><code>2.5</code></td><td>Proximity trigger radius (metres)</td></tr>
+              <tr><td><code>label</code></td><td><code>'Open Garage'</code></td><td>[E] prompt text</td></tr>
+              <tr><td><code>badge</code></td><td><code>'LSPD'</code></td><td>Fallback badge shown in the UI header</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 5. Armory ───────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="armory">5 — Police Armory — Config.Armory</h2>
+        <p>The armory system lets officers collect pre-defined loadouts from a ped at each armory location. Loadouts can be grade-restricted via <code>minGrade</code>.</p>
+
+        <h4>Armory Location Schema</h4>
+        <pre><code>Config.Armory.locations = {
+    {
+        <span class="p">coords</span> = vector4(<span class="n">461.85</span>, <span class="n">-981.07</span>, <span class="n">30.69</span>, <span class="n">91.59</span>),
+        <span class="p">badge</span>  = <span class="s">'LSPD'</span>,
+        <span class="c">-- optional: model, scenario, radius, label</span>
+    },
+}</code></pre>
+
+        <h4>Loadout Schema</h4>
+        <pre><code>Config.Armory.loadouts = {
+    {
+        <span class="p">id</span>       = <span class="s">'patrol'</span>,
+        <span class="p">label</span>    = <span class="s">'Patrol Loadout'</span>,
+        <span class="p">desc</span>     = <span class="s">'Standard patrol gear for everyday duty.'</span>,
+        <span class="p">minGrade</span> = <span class="n">0</span>,   <span class="c">-- 0 = all ranks</span>
+        <span class="p">items</span>    = {
+            { name = <span class="s">'weapon_pistol'</span>,     amount = <span class="n">1</span> },
+            { name = <span class="s">'weapon_nightstick'</span>, amount = <span class="n">1</span> },
+            { name = <span class="s">'pistol_ammo'</span>,       amount = <span class="n">50</span> },
+            { name = <span class="s">'handcuffs'</span>,         amount = <span class="n">1</span> },
+            { name = <span class="s">'armor'</span>,             amount = <span class="n">1</span> },
+        },
+    },
+}</code></pre>
+
+        <p>Four default loadouts are included: <strong>MDT</strong> (all ranks), <strong>Patrol</strong> (all ranks), <strong>Tactical</strong> (grade 1+), and <strong>SWAT</strong> (grade 2+). Add or remove entries from the <code>loadouts</code> array freely.</p>
+      </div>
+
+      <!-- ── 6. Weapon Registry ──────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="weapon-registry">6 — Weapon Registry — Config.WeaponRegistry</h2>
+        <p>The weapon registry is a physical terminal where officers can look up registered weapons by serial number, or register a new weapon from a suspect's inventory. Data is persisted to the database and can be queried from the MDT.</p>
+
+        <h4>Location Schema</h4>
+        <pre><code>Config.WeaponRegistry.locations = {
+    {
+        <span class="p">coords</span> = vector4(<span class="n">440.59</span>, <span class="n">-978.85</span>, <span class="n">30.69</span>, <span class="n">149.9</span>),
+        <span class="p">badge</span>  = <span class="s">'LSPD'</span>,
+        <span class="p">label</span>  = <span class="s">'Weapon Registry'</span>,  <span class="c">-- [E] prompt text</span>
+        <span class="c">-- optional: radius (default 2.0)</span>
+    },
+}</code></pre>
+      </div>
+
+      <!-- ── 7. Security Cameras ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="cameras">7 — Security Cameras — Config.SecurityCameras</h2>
+        <p>Defines CCTV cameras that officers can view via the <code>/cam [id]</code> command. Each camera is a static scripted-camera viewpoint. Officers cycle through cameras using in-game controls.</p>
+
+        <h4>Camera Entry Schema</h4>
+        <pre><code>Config.SecurityCameras.cameras = {
+    [<span class="n">1</span>] = {
+        label     = <span class="s">'Pacific Bank CAM#1'</span>,
+        coords    = vector3(<span class="n">257.45</span>, <span class="n">210.07</span>, <span class="n">109.08</span>),
+        r         = { x = <span class="n">-25.0</span>, y = <span class="n">0.0</span>, z = <span class="n">28.05</span> },  <span class="c">-- camera rotation</span>
+        canRotate = <span class="n">false</span>,
+        isOnline  = <span class="n">true</span>,
+    },
+}</code></pre>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>label</code></td><td>Camera name shown in the HUD when viewing.</td></tr>
+              <tr><td><code>coords</code></td><td>World position of the camera viewpoint.</td></tr>
+              <tr><td><code>r</code></td><td>Camera pitch (<code>x</code>), roll (<code>y</code>), and yaw (<code>z</code>) in degrees.</td></tr>
+              <tr><td><code>canRotate</code></td><td>If <code>true</code>, the camera can be panned with the mouse while viewing.</td></tr>
+              <tr><td><code>isOnline</code></td><td>If <code>false</code>, the camera feed shows as offline/static.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">Set <code>Config.SecurityCameras.hideradar = true</code> to hide the minimap radar while viewing a camera feed.</div>
+      </div>
+
+      <!-- ── 8. ANPR / Radars ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="anpr">8 — ANPR &amp; Plate Radars</h2>
+        <p>The Automatic Number Plate Recognition (ANPR) system alerts on-duty officers when a flagged vehicle passes through a radar zone. Radar positions are defined in <code>Config.Radars</code> and processed client-side.</p>
+
+        <h4>Enabling / Disabling Radars</h4>
+        <pre><code>Config.EnableRadars = <span class="n">true</span>  <span class="c">-- set false to disable all radar alerts</span></code></pre>
+
+        <h4>Adding Radar Positions</h4>
+        <pre><code>Config.Radars = {
+    vector3(<span class="n">1051.42</span>, <span class="n">331.11</span>, <span class="n">84.00</span>),
+    vector3( <span class="n">544.43</span>, <span class="n">-373.24</span>, <span class="n">33.14</span>),
+    <span class="c">-- add/remove entries freely</span>
+}</code></pre>
+
+        <p>When a vehicle with a flagged plate (wanted level or police note attached in the MDT) drives within range of a radar position, all on-duty officers receive an alert with the plate and nearest street.</p>
+      </div>
+
+      <!-- ── 9. Commands ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="commands">9 — Commands</h2>
+        <p>All commands are registered server-side and require the player to be on duty (<code>job.type == 'leo'</code> and <code>job.onduty == true</code>) unless noted.</p>
+
+        <h4>Duty &amp; Personnel</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Command</th><th>Args</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>/callsign [name]</code></td><td>name</td><td>Set your officer callsign (stored in metadata, shown in MDT).</td></tr>
+              <tr><td><code>/grantlicense [id] [type]</code></td><td>player id, driver/weapon</td><td>Grant a driver or weapon license. Requires <code>Config.LicenseRank</code>.</td></tr>
+              <tr><td><code>/revokelicense [id] [type]</code></td><td>player id, driver/weapon</td><td>Revoke a driver or weapon license. Requires <code>Config.LicenseRank</code>.</td></tr>
+              <tr><td><code>/takedrivinglicense</code></td><td>—</td><td>Initiate a driving license seize on the nearest player.</td></tr>
+              <tr><td><code>/paytow [id]</code></td><td>player id</td><td>Pay a tow driver $500 from the police job account.</td></tr>
+              <tr><td><code>/paylawyer [id]</code></td><td>player id</td><td>Pay a lawyer $500 (usable by LEO or judge job).</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Suspect Management</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Command</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>/cuff</code></td><td>Cuff/uncuff the nearest player. Uses <code>Config.HandCuffItem</code>.</td></tr>
+              <tr><td><code>/sc</code></td><td>Soft-cuff the nearest player (no item required, less restrictive).</td></tr>
+              <tr><td><code>/escort</code></td><td>Escort (grab/release) the nearest player. No duty requirement.</td></tr>
+              <tr><td><code>/jail</code></td><td>Initiate jail booking UI for nearest player.</td></tr>
+              <tr><td><code>/unjail [id]</code></td><td>Release a jailed player by server ID.</td></tr>
+              <tr><td><code>/seizecash</code></td><td>Seize cash from the nearest player.</td></tr>
+              <tr><td><code>/fine [id] [amount]</code></td><td>Issue a fine. Deducts from bank then cash; falls back to phone invoice if insufficient funds.</td></tr>
+              <tr><td><code>/anklet</code></td><td>Attach / check a GPS ankle monitor on the nearest player.</td></tr>
+              <tr><td><code>/ankletlocation [cid]</code></td><td>Request the live GPS position of a player with an active ankle monitor.</td></tr>
+              <tr><td><code>/takedna [id]</code></td><td>Collect a DNA sample from a player. Consumes one <code>empty_evidence_bag</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Evidence &amp; Scene</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Command</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>/clearcasings</code></td><td>Remove all bullet casings within a radius of the officer's position.</td></tr>
+              <tr><td><code>/clearblood</code></td><td>Remove all blood drops within a radius of the officer's position.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Vehicles &amp; Objects</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Command</th><th>Args</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>/depot [price]</code></td><td>price</td><td>Impound nearest vehicle with a release fee.</td></tr>
+              <tr><td><code>/impound</code></td><td>—</td><td>Impound nearest vehicle with no release fee.</td></tr>
+              <tr><td><code>/spikestrip</code></td><td>—</td><td>Place a spike strip at the officer's position (max <code>Config.MaxSpikes</code>).</td></tr>
+              <tr><td><code>/pobject [type]</code></td><td>cone/barrier/roadsign/tent/light/delete</td><td>Place or delete a deployable scene object.</td></tr>
+              <tr><td><code>/cam [id]</code></td><td>camera id</td><td>View a security camera by its <code>Config.SecurityCameras</code> index.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Dispatch</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Command</th><th>Args</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>/911p [message]</code></td><td>message text</td><td>Send a police alert to all on-duty officers. Also fires the <code>qb-policejob:server:911pCall</code> server event so external resources (e.g. ds_mdt) can record it.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 10. Features ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="features">10 — Feature Overview</h2>
+
+        <h3 class="entry-title" id="feat-evidence">Evidence System</h3>
+        <p>Officers can collect evidence from crime scenes using <code>empty_evidence_bag</code> items:</p>
+        <ul style="padding-left:20px;margin-bottom:12px;line-height:2">
+          <li><strong>Blood drops</strong> — collected near injured/downed players.</li>
+          <li><strong>Bullet casings</strong> — spawn when weapons are fired. Collected with evidence bags.</li>
+          <tr><td><strong>DNA samples</strong></td> — taken via <code>/takedna [id]</code>. Hash is derived from the player's citizenid.</li>
+        </ul>
+        <p>Collected evidence is stored in the police stash at <code>Config.Locations.stash</code> or in evidence lockers at <code>Config.Locations.evidence</code>. Evidence bags can be disposed of at <code>Config.Locations.trash</code>.</p>
+
+        <h3 class="entry-title" id="feat-fingerprint">Fingerprint Database (AFIS)</h3>
+        <p>The fingerprint database terminal (at <code>Config.Locations.fingerprint_db</code>) allows officers to query a suspect's fingerprints and return their identity and criminal history. When a player is fingerprinted at <code>Config.Locations.fingerprint</code>, their print is stored server-side.</p>
+
+        <h3 class="entry-title" id="feat-filecabinet">File Cabinet</h3>
+        <p>A physical records terminal at <code>Config.Locations.file_cabinet</code>. Officers can create, search, and retrieve written criminal records. Data is persisted to the database.</p>
+
+        <h3 class="entry-title" id="feat-tracker">Vehicle Tracker</h3>
+        <p>Officers can attach a GPS tracker to a vehicle. The <code>/ankletlocation [cid]</code> command requests the live position of a player wearing an ankle monitor. The tracker is stored in player metadata (<code>metadata['tracker']</code>).</p>
+
+        <h3 class="entry-title" id="feat-heli">Helicopter</h3>
+        <p>Officers can request a police helicopter at the spawn points defined in <code>Config.Locations.helicopter</code>. The helicopter model is set via <code>Config.PoliceHelicopter</code>.</p>
+
+        <h3 class="entry-title" id="feat-car-items">Car Items</h3>
+        <p>Default items placed in police vehicles when spawned from the garage, defined in <code>Config.CarItems</code>:</p>
+        <pre><code>Config.CarItems = {
+    [<span class="n">1</span>] = { name = <span class="s">'heavyarmor'</span>,          amount = <span class="n">2</span>,  slot = <span class="n">1</span> },
+    [<span class="n">2</span>] = { name = <span class="s">'empty_evidence_bag'</span>, amount = <span class="n">10</span>, slot = <span class="n">2</span> },
+    [<span class="n">3</span>] = { name = <span class="s">'police_stormram'</span>,     amount = <span class="n">1</span>,  slot = <span class="n">3</span> },
+}</code></pre>
+      </div>
+
+      <!-- ── 11. Developer API ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="developer-api">11 — Developer API</h2>
+        <p>qb-policejob exposes server exports and a server event for cross-resource integration.</p>
+
+        <h3 class="entry-title" id="export-police-alert">Server Exports</h3>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>PoliceAlert(playerSrc, text)</code> <span class="ret">boolean</span></h3>
+        <p>Dispatches a police alert to all on-duty LEOs. Location is derived from the calling player's ped position.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>playerSrc</code></td><td>number</td><td>Server source of the player triggering the alert.</td></tr>
+            <tr><td><code>text</code></td><td>string</td><td>Alert message shown to on-duty officers.</td></tr>
+          </tbody>
+        </table></div>
+        <pre><code><span class="c">-- From a heist resource — alert all cops to a robbery</span>
+exports[<span class="s">'qb-policejob'</span>]:PoliceAlert(source, <span class="s">'Armed robbery in progress at Fleeca Bank'</span>)</code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>PoliceAlertCoords(coords, text)</code> <span class="ret">boolean</span></h3>
+        <p>Dispatches an alert at explicit world coordinates. Ideal for script-triggered events where there is no specific player source.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>coords</code></td><td>vector3 <em>or</em> {x,y,z}</td><td>World position of the incident.</td></tr>
+            <tr><td><code>text</code></td><td>string</td><td>Alert message.</td></tr>
+          </tbody>
+        </table></div>
+        <pre><code><span class="c">-- From an alarm script — known coords, no player source</span>
+exports[<span class="s">'qb-policejob'</span>]:PoliceAlertCoords(
+    vector3(<span class="n">441.0</span>, <span class="n">-982.0</span>, <span class="n">30.7</span>),
+    <span class="s">'Bank alarm triggered'</span>
+)</code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>GetOnDutyCopCount()</code> <span class="ret">number</span></h3>
+        <p>Returns the number of players currently on duty with a job type of <code>'leo'</code>. Useful for robbery scripts that require minimum officer count.</p>
+        <pre><code><span class="k">local</span> count = exports[<span class="s">'qb-policejob'</span>]:GetOnDutyCopCount()
+<span class="k">if</span> count &lt; <span class="n">2</span> <span class="k">then</span>
+    <span class="c">-- block the action, not enough cops online</span>
+<span class="k">end</span></code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>GetOnDutyCops()</code> <span class="ret">table[]</span></h3>
+        <p>Returns an array of all on-duty LEO players with basic profile data.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>source</code></td><td>number</td><td>Player server ID</td></tr>
+            <tr><td><code>name</code></td><td>string</td><td>First + last name of the character</td></tr>
+            <tr><td><code>job</code></td><td>string</td><td>Job name (e.g. <code>'police'</code>)</td></tr>
+            <tr><td><code>callsign</code></td><td>string|nil</td><td>Officer callsign set via <code>/callsign</code></td></tr>
+          </tbody>
+        </table></div>
+        <pre><code><span class="k">local</span> cops = exports[<span class="s">'qb-policejob'</span>]:GetOnDutyCops()
+<span class="k">for</span> _, officer <span class="k">in</span> ipairs(cops) <span class="k">do</span>
+    print(officer.source, officer.name, officer.callsign)
+<span class="k">end</span></code></pre>
+
+        <h3 class="entry-title" id="server-events">Server Events</h3>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>qb-policejob:server:911pCall</code> <code style="color:var(--muted);font-size:12px">(callerSrc, data)</code></h3>
+        <p>Fired whenever a civilian uses <code>/911p</code>. Subscribe to this event from any server-side script to record or process emergency calls (e.g. ds_mdt uses this to create dispatch alerts).</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>callerSrc</code></td><td>number</td><td>Server source of the caller</td></tr>
+            <tr><td><code>data.x</code></td><td>number</td><td>Caller X coordinate</td></tr>
+            <tr><td><code>data.y</code></td><td>number</td><td>Caller Y coordinate</td></tr>
+            <tr><td><code>data.z</code></td><td>number</td><td>Caller Z coordinate</td></tr>
+            <tr><td><code>data.message</code></td><td>string</td><td>The message text provided by the caller</td></tr>
+          </tbody>
+        </table></div>
+        <pre><code>AddEventHandler(<span class="s">'qb-policejob:server:911pCall'</span>, <span class="k">function</span>(callerSrc, data)
+    print(<span class="s">'911 call from'</span>, callerSrc, <span class="s">'at'</span>, data.x, data.y, data.z)
+    print(<span class="s">'Message:'</span>, data.message)
+<span class="k">end</span>)</code></pre>
+
+        <div class="callout tip">The <code>on911pCall</code> export provides a convenience wrapper to register a listener without writing a raw <code>AddEventHandler</code>:
+<pre style="margin:8px 0 0"><code>exports[<span class="s">'qb-policejob'</span>]:on911pCall(<span class="k">function</span>(callerSrc, data)
+    <span class="c">-- handle it here</span>
+<span class="k">end</span>)</code></pre></div>
+      </div>
+
+      <!-- ── 12. FAQ ──────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="faq">12 — FAQ &amp; Troubleshooting</h2>
+
+        <h4>Which inventory resource takes priority?</h4>
+        <p>When <code>Config.Inventory = 'auto'</code>, detection runs in this order: <strong>ox_inventory → qs-inventory → qb-inventory</strong>. The first running resource wins. Force a specific one with <code>'ox'</code>, <code>'qs'</code>, or <code>'qb'</code>.</p>
+
+        <h4>Notifications are not showing</h4>
+        <p>If <code>Config.UseDSNotify = true</code> and <code>ds_notify</code> is not running, the resource falls back to QBCore notifications automatically. If you see no notifications at all, confirm <code>ds_notify</code> is started before <code>qb-policejob</code> in server.cfg.</p>
+
+        <h4>The garage ped / armory ped is not appearing</h4>
+        <p>Ensure <code>PolyZone</code> is started before <code>qb-policejob</code>. Check that the coords in <code>Config.Garage.locations</code> and <code>Config.Armory.locations</code> match a walkable surface — peds placed underground or in water will not render.</p>
+
+        <h4>How do I add more police stations?</h4>
+        <p>Add entries to <code>Config.Locations.stations</code>. Each entry needs a <code>label</code> and a <code>coords</code> (<code>vector4</code>). The MDT uses this list to populate the station selector for calls and warrants.</p>
+
+        <h4>Fine command falls through to phone invoice</h4>
+        <p>This is expected behaviour — if the player has insufficient bank and cash funds, a QBCore phone invoice is created instead of an immediate deduction. The fine is still tracked.</p>
+
+        <h4>Spike strips disappear after reconnect</h4>
+        <p>Spike strips are client-side entities managed per-session. They do not persist across server restarts or reconnects by design. <code>Config.MaxSpikes</code> limits simultaneous deployments per officer.</p>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+
+  <script src="../script.js"></script>
+</body>
+</html>
