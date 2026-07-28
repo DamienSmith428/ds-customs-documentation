@@ -22,10 +22,10 @@
       "tags": ["QBCore", "FiveM", "Escrow", "Requires ds_mdt"]
     },
     {
-      "name": "QB Police Job",
+      "name": "Enhanced QB Police Job",
       "path": "docs/qb_policejob.html",
       "status": "coming soon",
-      "description": "Full-featured police job with armory, garage, evidence collection, ANPR, fingerprint DB, file cabinet, weapon registry, security cameras, and dispatch exports.",
+      "description": "Full-featured Enhanced police job with armory, garage, evidence collection, ANPR, fingerprint DB, file cabinet, weapon registry, security cameras, and dispatch exports.",
       "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory"]
     },
     {
