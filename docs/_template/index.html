@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- EDIT: page title -->
+<title>Resource Name — DS Customs Docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../style.css">
+<link rel="stylesheet" href="../docs.css">
+</head>
+<body>
+
+<header class="site-header" id="siteHeader">
+  <div class="bar wrap">
+    <a href="../../index.html" class="brand">
+      <span class="plate">DS</span>
+      <span>DS CUSTOMS<small>Fivem build shop</small></span>
+    </a>
+    <nav class="links">
+      <a href="../../index.html">Shop</a>
+      <a href="../../index.html#products">Products</a>
+      <a href="../index.html" class="current">Docs</a>
+      <a href="../../index.html#support">Support</a>
+    </nav>
+    <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="breadcrumb"><a href="../index.html">Docs</a> / Resource Name</div>
+
+  <!-- EDIT: everything inside .doc-content below -->
+  <article class="doc-content">
+    <h1 style="font-family: var(--font-display); font-size: 2rem; margin: 0 0 12px;">Resource Name</h1>
+    <div class="doc-meta">
+      <span><b>Version</b> — 1.0.0</span>
+      <span><b>Requires</b> — QBCore, oxmysql</span>
+      <span><b>Updated</b> — Month Year</span>
+    </div>
+
+    <h2>Overview</h2>
+    <p>One or two sentences on what this resource does and who it's for.</p>
+
+    <h2>Installation</h2>
+    <ol>
+      <li>Drop the resource folder into your server's <code>resources</code> directory.</li>
+      <li>Add <code>ensure resource-name</code> to your <code>server.cfg</code>.</li>
+      <li>Import the included SQL file if one is provided.</li>
+    </ol>
+
+    <h2>Configuration</h2>
+    <p>Open <code>config.lua</code> and adjust the values below to match your server.</p>
+    <pre><code>Config.Locale = 'en'
+Config.EnableTargetSupport = true</code></pre>
+
+    <h2>Commands & permissions</h2>
+    <ul>
+      <li><code>/example</code> — describe what it does.</li>
+    </ul>
+
+    <h2>Troubleshooting</h2>
+    <p>List the most common install issues here and how to fix them.</p>
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap row">
+    <span>© <span id="year"></span> DS Customs — builds for FiveM servers</span>
+    <div class="flinks">
+      <a href="../../index.html">Shop</a>
+      <a href="../index.html">All docs</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  document.getElementById("menuToggle")?.addEventListener("click", function () {
+    document.getElementById("siteHeader").classList.toggle("open");
+  });
+  document.getElementById("year").textContent = new Date().getFullYear();
+</script>
+</body>
+</html>

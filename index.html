@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DS Customs — Vehicle & Server Customization Scripts</title>
+<meta name="description" content="DS Customs builds vehicle customization, livery, and dealership scripts for FiveM servers. Browse the shop and read the docs.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2214%22 fill=%22%230a0d10%22/><text x=%2250%22 y=%2263%22 font-family=%22monospace%22 font-size=%2240%22 fill=%22%232fe6d9%22 text-anchor=%22middle%22>DS</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header" id="siteHeader">
+  <div class="bar wrap">
+    <a href="index.html" class="brand">
+      <span class="plate">DS</span>
+      <span>DS CUSTOMS<small>Fivem build shop</small></span>
+    </a>
+    <nav class="links">
+      <a href="index.html" class="current">Shop</a>
+      <a href="#products">Products</a>
+      <a href="docs/index.html">Docs</a>
+      <a href="#support">Support</a>
+    </nav>
+    <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <div class="eyebrow">Custom builds, cut to spec</div>
+    <h1>Vehicle customs & dealership scripts, <span>built to spec.</span></h1>
+    <p class="lede">DS Customs ships paint, livery, performance, and dealership resources for FiveM servers — every release documented, versioned, and installed in minutes.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#products">Browse the shop</a>
+      <a class="btn btn-ghost" href="docs/index.html">Read the docs</a>
+    </div>
+    <svg class="schematic" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="200" cy="200" r="150" stroke="#2fe6d9" stroke-opacity="0.25" stroke-dasharray="2 6"/>
+      <circle cx="200" cy="200" r="110" stroke="#2fe6d9" stroke-opacity="0.4"/>
+      <circle cx="200" cy="200" r="4" fill="#ffb020"/>
+      <path d="M200 50 V90 M200 310 V350 M50 200 H90 M310 200 H350" stroke="#2fe6d9" stroke-opacity="0.4"/>
+      <path d="M120 120 L150 150 M280 120 L250 150 M120 280 L150 250 M280 280 L250 250" stroke="#ffb020" stroke-opacity="0.35"/>
+    </svg>
+  </section>
+
+  <section id="products" class="wrap">
+    <div class="section-head">
+      <h2>Product line</h2>
+      <span class="tag">// live packages, synced with tebex</span>
+    </div>
+    <div class="card-grid" id="productGrid"></div>
+  </section>
+
+  <section id="support" class="wrap">
+    <div class="section-head">
+      <h2>Support</h2>
+      <span class="tag">// before you open a ticket</span>
+    </div>
+    <div class="card-grid">
+      <a class="card" href="docs/index.html">
+        <div class="card-top"><span>DOCS</span><span class="stamp cyan">Start here</span></div>
+        <h3>Installation & setup guides</h3>
+        <p>Step-by-step docs for every resource — dependencies, config, and common fixes.</p>
+        <div class="card-foot"><span class="price">Free</span><span class="go">Open docs →</span></div>
+      </a>
+      <a class="card" href="#" id="discordCard">
+        <div class="card-top"><span>DISCORD</span><span class="stamp">Live</span></div>
+        <h3>Support server</h3>
+        <p>Report bugs, request features, and get help from the team directly.</p>
+        <div class="card-foot"><span class="price">Join</span><span class="go">Open Discord →</span></div>
+      </a>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap row">
+    <span>© <span id="year"></span> DS Customs — builds for FiveM servers</span>
+    <div class="flinks">
+      <a href="docs/index.html">Docs</a>
+      <a href="#products">Shop</a>
+      <a href="#" id="discordFooterLink">Discord</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
