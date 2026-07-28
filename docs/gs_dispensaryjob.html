@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GS Dispensary Job — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>GS Dispensary Job</h1>
+        <p class="subtitle">Full-featured cannabis dispensary job — grow, harvest, roll, stock, sell, and manage your crew — by GunSmoke Creations</p>
+        <div class="badge-row">
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-blue">FiveM</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-purple">qs-inventory / ox_inventory / qb-inventory</span>
+          <span class="badge badge-gray">oxmysql</span>
+          <span class="badge badge-gray">Escrow</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>The GS Dispensary Job is a complete, player-run cannabis business. It ships as two separate resources that are functionally identical — each themed for a different location on your server:</p>
+
+        <div class="escrow-row" style="margin-top:16px">
+          <div class="escrow-card open-card">
+            <h4>HotBox Dispensary</h4>
+            <ul>
+              <li>Resource: <code>gs-hotboxdispensary-job</code></li>
+              <li>Job name: <code>hotbox</code></li>
+              <li>DB tables prefix: <code>hotbox_</code></li>
+              <li>Receipt item: <code>hotbox_receipt</code></li>
+            </ul>
+          </div>
+          <div class="escrow-card open-card">
+            <h4>White Widow Weed Shop</h4>
+            <ul>
+              <li>Resource: <code>gs-whitewidow-job</code></li>
+              <li>Job name: <code>whitewidow</code></li>
+              <li>DB tables prefix: <code>whitewidow_</code></li>
+              <li>Receipt item: <code>ww_receipt</code></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="callout tip" style="margin-top:16px">Both resources share the same config structure, events, callbacks, and gameplay loop. This page documents both — differences between the two are called out inline where they exist.</div>
+
+        <h4>Feature summary</h4>
+        <ul style="padding-left:20px;line-height:2.1">
+          <li>Plant, grow, and harvest 6 cannabis strains at configurable world spots</li>
+          <li>Roll harvested weed into joints at the rolling station (requires rolling paper)</li>
+          <li>Employee-stocked store with live DB inventory and owner-adjustable prices</li>
+          <li>Customer shop UI — browse by category, pay with cash</li>
+          <li>Employee billing terminal — charge customers directly from a cash register target zone</li>
+          <li>Full HR menu — hire, fire, promote, demote, view roster with employee mugshots</li>
+          <li>Business bank account integration via <code>gs-businessbanking</code></li>
+          <li>Dispensary effects dependency (<code>gs-dispensaryeffects-dependency</code>)</li>
+          <li>Purchase receipts stored in DB — useable item opens a custom NUI receipt</li>
+          <li>Employee mugshots via <code>screenshot-basic</code> + fivemanage.com</li>
+          <li>Admin in-game plant-spot setup via <code>/hotboxsetupplants</code> or <code>/wwsetupplants</code></li>
+          <li>Supports <code>qs-inventory</code>, <code>ox_inventory</code>, and <code>qb</code> — auto-detected at startup</li>
+        </ul>
+      </div>
+
+      <!-- ── 2. Dependencies ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="dependencies">2 — Dependencies</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Resource</th><th>Required</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>qb-core</code></td><td>Yes</td><td>QBCore framework</td></tr>
+              <tr><td><code>oxmysql</code></td><td>Yes</td><td>Database queries for plants, store inventory, receipts, and photos</td></tr>
+              <tr><td><code>ds_notify</code></td><td>Yes</td><td>All in-game toast notifications</td></tr>
+              <tr><td><code>gs-businessbanking</code></td><td>Yes</td><td>Business bank account for revenue and HR bank transactions</td></tr>
+              <tr><td><code>gs-dispensaryeffects-dependency</code></td><td>Yes</td><td>Shared weed prop / effects resource</td></tr>
+              <tr><td><code>screenshot-basic</code></td><td>Yes (client dep.)</td><td>Mugshot capture and upload to fivemanage.com</td></tr>
+              <tr><td><code>qb-target</code></td><td>Yes</td><td>Cash register target zone for billing</td></tr>
+              <tr><td><code>qs-inventory</code> / <code>ox_inventory</code></td><td>One or none</td><td>Auto-detected. Falls back to built-in QBCore inventory</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 3. Installation ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">3 — Installation</h2>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:16px;color:var(--text-dim)">
+          <li>Place the resource folder inside your <code>resources</code> directory.</li>
+          <li>Import the SQL files (see §4 below).</li>
+          <li>Add the job entry from <code>SQL + items + job/job.txt</code> to your <code>qb-core/shared/jobs.lua</code>.</li>
+          <li>Add all item entries from <code>SQL + items + job/items.txt</code> to your inventory shared items file.</li>
+          <li>Add <code>ensure &lt;resource-name&gt;</code> to <code>server.cfg</code> <strong>after</strong> all dependencies.</li>
+          <li>Configure <code>config.lua</code> (API key, positions, strains — see §5).</li>
+          <li>Set up plant spots in-game using the admin command (see §8).</li>
+        </ol>
+
+        <pre><code><span class="c"># server.cfg — ensure dependencies before the job resource</span>
+ensure gs-dispensaryeffects-dependency
+ensure ds_notify
+ensure gs-businessbanking
+
+<span class="c"># Then ensure the job resource(s) you are using</span>
+ensure gs-hotboxdispensary-job
+ensure gs-whitewidow-job</code></pre>
+
+        <div class="callout warn">Both resources can run simultaneously on the same server — they use entirely separate DB table prefixes, job names, and event namespaces.</div>
+      </div>
+
+      <!-- ── 4. SQL Setup ───────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="sql">4 — SQL Setup</h2>
+        <p>Each resource auto-creates its own tables on server start via <code>oxmysql</code>. The following tables are created automatically — you do not need to import them manually:</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Table (HotBox)</th><th>Table (White Widow)</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><code>hotbox_plant_spots</code></td><td><code>whitewidow_plant_spots</code></td><td>Admin-configured plant prop locations</td></tr>
+              <tr><td><code>hotbox_plants</code></td><td><code>whitewidow_plants</code></td><td>Currently planted weed (strain, planted time)</td></tr>
+              <tr><td><code>hotbox_employee_photos</code></td><td><code>whitewidow_employee_photos</code></td><td>Employee mugshot URLs from fivemanage</td></tr>
+              <tr><td><code>hotbox_receipts</code></td><td><code>whitewidow_receipts</code></td><td>Purchase receipt records</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>The <strong>store inventory table</strong> must be created manually before first run — run the SQL file included in <code>SQL + items + job/</code>:</p>
+        <pre><code><span class="c">-- HotBox</span>
+<span class="k">CREATE TABLE</span> `hotbox_store_inventory` (
+  `id`        <span class="n">int</span>(11)       <span class="k">NOT NULL</span> AUTO_INCREMENT,
+  `item_name` varchar(<span class="n">64</span>)   <span class="k">NOT NULL</span>,
+  `label`     varchar(<span class="n">128</span>)  <span class="k">NOT NULL</span>,
+  `category`  varchar(<span class="n">64</span>)   DEFAULT <span class="s">'Other'</span>,
+  `amount`    <span class="n">int</span>(11)       DEFAULT <span class="n">0</span>,
+  `price`     decimal(<span class="n">10</span>,<span class="n">2</span>)  DEFAULT <span class="n">0.00</span>,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `item_name` (`item_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+<span class="c">-- White Widow (same structure, different table name)</span>
+<span class="k">CREATE TABLE</span> `whitewidow_store_inventory` ( ... );</code></pre>
+      </div>
+
+      <!-- ── 5. Configuration ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">5 — Configuration — config.lua</h2>
+        <p><code>config.lua</code> is open (not escrowed) and is the only file you need to edit. The same structure applies to both resources.</p>
+
+        <h4>Mugshot Settings</h4>
+        <pre><code>Config.FiveManageApiKey = <span class="s">"YOUR_TOKEN_HERE"</span>   <span class="c">-- fivemanage.com image token</span>
+Config.MugshotSpot = vector4(<span class="n">-31.77</span>, <span class="n">-1665.86</span>, <span class="n">29.49</span>, <span class="n">52.11</span>)
+Config.MugshotCamera = {
+    CamOffsetUp    =  <span class="n">0.60</span>,  <span class="c">-- raise/lower camera</span>
+    CamOffsetRight = <span class="n">-0.70</span>,  <span class="c">-- left/right offset</span>
+    CamDistance    = <span class="n">-0.15</span>,  <span class="c">-- forward/back from ped</span>
+}</code></pre>
+
+        <h4>General Settings</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.StoreName</code></td><td><code>"HotBox Dispensary"</code></td><td>Display name used in UI and blip label</td></tr>
+              <tr><td><code>Config.InteractDistance</code></td><td><code>1.5</code></td><td>Metres from a plant prop to trigger the interact prompt</td></tr>
+              <tr><td><code>Config.Inventory</code></td><td><code>"auto"</code></td><td><code>"auto"</code> / <code>"qb"</code> / <code>"ox"</code> / <code>"qs"</code></td></tr>
+              <tr><td><code>Config.BillingEmployeeCut</code></td><td><code>0.50</code></td><td>Fraction of a billing transaction the employee receives as cash (0.50 = 50%)</td></tr>
+              <tr><td><code>Config.ShowMarkers</code></td><td><code>false</code></td><td>Show world markers at interaction zones</td></tr>
+              <tr><td><code>Config.MarkerDrawDistance</code></td><td><code>3.0</code></td><td>Metres at which markers become visible</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Location Vectors</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.Locations.customerStore</code></td><td>Where customers open the shop UI</td></tr>
+              <tr><td><code>Config.Locations.employeeStore</code></td><td>Where employees stock the store and owners set prices</td></tr>
+              <tr><td><code>Config.Locations.HRMenu</code></td><td>HR management menu (rank 3+ only)</td></tr>
+              <tr><td><code>Config.Locations.rollStation</code></td><td>Joint rolling station</td></tr>
+              <tr><td><code>Config.Locations.Duty</code></td><td>Clock on/off duty</td></tr>
+              <tr><td><code>Config.Locations.seedPickup</code></td><td>Employees collect seeds here</td></tr>
+              <tr><td><code>Config.Locations.bagCollection</code></td><td>Employees collect empty weed bags here</td></tr>
+              <tr><td><code>Config.Locations.weedLeafBlip</code></td><td>Map blip position</td></tr>
+              <tr><td><code>Config.Locations.papersCollect</code></td><td>Owner (rank 4) picks up 20× rolling papers here</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Strain Definitions</h4>
+        <pre><code>Config.Strains = {
+    [<span class="s">"whitewidow"</span>] = { label = <span class="s">"White Widow"</span>, seed = <span class="s">"weed_whitewidow_seed"</span>, product = <span class="s">"weed_whitewidow"</span>, joint = <span class="s">"whitewidow_joint"</span>, growth = <span class="n">1</span> },
+    [<span class="s">"skunk"</span>]      = { label = <span class="s">"Skunk"</span>,       seed = <span class="s">"weed_skunk_seed"</span>,      product = <span class="s">"weed_skunk"</span>,      joint = <span class="s">"skunk_joint"</span>,      growth = <span class="n">1</span> },
+    [<span class="s">"purplehaze"</span>] = { label = <span class="s">"Purple Haze"</span>, seed = <span class="s">"weed_purplehaze_seed"</span>, product = <span class="s">"weed_purplehaze"</span>, joint = <span class="s">"purplehaze_joint"</span>, growth = <span class="n">1</span> },
+    [<span class="s">"ogkush"</span>]     = { label = <span class="s">"OG Kush"</span>,     seed = <span class="s">"weed_ogkush_seed"</span>,     product = <span class="s">"weed_ogkush"</span>,     joint = <span class="s">"ogkush_joint"</span>,     growth = <span class="n">1</span> },
+    [<span class="s">"amnesia"</span>]    = { label = <span class="s">"Amnesia"</span>,     seed = <span class="s">"weed_amnesia_seed"</span>,    product = <span class="s">"weed_amnesia"</span>,    joint = <span class="s">"amnesia_joint"</span>,    growth = <span class="n">1</span> },
+    [<span class="s">"ak47"</span>]       = { label = <span class="s">"AK47"</span>,        seed = <span class="s">"weed_ak47_seed"</span>,       product = <span class="s">"weed_ak47"</span>,       joint = <span class="s">"ak47_joint"</span>,       growth = <span class="n">1</span> }
+}</code></pre>
+        <p>The <code>growth</code> value is in <strong>minutes</strong>. A value of <code>1</code> means plants are ready to harvest after 1 minute. Increase this for a more realistic grow cycle.</p>
+
+        <h4>Receipt Settings</h4>
+        <pre><code>Config.ReceiptItem    = <span class="s">"hotbox_receipt"</span>  <span class="c">-- item name in DB  (ww_receipt for White Widow)</span>
+Config.ReceiptEnabled = <span class="k">true</span>              <span class="c">-- set false to disable receipt items entirely</span></code></pre>
+
+        <h4>Store Allowed Items</h4>
+        <p>Only items listed in <code>Config.Store.AllowedItems</code> can be deposited to or sold from the store. Add or remove entries here to control the store catalogue. The <code>price</code> is the default — it can be changed in-game by rank 3+ employees.</p>
+        <pre><code>Config.Store.AllowedItems = {
+    [<span class="s">"rolling_paper"</span>]    = { label = <span class="s">"Rolling Papers"</span>,    price = <span class="n">10</span>,  category = <span class="s">"Misc"</span> },
+    [<span class="s">"whitewidow_joint"</span>] = { label = <span class="s">"White Widow Joint"</span>, price = <span class="n">200</span>, category = <span class="s">"Joints"</span> },
+    [<span class="s">"weed_whitewidow"</span>]  = { label = <span class="s">"White Widow Weed"</span>,  price = <span class="n">200</span>, category = <span class="s">"Bud"</span> },
+    <span class="c">-- ... (6 strains as Bud + 6 as Joints + Misc)</span>
+}</code></pre>
+      </div>
+
+      <!-- ── 6. Job Grades ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="job-grades">6 — Job Grades</h2>
+        <p>Add the appropriate entry from <code>SQL + items + job/job.txt</code> to <code>qb-core/shared/jobs.lua</code>.</p>
+
+        <div class="escrow-row">
+          <div class="escrow-card">
+            <h4>HotBox Dispensary (<code>hotbox</code>)</h4>
+            <div class="tbl-wrap" style="margin-top:0">
+              <table>
+                <thead><tr><th>Grade</th><th>Name</th><th>Pay</th></tr></thead>
+                <tbody>
+                  <tr><td>0</td><td>Recruit Farmer</td><td>$110</td></tr>
+                  <tr><td>1</td><td>Apprentice Farmer</td><td>$160</td></tr>
+                  <tr><td>2</td><td>Experienced Farmer</td><td>$200</td></tr>
+                  <tr><td>3</td><td>Manager</td><td>$300</td></tr>
+                  <tr><td>4</td><td>Owner</td><td>$450</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="escrow-card">
+            <h4>White Widow (<code>whitewidow</code>)</h4>
+            <div class="tbl-wrap" style="margin-top:0">
+              <table>
+                <thead><tr><th>Grade</th><th>Name</th><th>Pay</th></tr></thead>
+                <tbody>
+                  <tr><td>0</td><td>Recruit Farmer</td><td>$90</td></tr>
+                  <tr><td>1</td><td>Apprentice Farmer</td><td>$125</td></tr>
+                  <tr><td>2</td><td>Experienced Farmer</td><td>$180</td></tr>
+                  <tr><td>3</td><td>Manager</td><td>$240</td></tr>
+                  <tr><td>4</td><td>Owner</td><td>$350</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <p>Grades 3 and 4 unlock HR menu access. Grade 4 is additionally required to collect rolling papers from the restock location.</p>
+      </div>
+
+      <!-- ── 7. Gameplay Loop ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="gameplay">7 — Gameplay Loop</h2>
+
+        <h3 class="entry-title" id="duty">Going On / Off Duty</h3>
+        <p>Walk to <code>Config.Locations.Duty</code> and press <kbd>E</kbd>. The 3D prompt turns <span style="color:var(--green)">green</span> when off duty and <span style="color:var(--red)">red</span> when on duty. The server validates job name before toggling.</p>
+
+        <h3 class="entry-title" id="planting">Planting</h3>
+        <ol style="padding-left:20px;line-height:2.1;color:var(--text-dim)">
+          <li>Collect a seed from <code>Config.Locations.seedPickup</code> — press <kbd>E</kbd> to open the strain picker.</li>
+          <li>Walk to an empty plant spot (props registered by an admin — see §8) and press <kbd>E</kbd>.</li>
+          <li>Select a strain. The resource checks your inventory for the matching seed, removes it, plays the planting animation, and notifies the server.</li>
+          <li>The plant is saved to the DB. A growth timer runs server-side — plants become harvestable after <code>growth</code> minutes (configurable per strain).</li>
+        </ol>
+
+        <h3 class="entry-title" id="harvesting">Harvesting</h3>
+        <ol style="padding-left:20px;line-height:2.1;color:var(--text-dim)">
+          <li>Collect an <code>empty_weed_bag</code> from <code>Config.Locations.bagCollection</code>.</li>
+          <li>Walk to a grown plant (prompt reads <em>"[E] Harvest"</em>) and press <kbd>E</kbd>.</li>
+          <li>The server removes your empty bag, gives you the harvested weed item, and clears the plant from the DB.</li>
+        </ol>
+
+        <h3 class="entry-title" id="rolling">Rolling Joints</h3>
+        <p>Walk to <code>Config.Locations.rollStation</code> and press <kbd>E</kbd>. The server checks for any weed item and a <code>rolling_paper</code> in your inventory. If both are present, a QBCore progress bar plays the rolling animation, then the weed and paper are swapped for the corresponding joint item.</p>
+
+        <h3 class="entry-title" id="stocking">Stocking the Store</h3>
+        <p>Walk to <code>Config.Locations.employeeStore</code>. The store menu opens showing all allowed items, your inventory count, and the current store stock. Use <strong>Deposit</strong> to move items from your inventory to the store, or <strong>Withdraw</strong> to take items out. Rank 3+ employees can also adjust item prices from this menu.</p>
+
+        <h3 class="entry-title" id="selling">Customer Shop</h3>
+        <p>Any player can walk to <code>Config.Locations.customerStore</code> to open the customer shop. Items are browsable by category (Bud, Joints, Misc). Purchase removes cash from the player, deposits to the business bank, reduces store stock, and gives the player the item plus a receipt.</p>
+
+        <h3 class="entry-title" id="billing">Employee Billing</h3>
+        <p>A <code>qb-target</code> zone on the cash register opens a billing UI. The employee picks from nearby players and selects items from their own inventory to bill. The target player receives an incoming transaction popup and can accept (cash or bank) or decline. On acceptance, money is transferred to the business bank and the employee receives their configured cut (<code>Config.BillingEmployeeCut</code>).</p>
+      </div>
+
+      <!-- ── 8. Admin Plant Setup ───────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="admin-setup">8 — Admin Plant Spot Setup</h2>
+        <p>Plant spots are <strong>not</strong> hard-coded in config. They are registered in-game by a server admin and stored in the database. Spots persist across server restarts and are broadcast to all clients on join.</p>
+
+        <h3 class="entry-title" id="admin-command">Admin Commands</h3>
+        <pre><code><span class="c"># HotBox</span>
+/hotboxsetupplants
+
+<span class="c"># White Widow</span>
+/wwsetupplants</code></pre>
+        <div class="callout">Requires the <code>command.noclip</code> ace permission, or <code>god</code> / <code>admin</code> QBCore permission level.</div>
+
+        <h4>Two placement methods</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Method</th><th>How to use</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Raycast Selector</strong></td>
+                <td>Click <em>Start Selector</em> in the panel. Aim at an existing weed prop in the world — it highlights in gold. Press <kbd>E</kbd> to register it. Press <kbd>Backspace</kbd> or <kbd>Enter</kbd> to finish.</td>
+              </tr>
+              <tr>
+                <td><strong>Marker Placement</strong></td>
+                <td>Click <em>Place Marker</em>. A floating green sphere appears. Use <kbd>WASD</kbd> to move, <kbd>R</kbd>/<kbd>F</kbd> to raise/lower, mouse to orbit camera. Press <kbd>E</kbd> to add the current position as a spot, <kbd>Backspace</kbd> to undo, <kbd>Enter</kbd> to confirm.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>When you click <strong>Save Spots</strong> in the panel, all registered spots are sent to the server, saved to the DB, and broadcast to all connected clients immediately — no restart required.</p>
+      </div>
+
+      <!-- ── 9. Items Reference ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="items">9 — Items Reference</h2>
+        <p>Add all items from <code>SQL + items + job/items.txt</code> to your inventory shared items. The items below are shared by both dispensary resources.</p>
+
+        <h4>Strains (Bud)</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Item Name</th><th>Label</th><th>Weight</th></tr></thead>
+            <tbody>
+              <tr><td><code>weed_whitewidow</code></td><td>White Widow 2g</td><td>200</td></tr>
+              <tr><td><code>weed_skunk</code></td><td>Skunk 2g</td><td>200</td></tr>
+              <tr><td><code>weed_purplehaze</code></td><td>Purple Haze 2g</td><td>200</td></tr>
+              <tr><td><code>weed_ogkush</code></td><td>OGKush 2g</td><td>200</td></tr>
+              <tr><td><code>weed_amnesia</code></td><td>Amnesia 2g</td><td>200</td></tr>
+              <tr><td><code>weed_ak47</code></td><td>AK47 2g</td><td>200</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Seeds</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Item Name</th><th>Label</th></tr></thead>
+            <tbody>
+              <tr><td><code>weed_whitewidow_seed</code></td><td>White Widow Seed</td></tr>
+              <tr><td><code>weed_skunk_seed</code></td><td>Skunk Seed</td></tr>
+              <tr><td><code>weed_purplehaze_seed</code></td><td>Purple Haze Seed</td></tr>
+              <tr><td><code>weed_ogkush_seed</code></td><td>OGKush Seed</td></tr>
+              <tr><td><code>weed_amnesia_seed</code></td><td>Amnesia Seed</td></tr>
+              <tr><td><code>weed_ak47_seed</code></td><td>AK47 Seed</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Joints</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Item Name</th><th>Label</th></tr></thead>
+            <tbody>
+              <tr><td><code>whitewidow_joint</code></td><td>White Widow Joint</td></tr>
+              <tr><td><code>skunk_joint</code></td><td>Skunk Joint</td></tr>
+              <tr><td><code>purplehaze_joint</code></td><td>Purple Haze Joint</td></tr>
+              <tr><td><code>ogkush_joint</code></td><td>OG Kush Joint</td></tr>
+              <tr><td><code>amnesia_joint</code></td><td>Amnesia Joint</td></tr>
+              <tr><td><code>ak47_joint</code></td><td>AK47 Joint</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Tools &amp; Misc</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Item Name</th><th>Label</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>empty_weed_bag</code></td><td>Empty Weed Bag</td><td>Required to harvest a plant</td></tr>
+              <tr><td><code>rolling_paper</code></td><td>Rolling Paper</td><td>Required to roll a joint</td></tr>
+              <tr><td><code>lighter</code></td><td>Lighter</td><td>Sold in store Misc category</td></tr>
+              <tr><td><code>hotbox_receipt</code></td><td>HotBox Receipt</td><td>HotBox only — <code>unique: true</code></td></tr>
+              <tr><td><code>ww_receipt</code></td><td>White Widow Receipt</td><td>White Widow only — <code>unique: true</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 10. Escrow & Open Files ────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="escrow">10 — Escrow &amp; Open Files</h2>
+        <div class="escrow-row">
+          <div class="escrow-card open-card">
+            <h4>Open (editable)</h4>
+            <ul>
+              <li><code>config.lua</code> — all configuration</li>
+            </ul>
+          </div>
+          <div class="escrow-card closed-card">
+            <h4>Escrowed</h4>
+            <ul>
+              <li><code>client.lua</code></li>
+              <li><code>client_billing.lua</code></li>
+              <li><code>server.lua</code></li>
+              <li><code>shop_client.lua</code></li>
+              <li><code>shop_server.lua</code></li>
+              <li><code>inventory_detect.lua</code></li>
+              <li><code>html/</code> (NUI)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 11. File Structure ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="file-structure">11 — File Structure</h2>
+        <pre><code>gs-hotboxdispensary-job/         <span class="c">(gs-whitewidow-job/ is identical)</span>
+├── fxmanifest.lua               <span class="c">← Resource manifest</span>
+├── config.lua                   <span class="c">← All settings — open and editable</span>
+├── inventory_detect.lua         <span class="c">← Auto-detects qs/ox/qb inventory</span>
+├── client.lua                   <span class="c">← Plant/harvest/duty/HR/admin setup</span>
+├── client_billing.lua           <span class="c">← Cash register target + billing NUI</span>
+├── shop_client.lua              <span class="c">← Customer & employee store NUI</span>
+├── server.lua                   <span class="c">← All server events, callbacks, DB logic</span>
+├── shop_server.lua              <span class="c">← Store inventory & shop purchase handlers</span>
+├── html/
+│   ├── index.html               <span class="c">← NUI root</span>
+│   ├── style.css                <span class="c">← NUI styles</span>
+│   └── script.js                <span class="c">← NUI logic (menus, billing, HR, admin)</span>
+└── SQL + items + job/
+    ├── job.txt                  <span class="c">← Paste into qb-core shared/jobs.lua</span>
+    ├── items.txt                <span class="c">← Paste into inventory shared items</span>
+    └── *_store_inventory SQL.txt <span class="c">← Run once in your DB</span></code></pre>
+      </div>
+
+      <!-- ── 12. Notes ──────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="notes">12 — Notes</h2>
+        <ul style="padding-left:20px;line-height:2.2;color:var(--text-dim)">
+          <li>Both resources are independent — running both simultaneously on one server is fully supported.</li>
+          <li>Plant spots are stored in the DB and survive server restarts. After the initial admin setup you never need to reconfigure them unless you move locations.</li>
+          <li>The <code>growth</code> timer runs server-side. Plants that are planted before a restart will resume from their saved <code>planted_at</code> timestamp and become harvestable on the next growth check (every 10 seconds).</li>
+          <li>The billing employee cut is applied at transaction acceptance time — the employee receives cash, not bank funds.</li>
+          <li>Receipt items are <code>unique: true</code> — a player can only hold one receipt at a time. Use the item to view the receipt in a NUI overlay, then it is consumed.</li>
+          <li>Mugshot uploads require a valid <code>Config.FiveManageApiKey</code>. Without it, photos will fail silently and employee cards will show no photo.</li>
+          <li>Store prices changed in-game are persisted to the DB and survive restarts.</li>
+        </ul>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs &amp; GunSmoke Creations. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+
+  <script src="../script.js"></script>
+</body>
+</html>

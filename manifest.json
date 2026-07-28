@@ -19,7 +19,7 @@
       "path": "docs/ds_mdt_doj.html",
       "status": "coming soon",
       "description": "Department of Justice terminal for judges, prosecutors, and defense attorneys. Warrant review, motions, hearings, verdicts, court orders, and client management.",
-      "tags": ["QBCore", "FiveM", "Escrow", "Requires ds_mdt", "Escrow"]
+      "tags": ["QBCore", "FiveM", "Requires ds_mdt", "Escrow"]
     },
     {
       "name": "Enhanced QB Police Job",
@@ -48,6 +48,13 @@
       "status": "release",
       "description": "Shared business bank accounts for every QBCore job. NPC banker terminals, grade-restricted access, and a full server export & callback API.",
       "tags": ["QBCore", "FiveM", "ds_notify", "Escrow"]
+    },
+    {
+      "name": "GS Dispensary Job",
+      "path": "docs/gs_dispensaryjob.html",
+      "status": "release",
+      "description": "Full-featured player-run cannabis dispensary job. Plant, grow, harvest, roll joints, stock a live store, bill customers, and manage your crew with mugshot HR. Ships as HotBox Dispensary and White Widow Weed Shop.",
+      "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory", "Escrow"]
     }
   ]
 }
