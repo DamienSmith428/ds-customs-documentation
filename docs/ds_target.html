@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Target — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS Target</h1>
+        <p class="subtitle">Entity &amp; zone interaction system — qb-target compatible API, DS Customs visual language — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.0.0</span>
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-blue">FiveM</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-purple">PolyZone</span>
+          <span class="badge badge-green">No SQL</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS Target is a drop-in replacement for <code>qb-target</code>. It exposes the exact same export API so any existing resource that calls <code>qb-target</code> can be redirected with a one-line rename in <code>server.cfg</code>. The interaction UI is rebuilt in the DS Customs dark-glass aesthetic — corner brackets, accent colours, shimmer icon boxes, and a configurable eye reticle — matching <code>ds_notify</code> and <code>ds_progressbar</code>.</p>
+        <div class="callout tip">The API is a direct port of qb-target (BerkieB). If you already have target registrations working with qb-target they will work identically with ds_target — no code changes required in your other resources.</div>
+      </div>
+
+      <!-- ── 2. Installation ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">2 — Installation</h2>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Ensure <code>PolyZone</code> is present in your resources — ds_target depends on it.</li>
+          <li>Place the <code>ds_target</code> folder inside your resources directory (e.g. <code>[Dependencies]</code>).</li>
+          <li>Add <code>ensure ds_target</code> to your <code>server.cfg</code> <strong>after</strong> <code>PolyZone</code> and <strong>before</strong> any resource that registers targets.</li>
+          <li>If you were previously using <code>qb-target</code>, replace <code>ensure qb-target</code> with <code>ensure ds_target</code>. No other changes needed.</li>
+          <li>Done — no SQL, no further configuration required.</li>
+        </ol>
+        <pre><code><span class="c"># server.cfg</span>
+ensure PolyZone
+ensure ds_target        <span class="c"># replaces qb-target</span>
+ensure my_job_resource  <span class="c"># any resource that registers targets</span>
+</code></pre>
+        <div class="callout">To declare the dependency formally in another resource, add <code>dependency 'ds_target'</code> to that resource's <code>fxmanifest.lua</code>.</div>
+      </div>
+
+      <!-- ── 3. Configuration ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">3 — Configuration — config.lua</h2>
+        <p><code>config.lua</code> is open and unencrypted. All values here control the visual style and interaction behaviour of the target system globally.</p>
+        <pre><code><span class="c">-- Maximum raycast distance for targeting entities.</span>
+<span class="c">-- Keep low — entities can be detected through walls at high values.</span>
+Config.MaxDistance = <span class="n">7.0</span>
+
+<span class="c">-- Accent colour for corner brackets, card outline, top-rule glow, and eye reticle.</span>
+<span class="c">-- Presets: 'blue' | 'red' | 'green' | 'gold' | 'purple' | 'teal' | 'orange' | 'white'</span>
+Config.Color = <span class="s">'gold'</span>
+
+<span class="c">-- Unicode character shown as the centre eye reticle.</span>
+<span class="c">--   '◈'  Diamond dot (default)   '⊕'  Circled plus</span>
+<span class="c">--   '⊗'  X-circle                '◎'  Bullseye / ring dot</span>
+<span class="c">--   '✦'  Four-pointed star        '⬡'  Hexagon</span>
+<span class="c">--   '⌖'  Position target          '·'  Middle dot (minimal)</span>
+Config.EyeIcon = <span class="s">'◈'</span>
+
+<span class="c">-- FiveM input mapper key that opens the targeting eye.</span>
+Config.OpenKey = <span class="s">'LMENU'</span>  <span class="c">-- Left Alt</span>
+
+<span class="c">-- true  → DisableAllControlActions while targeting</span>
+<span class="c">-- false → disable only camera/aim controls; movement still works</span>
+Config.DisableControls = <span class="k">true</span>
+
+<span class="c">-- Prevent targeting while the player is inside a vehicle.</span>
+Config.DisableInVehicle = <span class="k">false</span>
+
+<span class="c">-- Draw a coloured outline on the entity being looked at.</span>
+Config.EnableOutline = <span class="k">false</span>
+Config.OutlineColor  = { <span class="n">255</span>, <span class="n">255</span>, <span class="n">255</span>, <span class="n">255</span> }
+
+<span class="c">-- Draw a dot sprite at the centre of PolyZone targets.</span>
+Config.DrawSprite       = <span class="k">true</span>
+Config.DrawDistance     = <span class="n">10.0</span>
+Config.DrawColor        = { <span class="n">255</span>, <span class="n">255</span>, <span class="n">255</span>, <span class="n">255</span> }
+Config.SuccessDrawColor = { <span class="n">220</span>, <span class="n">20</span>, <span class="n">60</span>, <span class="n">255</span> }
+
+<span class="c">-- Enable built-in vehicle door toggle options.</span>
+Config.EnableDefaultOptions = <span class="k">true</span>
+
+Config.Debug = <span class="k">false</span>
+</code></pre>
+
+        <h4>Config.Color presets</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Value</th><th>Corner &amp; reticle colour</th></tr></thead>
+            <tbody>
+              <tr><td><code>'blue'</code></td><td style="color:#00d4ff">Electric blue</td></tr>
+              <tr><td><code>'red'</code></td><td style="color:#ff4040">Danger / EMS red</td></tr>
+              <tr><td><code>'green'</code></td><td style="color:#00ffaa">Success green</td></tr>
+              <tr><td><code>'gold'</code></td><td style="color:#ffe040">VIP / money gold <em>(default)</em></td></tr>
+              <tr><td><code>'purple'</code></td><td style="color:#c050ff">Gang / dark-ops purple</td></tr>
+              <tr><td><code>'teal'</code></td><td style="color:#00ffd5">Hacker / tech teal</td></tr>
+              <tr><td><code>'orange'</code></td><td style="color:#ff8c20">Mechanic / service orange</td></tr>
+              <tr><td><code>'white'</code></td><td>Clean / minimal white</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 4. Option definition ────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="option-definition">4 — Option Definition</h2>
+        <p>Every target registration accepts an <code>options</code> table — a list of option objects. Each object defines one entry in the interaction menu.</p>
+
+        <h4>Option object keys</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>label</code></td><td>string</td><td>Yes</td><td>Text shown in the menu row. Also used as the internal key — must be unique per registration.</td></tr>
+              <tr><td><code>icon</code></td><td>string</td><td>Yes</td><td>FontAwesome class string for the icon box, e.g. <code>'fas fa-wrench'</code>.</td></tr>
+              <tr><td><code>action</code></td><td>function</td><td>*</td><td>Lua function called with <code>(entity)</code> when the option is clicked. Use this <strong>or</strong> <code>event</code>.</td></tr>
+              <tr><td><code>event</code></td><td>string</td><td>*</td><td>Event / command name triggered when the option is clicked.</td></tr>
+              <tr><td><code>type</code></td><td>string</td><td>No</td><td>Event dispatch type: <code>'client'</code> (default), <code>'server'</code>, <code>'command'</code>, <code>'qbcommand'</code>.</td></tr>
+              <tr><td><code>targeticon</code></td><td>string</td><td>No</td><td>FA class to show on the eye reticle when this target is found. Overrides <code>Config.EyeIcon</code>.</td></tr>
+              <tr><td><code>distance</code></td><td>number</td><td>No</td><td>Per-option max distance override. Defaults to the registration's <code>distance</code>.</td></tr>
+              <tr><td><code>job</code></td><td>string / table</td><td>No</td><td>Restrict to job name, or a table of <code>{[jobName] = minGrade}</code>.</td></tr>
+              <tr><td><code>excludejob</code></td><td>string / table</td><td>No</td><td>Hide option for this job.</td></tr>
+              <tr><td><code>jobType</code></td><td>string / table</td><td>No</td><td>Restrict by QBCore job type.</td></tr>
+              <tr><td><code>gang</code></td><td>string / table</td><td>No</td><td>Restrict to gang name, or <code>{[gangName] = minGrade}</code>.</td></tr>
+              <tr><td><code>item</code></td><td>string</td><td>No</td><td>Require player to have this item in inventory.</td></tr>
+              <tr><td><code>citizenid</code></td><td>string</td><td>No</td><td>Restrict to a specific citizen ID.</td></tr>
+              <tr><td><code>canInteract</code></td><td>function</td><td>No</td><td>Custom check function <code>(entity, distance, data) → boolean</code>. Return <code>false</code> to hide the option.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn">Either <code>action</code> <strong>or</strong> <code>event</code> must be provided. If neither is set a Lua error is thrown when the player clicks the option.</div>
+
+        <h4>Example option table</h4>
+        <pre><code>{
+    options = {
+        {
+            label  = <span class="s">'Repair Vehicle'</span>,
+            icon   = <span class="s">'fas fa-wrench'</span>,
+            action = <span class="k">function</span>(entity)
+                TriggerEvent(<span class="s">'mechanic:repairVehicle'</span>, entity)
+            <span class="k">end</span>,
+        },
+        {
+            label  = <span class="s">'Open Trunk'</span>,
+            icon   = <span class="s">'fas fa-door-open'</span>,
+            job    = <span class="s">'mechanic'</span>,    <span class="c">-- only mechanics see this</span>
+            event  = <span class="s">'vehicle:openTrunk'</span>,
+            type   = <span class="s">'client'</span>,
+        },
+    },
+    distance = <span class="n">2.5</span>,
+}
+</code></pre>
+      </div>
+
+      <!-- ── 5. Zone exports ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="zones">5 — Zone Exports</h2>
+        <p>Zone targets trigger when the player's raycast end-point is inside the zone. All zones are backed by <code>PolyZone</code>.</p>
+
+        <h3 class="entry-title" id="add-circle-zone"><code>AddCircleZone</code></h3>
+        <pre><code>exports[<span class="s">'ds_target'</span>]:AddCircleZone(
+    name,           <span class="c">-- string  — unique zone name</span>
+    center,         <span class="c">-- vector3 / table  — {x,y,z}</span>
+    radius,         <span class="c">-- number  — circle radius in metres</span>
+    options,        <span class="c">-- table   — PolyZone options: {name, debugPoly, useZ}</span>
+    targetoptions   <span class="c">-- table   — {options={...}, distance=number}</span>
+)</code></pre>
+
+        <h3 class="entry-title" id="add-box-zone"><code>AddBoxZone</code></h3>
+        <pre><code>exports[<span class="s">'ds_target'</span>]:AddBoxZone(
+    name, center, length, width,
+    options,        <span class="c">-- {name, heading, debugPoly, minZ, maxZ}</span>
+    targetoptions   <span class="c">-- {options={...}, distance=number}</span>
+)</code></pre>
+
+        <h3 class="entry-title" id="add-poly-zone"><code>AddPolyZone</code></h3>
+        <pre><code>exports[<span class="s">'ds_target'</span>]:AddPolyZone(
+    name,
+    points,         <span class="c">-- table of vector2/vector3/vector4 or {x,y} tables</span>
+    options,        <span class="c">-- {name, debugPoly, minZ, maxZ}</span>
+    targetoptions   <span class="c">-- {options={...}, distance=number}</span>
+)</code></pre>
+
+        <h3 class="entry-title" id="add-entity-zone"><code>AddEntityZone</code></h3>
+        <pre><code>exports[<span class="s">'ds_target'</span>]:AddEntityZone(
+    name, entity,
+    options,        <span class="c">-- PolyZone EntityZone options</span>
+    targetoptions   <span class="c">-- {options={...}, distance=number}</span>
+)</code></pre>
+
+        <h3 class="entry-title" id="add-combo-zone"><code>AddComboZone</code></h3>
+        <pre><code>exports[<span class="s">'ds_target'</span>]:AddComboZone(
+    zones,          <span class="c">-- table of existing zone objects</span>
+    options,        <span class="c">-- {name, ...}</span>
+    targetoptions   <span class="c">-- {options={...}, distance=number}</span>
+)</code></pre>
+
+        <h3 class="entry-title" id="remove-zone"><code>RemoveZone</code></h3>
+        <pre><code>exports[<span class="s">'ds_target'</span>]:RemoveZone(name) <span class="c">-- destroys and unregisters the zone</span></code></pre>
+
+        <h4>Zone example</h4>
+        <pre><code>exports[<span class="s">'ds_target'</span>]:AddBoxZone(
+    <span class="s">'mechanic_bench'</span>,
+    vector3(<span class="n">-351.4</span>, <span class="n">-130.1</span>, <span class="n">38.6</span>),
+    <span class="n">1.8</span>, <span class="n">1.2</span>,
+    { name = <span class="s">'mechanic_bench'</span>, heading = <span class="n">12</span>, debugPoly = <span class="k">false</span>, minZ = <span class="n">37.6</span>, maxZ = <span class="n">40.6</span> },
+    {
+        options = {
+            {
+                label  = <span class="s">'Use Workbench'</span>,
+                icon   = <span class="s">'fas fa-screwdriver'</span>,
+                job    = <span class="s">'mechanic'</span>,
+                action = <span class="k">function</span>() TriggerEvent(<span class="s">'mechanic:openBench'</span>) <span class="k">end</span>,
+            },
+        },
+        distance = <span class="n">1.5</span>,
+    }
+)</code></pre>
+      </div>
+
+      <!-- ── 6. Entity exports ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="entities">6 — Entity Exports</h2>
+        <p>Target a specific entity by its handle. Supports both networked and local (non-net) entities. The handle is automatically converted to a network ID for networked entities so targets survive across sessions.</p>
+
+        <h3 class="entry-title" id="add-target-entity"><code>AddTargetEntity</code></h3>
+        <pre><code>exports[<span class="s">'ds_target'</span>]:AddTargetEntity(
+    entities,     <span class="c">-- number | table of numbers — entity handle(s)</span>
+    parameters    <span class="c">-- {options={...}, distance=number}</span>
+)</code></pre>
+
+        <h3 class="entry-title" id="remove-target-entity"><code>RemoveTargetEntity</code></h3>
+        <pre><code>exports[<span class="s">'ds_target'</span>]:RemoveTargetEntity(
+    entities,     <span class="c">-- number | table of numbers</span>
+    labels        <span class="c">-- string | table of strings — option labels to remove, or nil to remove all</span>
+)</code></pre>
+      </div>
+
+      <!-- ── 7. Model exports ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="models">7 — Model Exports</h2>
+        <p>Target every entity of a given model hash. Accepts model strings (auto-hashed with <code>joaat</code>) or raw hashes.</p>
+
+        <h3 class="entry-title" id="add-target-model"><code>AddTargetModel</code></h3>
+        <pre><code>exports[<span class="s">'ds_target'</span>]:AddTargetModel(
+    models,       <span class="c">-- string | number | table — model name(s) or hash(es)</span>
+    parameters    <span class="c">-- {options={...}, distance=number}</span>
+)
+
+<span class="c">-- Example: every gas pump on the map</span>
+exports[<span class="s">'ds_target'</span>]:AddTargetModel(<span class="s">'prop_gas_pump_1d'</span>, {
+    options  = {{ label = <span class="s">'Refuel'</span>, icon = <span class="s">'fas fa-gas-pump'</span>, action = <span class="k">function</span>(e) ... <span class="k">end</span> }},
+    distance = <span class="n">2.0</span>,
+})</code></pre>
+
+        <h3 class="entry-title" id="remove-target-model"><code>RemoveTargetModel</code></h3>
+        <pre><code>exports[<span class="s">'ds_target'</span>]:RemoveTargetModel(models, labels)</code></pre>
+      </div>
+
+      <!-- ── 8. Bone exports ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="bones">8 — Bone Exports</h2>
+        <p>Target a named vehicle bone (e.g. <code>'bonnet'</code>, <code>'boot'</code>, <code>'door_dside_f'</code>). The system picks the closest matching bone from the list and shows those options.</p>
+
+        <h3 class="entry-title" id="add-target-bone"><code>AddTargetBone</code></h3>
+        <pre><code>exports[<span class="s">'ds_target'</span>]:AddTargetBone(
+    bones,        <span class="c">-- string | table of strings — bone name(s)</span>
+    parameters    <span class="c">-- {options={...}, distance=number}</span>
+)
+
+<span class="c">-- Example: add a "Open Bonnet" option on the bonnet bone of every vehicle</span>
+exports[<span class="s">'ds_target'</span>]:AddTargetBone({ <span class="s">'bonnet'</span> }, {
+    options  = {{ label = <span class="s">'Open Bonnet'</span>, icon = <span class="s">'fas fa-car-battery'</span>, action = <span class="k">function</span>(e) ... <span class="k">end</span> }},
+    distance = <span class="n">2.5</span>,
+})</code></pre>
+
+        <h3 class="entry-title" id="remove-target-bone"><code>RemoveTargetBone</code></h3>
+        <pre><code>exports[<span class="s">'ds_target'</span>]:RemoveTargetBone(bones, labels)</code></pre>
+      </div>
+
+      <!-- ── 9. Global type exports ──────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="global-types">9 — Global Type Exports</h2>
+        <p>Add options to <em>every</em> entity of a given GTA entity type (ped, vehicle, object) or every other player.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export</th><th>Targets</th></tr></thead>
+            <tbody>
+              <tr><td><code>AddGlobalPed(parameters)</code></td><td>All peds (entity type 1)</td></tr>
+              <tr><td><code>AddGlobalVehicle(parameters)</code></td><td>All vehicles (entity type 2)</td></tr>
+              <tr><td><code>AddGlobalObject(parameters)</code></td><td>All objects (entity type 3)</td></tr>
+              <tr><td><code>AddGlobalPlayer(parameters)</code></td><td>All other player peds</td></tr>
+              <tr><td><code>RemoveGlobalPed(labels)</code></td><td>Remove ped options by label</td></tr>
+              <tr><td><code>RemoveGlobalVehicle(labels)</code></td><td>Remove vehicle options by label</td></tr>
+              <tr><td><code>RemoveGlobalObject(labels)</code></td><td>Remove object options by label</td></tr>
+              <tr><td><code>RemoveGlobalPlayer(labels)</code></td><td>Remove player options by label</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <pre><code><span class="c">-- Show a "Frisk Player" option on every other player (police only)</span>
+exports[<span class="s">'ds_target'</span>]:AddGlobalPlayer({
+    options = {
+        {
+            label  = <span class="s">'Frisk Player'</span>,
+            icon   = <span class="s">'fas fa-hands'</span>,
+            job    = <span class="s">'police'</span>,
+            action = <span class="k">function</span>(entity) TriggerEvent(<span class="s">'police:frisk'</span>, entity) <span class="k">end</span>,
+        },
+    },
+    distance = <span class="n">2.0</span>,
+})</code></pre>
+      </div>
+
+      <!-- ── 10. Getter / Setter exports ────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="getters-setters">10 — Getters &amp; Setters</h2>
+        <p>Read or update registration data at runtime without removing and re-adding targets.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export</th><th>Signature</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>GetZoneData</code></td><td><code>(name)</code></td><td>Returns the PolyZone object including <code>targetoptions</code>.</td></tr>
+              <tr><td><code>GetTargetBoneData</code></td><td><code>(bone, label)</code></td><td>Returns a single option object from the bone registry.</td></tr>
+              <tr><td><code>GetTargetEntityData</code></td><td><code>(entity, label)</code></td><td>Returns a single option object from the entity registry.</td></tr>
+              <tr><td><code>GetTargetModelData</code></td><td><code>(model, label)</code></td><td>Returns a single option object from the model registry.</td></tr>
+              <tr><td><code>GetGlobalPedData</code></td><td><code>(label)</code></td><td>Returns a global ped option by label.</td></tr>
+              <tr><td><code>GetGlobalVehicleData</code></td><td><code>(label)</code></td><td>Returns a global vehicle option by label.</td></tr>
+              <tr><td><code>GetGlobalObjectData</code></td><td><code>(label)</code></td><td>Returns a global object option by label.</td></tr>
+              <tr><td><code>GetGlobalPlayerData</code></td><td><code>(label)</code></td><td>Returns a global player option by label.</td></tr>
+              <tr><td><code>UpdateZoneData</code></td><td><code>(name, data)</code></td><td>Replace the <code>targetoptions</code> of a zone.</td></tr>
+              <tr><td><code>UpdateTargetBoneData</code></td><td><code>(bone, label, data)</code></td><td>Replace a single bone option object.</td></tr>
+              <tr><td><code>UpdateTargetEntityData</code></td><td><code>(entity, label, data)</code></td><td>Replace a single entity option object.</td></tr>
+              <tr><td><code>UpdateTargetModelData</code></td><td><code>(model, label, data)</code></td><td>Replace a single model option object.</td></tr>
+              <tr><td><code>UpdateGlobalPedData</code></td><td><code>(label, data)</code></td><td>Replace a global ped option.</td></tr>
+              <tr><td><code>UpdateGlobalVehicleData</code></td><td><code>(label, data)</code></td><td>Replace a global vehicle option.</td></tr>
+              <tr><td><code>UpdateGlobalObjectData</code></td><td><code>(label, data)</code></td><td>Replace a global object option.</td></tr>
+              <tr><td><code>UpdateGlobalPlayerData</code></td><td><code>(label, data)</code></td><td>Replace a global player option.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 11. Utility exports ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="utility">11 — Utility Exports</h2>
+        <p>Low-level hooks exposed for advanced integrations and custom target overlays.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export</th><th>Returns</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>IsTargetActive()</code></td><td>boolean</td><td><code>true</code> while the player is holding the target key open.</td></tr>
+              <tr><td><code>IsTargetSuccess()</code></td><td>boolean</td><td><code>true</code> while a valid target is locked and its menu is displayed.</td></tr>
+              <tr><td><code>AllowTargeting(bool)</code></td><td>void</td><td>Enable or disable targeting globally. Passing <code>false</code> force-closes any active session.</td></tr>
+              <tr><td><code>RaycastCamera(flag, coords)</code></td><td>endCoords, distance, entity, entityType</td><td>Fires a <code>StartShapeTestLosProbe</code> from the camera and returns results. Useful for custom targeting logic.</td></tr>
+              <tr><td><code>CheckEntity(flag, datatable, entity, distance)</code></td><td>void</td><td>Manually trigger an entity check against a provided options table.</td></tr>
+              <tr><td><code>CheckBones(coords, entity, bonelist)</code></td><td>boneId, bonePos, boneName</td><td>Find the closest named bone from <code>bonelist</code> to <code>coords</code>.</td></tr>
+              <tr><td><code>EnableNUI(options)</code></td><td>void</td><td>Force the NUI menu open with a pre-built options table (used after <code>FoundTarget</code>).</td></tr>
+              <tr><td><code>DisableNUI()</code></td><td>void</td><td>Close the NUI menu without ending the target session.</td></tr>
+              <tr><td><code>LeftTarget()</code></td><td>void</td><td>Clear the current target lock and close the menu.</td></tr>
+              <tr><td><code>DisableTarget(force)</code></td><td>void</td><td>End the entire target session. Pass <code>true</code> to force-close even if a target is locked.</td></tr>
+              <tr><td><code>DrawOutlineEntity(entity, bool)</code></td><td>void</td><td>Toggle the entity draw outline if <code>Config.EnableOutline</code> is set.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <pre><code><span class="c">-- Disable targeting while a cutscene plays</span>
+exports[<span class="s">'ds_target'</span>]:AllowTargeting(<span class="k">false</span>)
+<span class="c">-- ... cutscene ...</span>
+exports[<span class="s">'ds_target'</span>]:AllowTargeting(<span class="k">true</span>)
+</code></pre>
+      </div>
+
+      <!-- ── 12. Config pre-registration ────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="config-targets">12 — Config Pre-registration</h2>
+        <p>Targets that should exist from server start can be declared directly in <code>config.lua</code> instead of registering them from another resource. All tables default to empty — add entries as needed.</p>
+
+        <pre><code><span class="c">-- Circle zones</span>
+Config.CircleZones = {
+    {
+        name     = <span class="s">'atm_legion'</span>,
+        coords   = vector3(<span class="n">195.0</span>, <span class="n">-933.8</span>, <span class="n">30.7</span>),
+        radius   = <span class="n">1.2</span>,
+        useZ     = <span class="k">true</span>,
+        options  = {{ label = <span class="s">'Use ATM'</span>, icon = <span class="s">'fas fa-credit-card'</span>, action = <span class="k">function</span>() ... <span class="k">end</span> }},
+        distance = <span class="n">1.5</span>,
+    },
+}
+
+<span class="c">-- Model targets</span>
+Config.TargetModels = {
+    {
+        models   = { <span class="s">'prop_atm_01'</span>, <span class="s">'prop_atm_02'</span> },
+        options  = {{ label = <span class="s">'Use ATM'</span>, icon = <span class="s">'fas fa-credit-card'</span>, action = <span class="k">function</span>() ... <span class="k">end</span> }},
+        distance = <span class="n">1.5</span>,
+    },
+}
+
+<span class="c">-- Also available: Config.BoxZones, Config.PolyZones, Config.TargetBones</span>
+<span class="c">-- Config.GlobalPedOptions, Config.GlobalVehicleOptions</span>
+<span class="c">-- Config.GlobalObjectOptions, Config.GlobalPlayerOptions</span>
+</code></pre>
+      </div>
+
+      <!-- ── 13. Ped spawning ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="peds">13 — Ped Spawning (Config.Peds)</h2>
+        <p>DS Target can spawn and manage targetable scenario peds from <code>config.lua</code>. Peds are created on resource start and deleted on resource stop, and are automatically re-created on player spawn.</p>
+
+        <pre><code>Config.Peds = {
+    {
+        model    = <span class="s">'a_m_m_skater_01'</span>,
+        coords   = vector4(<span class="n">-350.2</span>, <span class="n">-125.0</span>, <span class="n">38.6</span>, <span class="n">90.0</span>),  <span class="c">-- x, y, z, heading</span>
+        freeze   = <span class="k">true</span>,
+        invincible = <span class="k">true</span>,
+        scenario = <span class="s">'WORLD_HUMAN_STAND_MOBILE'</span>,
+        options  = {
+            {
+                label  = <span class="s">'Talk to Mechanic'</span>,
+                icon   = <span class="s">'fas fa-comment'</span>,
+                action = <span class="k">function</span>() TriggerEvent(<span class="s">'mechanic:openMenu'</span>) <span class="k">end</span>,
+            },
+        },
+        distance = <span class="n">2.5</span>,
+    },
+}
+</code></pre>
+      </div>
+
+      <!-- ── 14. Quick reference ────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="quick-reference">14 — Quick Reference</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export</th><th>Category</th></tr></thead>
+            <tbody>
+              <tr><td><code>AddCircleZone</code> / <code>AddBoxZone</code> / <code>AddPolyZone</code> / <code>AddEntityZone</code> / <code>AddComboZone</code></td><td>Zone</td></tr>
+              <tr><td><code>RemoveZone</code></td><td>Zone</td></tr>
+              <tr><td><code>AddTargetEntity</code> / <code>RemoveTargetEntity</code></td><td>Entity</td></tr>
+              <tr><td><code>AddTargetModel</code> / <code>RemoveTargetModel</code></td><td>Model</td></tr>
+              <tr><td><code>AddTargetBone</code> / <code>RemoveTargetBone</code></td><td>Bone</td></tr>
+              <tr><td><code>AddGlobalPed</code> / <code>AddGlobalVehicle</code> / <code>AddGlobalObject</code> / <code>AddGlobalPlayer</code></td><td>Global</td></tr>
+              <tr><td><code>RemoveGlobalPed</code> / <code>RemoveGlobalVehicle</code> / <code>RemoveGlobalObject</code> / <code>RemoveGlobalPlayer</code></td><td>Global</td></tr>
+              <tr><td><code>GetZoneData</code> / <code>UpdateZoneData</code></td><td>Getter/Setter</td></tr>
+              <tr><td><code>GetTargetBoneData</code> / <code>UpdateTargetBoneData</code></td><td>Getter/Setter</td></tr>
+              <tr><td><code>GetTargetEntityData</code> / <code>UpdateTargetEntityData</code></td><td>Getter/Setter</td></tr>
+              <tr><td><code>GetTargetModelData</code> / <code>UpdateTargetModelData</code></td><td>Getter/Setter</td></tr>
+              <tr><td><code>GetGlobalPedData</code> / <code>UpdateGlobalPedData</code></td><td>Getter/Setter</td></tr>
+              <tr><td><code>GetGlobalVehicleData</code> / <code>UpdateGlobalVehicleData</code></td><td>Getter/Setter</td></tr>
+              <tr><td><code>GetGlobalObjectData</code> / <code>UpdateGlobalObjectData</code></td><td>Getter/Setter</td></tr>
+              <tr><td><code>GetGlobalPlayerData</code> / <code>UpdateGlobalPlayerData</code></td><td>Getter/Setter</td></tr>
+              <tr><td><code>IsTargetActive</code> / <code>IsTargetSuccess</code> / <code>AllowTargeting</code></td><td>Utility</td></tr>
+              <tr><td><code>RaycastCamera</code> / <code>CheckEntity</code> / <code>CheckBones</code></td><td>Utility</td></tr>
+              <tr><td><code>EnableNUI</code> / <code>DisableNUI</code> / <code>LeftTarget</code> / <code>DisableTarget</code> / <code>DrawOutlineEntity</code></td><td>NUI / UI</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout tip">All exports are <strong>client-side only</strong>. There are no server-side exports — target registration and logic run entirely on the client.</div>
+      </div>
+
+      <!-- ── 15. File structure ──────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="file-structure">15 — File Structure</h2>
+        <pre><code>ds_target/
+├── fxmanifest.lua        <span class="c">← Resource manifest (dependency: PolyZone)</span>
+├── config.lua            <span class="c">← Color, eye icon, distance, controls, pre-registered targets (open)</span>
+├── client.lua            <span class="c">← Core raycast loop, NUI bridge, QBCore job/gang/item checks</span>
+├── registration.lua      <span class="c">← All Add* / Remove* / Get* / Update* exports</span>
+├── peds.lua              <span class="c">← SpawnPeds / DeletePeds driven by Config.Peds</span>
+├── data/
+│   ├── bones.lua         <span class="c">← Bone name list and options table</span>
+│   └── debug.lua         <span class="c">← Debug overlay (loaded when Config.Debug = true)</span>
+└── html/
+    ├── index.html        <span class="c">← NUI root — eye reticle + option list DOM</span>
+    ├── style.css         <span class="c">← Dark-glass visual styles, color tokens, corner brackets</span>
+    └── app.js            <span class="c">← NUI message handler: openTarget / foundTarget / leftTarget / closeTarget</span></code></pre>
+      </div>
+
+      <!-- ── 16. Notes ───────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="notes">16 — Notes</h2>
+        <ul style="padding-left:20px;line-height:2.2">
+          <li>The export API is <strong>fully compatible with qb-target</strong>. Changing <code>ensure qb-target</code> → <code>ensure ds_target</code> in <code>server.cfg</code> is the only change needed in most setups.</li>
+          <li>Option <code>label</code> strings are used as internal dictionary keys. They must be <strong>unique per registration</strong>; duplicate labels in the same <code>AddTarget*</code> call will overwrite each other silently.</li>
+          <li><code>required_item</code> is accepted as an alias for <code>item</code> for compatibility with legacy qb-target option tables.</li>
+          <li>The <code>Config.EyeIcon</code> setting accepts any Unicode glyph or emoji — the NUI automatically detects whether it is a FontAwesome class string or a raw Unicode character and renders accordingly.</li>
+          <li>Entity outlines (<code>Config.EnableOutline</code>) are skipped on ped entities to avoid visual conflicts with targeting overlays.</li>
+          <li>DS Target has <strong>no database calls</strong>. The only hard dependency is <code>PolyZone</code>. QBCore is optional — job/gang/item checks simply pass when QBCore is not detected.</li>
+          <li>The resource is Escrow-protected except for <code>config.lua</code>, which is fully open.</li>
+        </ul>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+
+  <script src="../script.js"></script>
+</body>
+</html>

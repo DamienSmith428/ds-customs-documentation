@@ -1,6 +1,13 @@
 {
   "resources": [
     {
+      "name": "DS Target",
+      "path": "docs/ds_target.html",
+      "status": "release",
+      "description": "Drop-in qb-target replacement with the DS Customs dark-glass UI. 8 colour presets, configurable eye reticle, full PolyZone support, and an identical export API.",
+      "tags": ["QBCore", "FiveM", "PolyZone", "Escrow"]
+    },
+    {
       "name": "DS Garages",
       "path": "docs/ds_garages.html",
       "status": "release",
