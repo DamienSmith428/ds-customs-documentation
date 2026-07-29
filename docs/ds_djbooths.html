@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS DJ Booths — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS DJ Booths</h1>
+        <p class="subtitle">Server-synced DJ booth system with positional 3D audio, a professional music player UI, song history, and full target integration — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.0.0</span>
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-purple">xsound</span>
+          <span class="badge badge-purple">ds_target / qb-target</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-blue">Free</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS DJ Booths lets you place any number of DJ booths around your map. Each booth streams audio at a 3D world position via <strong>xsound</strong>, so volume fades naturally as players move away. Playback state is authoritative on the server — every connected player hears the same track, and late joiners are automatically synced.</p>
+
+        <h3 class="entry-title" id="features">Features</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Feature</th><th>Detail</th></tr></thead>
+            <tbody>
+              <tr><td>Unlimited booths</td><td>Add as many entries as you like in <code>config.lua</code>.</td></tr>
+              <tr><td>3 interaction modes</td><td><code>ds_target</code>, <code>qb-target</code>, or a custom NUI proximity prompt.</td></tr>
+              <tr><td>Server-synced playback</td><td>Play, pause, resume, volume, and stop all broadcast to every player in real time.</td></tr>
+              <tr><td>Late-joiner sync</td><td>New players automatically receive the current playback state for all active booths.</td></tr>
+              <tr><td>Positional 3D audio</td><td>Sound attenuates with distance. Configurable range and volume per booth.</td></tr>
+              <tr><td>Separate sound coords</td><td>Optional <code>soundCoords</code> lets the speaker position differ from the interaction zone.</td></tr>
+              <tr><td>Job restriction</td><td>Per-booth optional job list. Unauthorised players never see the option.</td></tr>
+              <tr><td>Live job updates</td><td>Job changes take effect immediately — no relog required.</td></tr>
+              <tr><td>Song history</td><td>Last 30 tracks stored server-side per booth (FIFO). Survives stops. Play-again button in UI.</td></tr>
+              <tr><td>Professional music player UI</td><td>Dark glass card with animated equaliser, live timer, tab system, loading shimmer, and seamless marquee.</td></tr>
+              <tr><td>No SQL</td><td>Zero database tables. All state is in server memory.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 2. Requirements ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="requirements">2 — Requirements</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Resource</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>qb-core</code></td><td>Required framework. Must start before ds_djbooths.</td></tr>
+              <tr><td><code>xsound</code></td><td>Required for all audio playback. Must start before ds_djbooths.</td></tr>
+              <tr><td><code>ds_target</code> <em>or</em> <code>qb-target</code></td><td>Required only when <code>Config.TargetSystem</code> is set to one of these. Not needed in <code>"prompt"</code> mode.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">DS DJ Booths has <strong>no SQL dependency</strong>. All playback state and song history lives in server memory and resets on server restart.</div>
+      </div>
+
+      <!-- ── 3. Installation ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">3 — Installation</h2>
+
+        <h3 class="entry-title" id="install-drop">Drop-in</h3>
+        <p>Copy the <code>ds_djbooths</code> folder into your resources directory. No SQL files to run.</p>
+
+        <h3 class="entry-title" id="install-cfg">server.cfg Start Order</h3>
+        <pre><code>ensure qb-core
+ensure xsound
+ensure ds_target        <span class="c"># or qb-target — only needed for target mode</span>
+ensure ds_djbooths
+</code></pre>
+        <div class="callout tip">In <code>"prompt"</code> mode neither <code>ds_target</code> nor <code>qb-target</code> needs to be running.</div>
+      </div>
+
+      <!-- ── 4. Configuration ───────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">4 — Configuration — config.lua</h2>
+        <p>All settings live in <code>config.lua</code>, which is fully open and unencrypted.</p>
+
+        <h3 class="entry-title" id="config-global">Global Settings</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.TargetSystem</code></td><td><code>"ds_target"</code></td><td>Interaction system to use. Options: <code>"ds_target"</code>, <code>"qb-target"</code>, <code>"prompt"</code>.</td></tr>
+              <tr><td><code>Config.PromptKey</code></td><td><code>38</code></td><td>Control key used in <code>"prompt"</code> mode. <code>38</code> = E key.</td></tr>
+              <tr><td><code>Config.PromptDistance</code></td><td><code>2.5</code></td><td>Metres from booth coords at which the prompt appears.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="config-booth">Booth Entry Schema</h3>
+        <pre><code>Config.Booths = {
+    [<span class="n">1</span>] = {
+        <span class="c">-- Display name shown in the target menu or the E prompt</span>
+        <span class="p">label</span>      = <span class="s">'My DJ Booth'</span>,
+
+        <span class="c">-- Position of the interaction zone (where players open the UI)</span>
+        <span class="p">coords</span>     = vector3(<span class="n">0.0</span>, <span class="n">0.0</span>, <span class="n">0.0</span>),
+
+        <span class="c">-- (Optional) Where the sound originates in 3D space.</span>
+        <span class="c">-- Omit to use coords above.</span>
+        <span class="p">soundCoords</span> = vector3(<span class="n">0.0</span>, <span class="n">0.0</span>, <span class="n">0.0</span>),
+
+        <span class="c">-- Volume at the sound origin (0.0 – 1.0)</span>
+        <span class="p">volume</span>     = <span class="n">0.8</span>,
+
+        <span class="c">-- Distance in metres at which the sound becomes inaudible</span>
+        <span class="p">distance</span>   = <span class="n">40.0</span>,
+
+        <span class="c">-- Radius of the interaction zone used by the target / prompt system</span>
+        <span class="p">zoneRadius</span> = <span class="n">2.0</span>,
+
+        <span class="c">-- Whether the track loops automatically when it ends</span>
+        <span class="p">loop</span>       = <span class="n">true</span>,
+
+        <span class="c">-- (Optional) Restrict access to one or more job names.</span>
+        <span class="c">-- Omit or set to nil to allow everyone.</span>
+        <span class="p">jobs</span>       = { <span class="s">'dj'</span>, <span class="s">'club_owner'</span> },
+    },
+}</code></pre>
+
+        <h3 class="entry-title" id="config-fields">Booth Field Reference</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>label</code></td><td>string</td><td>Yes</td><td>Name shown in the target option or E prompt HUD element.</td></tr>
+              <tr><td><code>coords</code></td><td>vector3</td><td>Yes</td><td>Centre of the interaction zone. Also used as the map/target position.</td></tr>
+              <tr><td><code>soundCoords</code></td><td>vector3</td><td>No</td><td>World position the sound radiates from. Falls back to <code>coords</code> when omitted.</td></tr>
+              <tr><td><code>volume</code></td><td>number</td><td>Yes</td><td>Base volume at the sound origin. Range <code>0.0</code>–<code>1.0</code>.</td></tr>
+              <tr><td><code>distance</code></td><td>number</td><td>Yes</td><td>Metres from <code>soundCoords</code> at which the sound becomes fully silent.</td></tr>
+              <tr><td><code>zoneRadius</code></td><td>number</td><td>Yes</td><td>Radius of the circle zone / prompt detection sphere in metres.</td></tr>
+              <tr><td><code>loop</code></td><td>boolean</td><td>Yes</td><td>When <code>true</code> the track restarts automatically when it ends.</td></tr>
+              <tr><td><code>jobs</code></td><td>table</td><td>No</td><td>Array of job name strings. If provided, only players on a listed job can interact with the booth.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout tip">You can mix restricted and unrestricted booths freely. Booth <code>[1]</code> can be job-locked while booth <code>[2]</code> is open to everyone.</div>
+      </div>
+
+      <!-- ── 5. Interaction Modes ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="interaction">5 — Interaction Modes</h2>
+        <p>Set <code>Config.TargetSystem</code> to one of the three modes below. The value applies globally — all booths use the same system.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Mode</th><th>Dependency</th><th>Behaviour</th></tr></thead>
+            <tbody>
+              <tr><td><code>"ds_target"</code></td><td><code>ds_target</code></td><td>Registers a <code>AddCircleZone</code> for every booth. The option appears in the DS Target radial menu when the player aims at the zone. Job restrictions are enforced natively by ds_target — the option is invisible to unauthorised players.</td></tr>
+              <tr><td><code>"qb-target"</code></td><td><code>qb-target</code></td><td>Same as above using qb-target's identical API.</td></tr>
+              <tr><td><code>"prompt"</code></td><td>None</td><td>A custom NUI prompt appears at the bottom-centre of the screen when the player walks within <code>Config.PromptDistance</code> metres. Press <code>Config.PromptKey</code> (default E) to open the UI. The prompt is never shown to players who lack the required job.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">Switching modes only requires changing <code>Config.TargetSystem</code> and restarting the resource. No other code changes are needed.</div>
+      </div>
+
+      <!-- ── 6. Job Restrictions ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="jobs">6 — Job Restrictions</h2>
+        <p>Add a <code>jobs</code> table to any booth entry to restrict who can open the DJ UI at that booth. Leave it out entirely to allow all players.</p>
+        <pre><code><span class="c">-- Restricted — only "dj" or "manager" can open this booth</span>
+<span class="p">jobs</span> = { <span class="s">'dj'</span>, <span class="s">'manager'</span> },
+
+<span class="c">-- Unrestricted — no jobs field (or set to nil)</span>
+</code></pre>
+        <p>The check reads <code>QBCore.PlayerData.job.name</code> from a local cache that is updated live whenever a player changes job in-game via <code>QBCore:Client:OnPlayerUpdated</code>. There is no need for the player to rejoin or reconnect after a job change.</p>
+
+        <h3 class="entry-title" id="jobs-target">Target Mode Behaviour</h3>
+        <p>When using <code>ds_target</code> or <code>qb-target</code>, the job restriction is passed natively to the target resource as a grade-hash table (<code>{ jobname = 0 }</code>). The option is <strong>completely hidden</strong> from the target UI for players who do not hold the required job — it does not appear greyed out, it simply does not exist for them.</p>
+
+        <h3 class="entry-title" id="jobs-prompt">Prompt Mode Behaviour</h3>
+        <p>In <code>"prompt"</code> mode the bottom-centre HUD prompt is suppressed entirely for unauthorised players. They receive no visual indication that a DJ booth exists at that location.</p>
+      </div>
+
+      <!-- ── 7. The UI ───────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="ui">7 — The Music Player UI</h2>
+        <p>The NUI opens as a floating dark-glass card. It does not obscure the game world — the background is fully transparent so players can still see and react to their surroundings while the UI is open.</p>
+
+        <h3 class="entry-title" id="ui-player">Player Tab</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Element</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td>Disc icon</td><td>Spins while a track is playing. Stops on pause or idle.</td></tr>
+              <tr><td>Status badge</td><td>Shows <strong>PLAYING</strong> (green), <strong>PAUSED</strong> (purple), <strong>LOADING…</strong> (yellow), or <strong>OFFLINE</strong> (grey).</td></tr>
+              <tr><td>Live timer</td><td>Counts up from <code>0:00</code> from when the current track started. Hidden when not playing.</td></tr>
+              <tr><td>Animated equaliser</td><td>20-bar visualiser with unique timings. Pulses while playing, dims when idle.</td></tr>
+              <tr><td>Now Playing bar</td><td>Shows the current URL with a seamless scrolling marquee. Displays a loading shimmer effect while buffering.</td></tr>
+              <tr><td>URL input</td><td>Paste any YouTube URL or direct audio link. Press Enter or the arrow button to load.</td></tr>
+              <tr><td>Transport controls</td><td>Stop, Play/Pause, and Restart (replay from beginning).</td></tr>
+              <tr><td>Volume slider</td><td>Gradient fill bar. Changes are broadcast to all players in real time.</td></tr>
+              <tr><td>Mute button</td><td>Locally mutes/unmutes. Remembers previous volume level.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="ui-history">History Tab</h3>
+        <p>The History tab shows the last 30 tracks played at this booth, most recent first. Each row displays:</p>
+        <ul style="margin: 8px 0 0 20px; display:flex; flex-direction:column; gap:4px;">
+          <li>A YouTube or audio file icon</li>
+          <li>Cleaned display URL (e.g. <code>youtube.com/watch?v=xxxxxxxxxxx</code>)</li>
+          <li>Relative time (e.g. <em>2m ago</em>, <em>1h ago</em>)</li>
+          <li>A ▶ play-again button that re-queues the track and switches back to the Player tab</li>
+        </ul>
+        <p style="margin-top:8px">The currently playing track is highlighted with a purple tint in the history list. History persists across stops — stopping a booth does not clear its history.</p>
+
+        <h3 class="entry-title" id="ui-close">Closing the UI</h3>
+        <p>The UI can be closed with the <strong>✕</strong> button in the top-right corner, or by pressing <strong>ESC</strong>. Either method immediately releases mouse focus and returns full game control to the player.</p>
+      </div>
+
+      <!-- ── 8. Song History ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="history">8 — Server-Side Song History</h2>
+        <p>Each booth maintains a rolling history of up to <strong>30 tracks</strong> in server memory. The history is stored as an array of <code>{ url, playedAt }</code> objects, with the most recent entry at index 1.</p>
+
+        <h3 class="entry-title" id="history-rules">Rules</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Rule</th><th>Detail</th></tr></thead>
+            <tbody>
+              <tr><td>Max entries</td><td>30 per booth. The oldest entry is removed automatically when the cap is exceeded.</td></tr>
+              <tr><td>Deduplication</td><td>Playing the same URL consecutively only creates one history entry.</td></tr>
+              <tr><td>Survives stop</td><td>Calling Stop on a booth clears the active playback state but keeps the history intact.</td></tr>
+              <tr><td>Server restart</td><td>History lives in memory only. It resets when the resource or server restarts.</td></tr>
+              <tr><td>Sync</td><td>History is sent to all clients when a new track is played, and to each new player on join via the late-joiner sync.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">History is per-booth, not per-server. Booths do not share a history list.</div>
+      </div>
+
+      <!-- ── 9. Sync & Networking ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="networking">9 — Sync &amp; Networking</h2>
+        <p>All playback control flows through the server. The client never directly manipulates another player's audio — it asks the server, the server updates its authoritative state, and then broadcasts to all clients.</p>
+
+        <h3 class="entry-title" id="net-events">Net Event Flow</h3>
+        <pre><code><span class="c">-- Player queues a track:</span>
+Client → TriggerServerEvent(<span class="s">"ds_djbooths:server:play"</span>, boothId, url, volume)
+Server → TriggerClientEvent(<span class="s">"ds_djbooths:client:play"</span>, <span class="n">-1</span>, boothId, url, volume)
+Server → TriggerClientEvent(<span class="s">"ds_djbooths:client:history"</span>, <span class="n">-1</span>, boothId, history)
+
+<span class="c">-- Player pauses:</span>
+Client → TriggerServerEvent(<span class="s">"ds_djbooths:server:pause"</span>, boothId, timestamp)
+Server → TriggerClientEvent(<span class="s">"ds_djbooths:client:pause"</span>, <span class="n">-1</span>, boothId)
+
+<span class="c">-- Late joiner requests current state:</span>
+Client → TriggerServerEvent(<span class="s">"ds_djbooths:server:requestSync"</span>)
+Server → TriggerClientEvent(<span class="s">"ds_djbooths:client:sync"</span>, src, boothId, state)
+Server → TriggerClientEvent(<span class="s">"ds_djbooths:client:history"</span>, src, boothId, history)
+</code></pre>
+
+        <h3 class="entry-title" id="net-perf">Performance Notes</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Concern</th><th>Answer</th></tr></thead>
+            <tbody>
+              <tr><td>History payload size</td><td>~3 KB per booth at 30 entries (URL strings + timestamps). Negligible.</td></tr>
+              <tr><td>Broadcast frequency</td><td>History is only sent when a new track is queued or a player joins. Not polled.</td></tr>
+              <tr><td>Prompt mode CPU</td><td>The proximity poll runs every frame while a player is near a booth, and every 300 ms otherwise.</td></tr>
+              <tr><td>xsound per player</td><td>Each client manages its own xsound instance. The server stores state, not audio.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 10. FAQ ─────────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="faq">10 — FAQ</h2>
+
+        <h3 class="entry-title" id="faq-youtube">Can I use YouTube links?</h3>
+        <p>Yes. DS DJ Booths uses xsound under the hood, which supports YouTube URLs via its embedded Chromium player. Paste the full YouTube URL (<code>https://youtube.com/watch?v=…</code> or <code>https://youtu.be/…</code>) into the URL input and press Enter or the arrow button.</p>
+        <div class="callout warn">YouTube's embedded player has a known memory leak in FiveM's Chromium (141+) caused by YouTube's new animated UI. xsound isolates each YouTube video in its own DUI and auto-recovers if it crashes. This is a YouTube / FiveM Chromium issue, not a ds_djbooths issue.</div>
+
+        <h3 class="entry-title" id="faq-formats">What audio formats are supported?</h3>
+        <p>Any format xsound supports: YouTube URLs, direct <code>.mp3</code> links, direct <code>.ogg</code> links, and SoundCloud links. Direct links must be publicly accessible (no auth headers).</p>
+
+        <h3 class="entry-title" id="faq-everyone">Will everyone hear the music?</h3>
+        <p>Yes. When a DJ queues a track, the server broadcasts the URL to every connected client. Each client starts its own xsound instance at the booth's 3D world position. Players within range hear it; players far away do not. Everyone within range hears the same track simultaneously.</p>
+
+        <h3 class="entry-title" id="faq-latejoin">What happens when a player joins mid-track?</h3>
+        <p>On resource start the client fires <code>ds_djbooths:server:requestSync</code>. The server replies with the current playback state for every active booth (URL, volume, timestamp). The new player immediately begins playing the correct track at the correct seek position.</p>
+
+        <h3 class="entry-title" id="faq-job">I changed my job but the booth option didn't update.</h3>
+        <p>DS DJ Booths listens to <code>QBCore:Client:OnPlayerUpdated</code> to keep a local job cache fresh. Job changes take effect on the very next interaction check — no relog required. If you are experiencing issues, confirm your framework is firing this event correctly on job change.</p>
+
+        <h3 class="entry-title" id="faq-history">Does history persist across server restarts?</h3>
+        <p>No. History is stored in server memory only and resets when the resource or server restarts. If persistent history is needed, a SQL-backed extension would be required.</p>
+
+        <h3 class="entry-title" id="faq-modes">Can I mix target mode and prompt mode per booth?</h3>
+        <p>Not currently. <code>Config.TargetSystem</code> is a global setting that applies to all booths. All booths use the same interaction system.</p>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Back to top -->
+  <button id="back-top" aria-label="Back to top">↑</button>
+
+  <script src="../script.js"></script>
+</body>
+</html>
