@@ -74,10 +74,19 @@ ensure gs-businessbanking
       <!-- ── 3. Configuration ────────────────────────────────────────── -->
       <div class="section">
         <h2 class="section-title" id="configuration">3 — Configuration — config.lua</h2>
-        <p>The only setting is toast position. <code>config.lua</code> is open and unencrypted.</p>
-        <pre><code>Config.Position = <span class="s">'bottom-right'</span>
+        <p><code>config.lua</code> is open and unencrypted.</p>
+        <pre><code><span class="c">-- Where toasts appear on screen</span>
+Config.Position = <span class="s">'bottom-right'</span>
+
+<span class="c">-- Width and font size of each toast</span>
+Config.Size = <span class="s">'medium'</span>
+
+<span class="c">-- Corner brackets, card outline, and top-rule glow color.
+-- Message text is always clean white.</span>
+Config.DefaultColor = <span class="s">'blue'</span>
 </code></pre>
-        <h4>Valid position values</h4>
+
+        <h4>Config.Position values</h4>
         <div class="tbl-wrap">
           <table>
             <thead><tr><th>Value</th><th>Description</th></tr></thead>
@@ -93,19 +102,50 @@ ensure gs-businessbanking
             </tbody>
           </table>
         </div>
+
+        <h4>Config.Size values</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Value</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>'small'</code></td><td>Compact toast</td></tr>
+              <tr><td><code>'medium'</code></td><td>Default size <em>(default)</em></td></tr>
+              <tr><td><code>'large'</code></td><td>Prominent toast</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Config.DefaultColor presets</h4>
+        <p>Controls the 4-corner accent brackets, card outline border, and top-rule glow. Shares the same palette as DS Progressbar so both resources look uniform.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Value</th><th>Accent color</th></tr></thead>
+            <tbody>
+              <tr><td><code>'blue'</code></td><td style="color:var(--accent)">Blue <em>(default)</em></td></tr>
+              <tr><td><code>'red'</code></td><td style="color:var(--red)">Red</td></tr>
+              <tr><td><code>'green'</code></td><td style="color:var(--green)">Green</td></tr>
+              <tr><td><code>'gold'</code></td><td style="color:#ffe040">Gold</td></tr>
+              <tr><td><code>'purple'</code></td><td style="color:#c050ff">Purple</td></tr>
+              <tr><td><code>'teal'</code></td><td style="color:#00ffd5">Teal</td></tr>
+              <tr><td><code>'orange'</code></td><td style="color:#ff8c20">Orange</td></tr>
+              <tr><td><code>'white'</code></td><td>White</td></tr>
+            </tbody>
+          </table>
+        </div>
         <p>Multiple notifications stack vertically in the chosen corner. Older toasts slide out automatically after their duration expires.</p>
       </div>
 
       <!-- ── 4. Notification Types ───────────────────────────────────── -->
       <div class="section">
         <h2 class="section-title" id="types">4 — Notification Types</h2>
+        <p>The notification type controls the icon displayed on the toast. Message text is always clean white — type is communicated by the icon symbol only.</p>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>ntype</th><th>Colour</th><th>Use for</th></tr></thead>
+            <thead><tr><th>ntype</th><th>Icon</th><th>Icon color</th><th>Use for</th></tr></thead>
             <tbody>
-              <tr><td><code>'success'</code></td><td style="color:var(--green)">Green</td><td>Completed actions, positive outcomes. <em>Default when omitted.</em></td></tr>
-              <tr><td><code>'error'</code></td><td style="color:var(--red)">Red</td><td>Failures, permission denials, invalid input.</td></tr>
-              <tr><td><code>'info'</code></td><td style="color:var(--accent)">Blue</td><td>Neutral information, loading states, countdowns.</td></tr>
+              <tr><td><code>'success'</code></td><td>✓</td><td style="color:var(--green)">Green</td><td>Completed actions, positive outcomes. <em>Default when omitted.</em></td></tr>
+              <tr><td><code>'error'</code></td><td>✕</td><td style="color:var(--red)">Red</td><td>Failures, permission denials, invalid input.</td></tr>
+              <tr><td><code>'info'</code></td><td>!</td><td style="color:var(--accent)">Blue</td><td>Neutral information, loading states, countdowns.</td></tr>
             </tbody>
           </table>
         </div>

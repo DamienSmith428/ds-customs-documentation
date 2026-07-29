@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Progressbar — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS Progressbar</h1>
+        <p class="subtitle">Standalone cinematic progress bar — corner brackets, color presets, cancellable — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.0.0</span>
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-blue">FiveM</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-green">No SQL</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS Progressbar is a single, self-contained progress bar resource. Any other resource on your server can start a cinematic progress bar via a clean export API — label, duration, color preset, optional percentage counter, and an optional X-to-cancel button. The result is always returned through a Lua callback.</p>
+        <div class="callout tip">DS Progressbar ships with the same 4-corner bracket visual language as DS Notify — both resources share an identical color palette so they always look like they belong together.</div>
+      </div>
+
+      <!-- ── 2. Installation ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">2 — Installation</h2>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Place the <code>ds_progressbar</code> folder inside your resources directory.</li>
+          <li>Add <code>ensure ds_progressbar</code> to your <code>server.cfg</code> <strong>before</strong> any resource that depends on it.</li>
+          <li>Done — no SQL, no further configuration required.</li>
+        </ol>
+        <pre><code><span class="c"># server.cfg</span>
+ensure ds_progressbar
+ensure ds_notify        <span class="c"># optional companion — same visual language</span>
+ensure my_job_resource  <span class="c"># any resource that uses ds_progressbar</span>
+</code></pre>
+        <div class="callout">To declare the load-order dependency in another resource, add <code>dependency 'ds_progressbar'</code> to that resource's <code>fxmanifest.lua</code>.</div>
+      </div>
+
+      <!-- ── 3. Configuration ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">3 — Configuration — config.lua</h2>
+        <p><code>config.lua</code> is open and unencrypted. Every setting here is a fallback used when a caller does not pass that option to <code>Start()</code>.</p>
+        <pre><code><span class="c">-- Fallback size when none is passed to Start()</span>
+Config.DefaultSize = <span class="s">'medium'</span>
+
+<span class="c">-- Fallback color preset when none is passed to Start()</span>
+Config.DefaultColor = <span class="s">'blue'</span>
+
+<span class="c">-- Allow the player to press X to cancel any active bar</span>
+Config.AllowCancel = <span class="k">true</span>
+
+<span class="c">-- Text shown in the cancel hint below the bar</span>
+Config.CancelKeyLabel = <span class="s">'X'</span>
+
+<span class="c">-- Vertical position on screen</span>
+Config.Position = <span class="s">'lower'</span>
+
+<span class="c">-- Show a live xx% counter at the right of the label row</span>
+Config.ShowPercent = <span class="k">false</span>
+</code></pre>
+
+        <h4>Config.Position values</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Value</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>'lower'</code></td><td>Lower-third of the screen, above the hotbar area <em>(default)</em></td></tr>
+              <tr><td><code>'center'</code></td><td>Classic dead-center of the screen</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Config.DefaultColor presets</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Value</th><th>Corner &amp; bar color</th></tr></thead>
+            <tbody>
+              <tr><td><code>'blue'</code></td><td style="color:var(--accent)">Clean LSPD blue <em>(default)</em></td></tr>
+              <tr><td><code>'red'</code></td><td style="color:var(--red)">Danger / EMS red</td></tr>
+              <tr><td><code>'green'</code></td><td style="color:var(--green)">Success / medical green</td></tr>
+              <tr><td><code>'gold'</code></td><td style="color:#ffe040">VIP / money gold</td></tr>
+              <tr><td><code>'purple'</code></td><td style="color:#c050ff">Gang / dark-ops purple</td></tr>
+              <tr><td><code>'teal'</code></td><td style="color:#00ffd5">Hacker / tech teal</td></tr>
+              <tr><td><code>'orange'</code></td><td style="color:#ff8c20">Mechanic / service orange</td></tr>
+              <tr><td><code>'white'</code></td><td>Clean / minimal white</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 4. Start() ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="start">4 — Start(opts, callback)</h2>
+        <p>Starts a progress bar. If a bar is already active the callback fires immediately with <code>cancelled = true</code> and nothing is shown.</p>
+
+        <h4>Options table</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>label</code></td><td>string</td><td>No</td><td><code>'Working...'</code></td><td>Text shown above the bar.</td></tr>
+              <tr><td><code>duration</code></td><td>number</td><td>No</td><td><code>3000</code></td><td>Bar fill time in <strong>milliseconds</strong>. Minimum 100.</td></tr>
+              <tr><td><code>size</code></td><td>string</td><td>No</td><td><code>Config.DefaultSize</code></td><td><code>'small'</code>, <code>'medium'</code>, or <code>'large'</code>.</td></tr>
+              <tr><td><code>color</code></td><td>string</td><td>No</td><td><code>Config.DefaultColor</code></td><td>Any color preset name — see §3.</td></tr>
+              <tr><td><code>percent</code></td><td>boolean</td><td>No</td><td><code>Config.ShowPercent</code></td><td>Show live percentage counter.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Callback</h4>
+        <pre><code><span class="k">function</span>(cancelled)
+    <span class="c">-- cancelled = true  → player pressed X or Stop() was called externally</span>
+    <span class="c">-- cancelled = false → bar completed naturally</span>
+<span class="k">end</span></code></pre>
+
+        <h4>Examples</h4>
+        <pre><code><span class="c">-- Minimal — all defaults</span>
+exports[<span class="s">'ds_progressbar'</span>]:Start({
+    label    = <span class="s">'Picking lock...'</span>,
+    duration = <span class="n">5000</span>,
+}, <span class="k">function</span>(cancelled)
+    <span class="k">if</span> cancelled <span class="k">then return end</span>
+    <span class="c">-- lock was picked</span>
+<span class="k">end</span>)
+
+<span class="c">-- Full options</span>
+exports[<span class="s">'ds_progressbar'</span>]:Start({
+    label    = <span class="s">'Hacking terminal...'</span>,
+    duration = <span class="n">12000</span>,
+    size     = <span class="s">'large'</span>,
+    color    = <span class="s">'teal'</span>,
+    percent  = <span class="k">true</span>,
+}, <span class="k">function</span>(cancelled)
+    <span class="k">if</span> cancelled <span class="k">then</span>
+        <span class="c">-- player cancelled</span>
+        <span class="k">return</span>
+    <span class="k">end</span>
+    <span class="c">-- hack complete</span>
+<span class="k">end</span>)</code></pre>
+      </div>
+
+      <!-- ── 5. Stop() ──────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="stop">5 — Stop()</h2>
+        <p>Force-cancels the active bar from outside. The callback of the active bar fires with <code>cancelled = true</code>. Safe to call even when no bar is running.</p>
+        <pre><code><span class="c">-- Force-stop from another resource or event handler</span>
+exports[<span class="s">'ds_progressbar'</span>]:Stop()</code></pre>
+        <div class="callout">Use <code>Stop()</code> to cancel a bar when an external condition is met — e.g. the player enters a vehicle, gets downed, or a server event fires.</div>
+      </div>
+
+      <!-- ── 6. IsActive() ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="is-active">6 — IsActive()</h2>
+        <p>Returns <code>true</code> if a bar is currently running, <code>false</code> otherwise. Use this to guard against starting a second bar while one is already active.</p>
+        <pre><code><span class="k">if</span> <span class="k">not</span> exports[<span class="s">'ds_progressbar'</span>]:IsActive() <span class="k">then</span>
+    exports[<span class="s">'ds_progressbar'</span>]:Start({ label = <span class="s">'Reloading...'</span>, duration = <span class="n">2000</span> }, callback)
+<span class="k">end</span></code></pre>
+      </div>
+
+      <!-- ── 7. Quick Reference ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="quick-reference">7 — Quick Reference</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export</th><th>Signature</th><th>Returns</th></tr></thead>
+            <tbody>
+              <tr><td><code>Start</code></td><td><code>exports['ds_progressbar']:Start(opts, callback)</code></td><td>void</td></tr>
+              <tr><td><code>Stop</code></td><td><code>exports['ds_progressbar']:Stop()</code></td><td>void</td></tr>
+              <tr><td><code>IsActive</code></td><td><code>exports['ds_progressbar']:IsActive()</code></td><td>boolean</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout tip">All three exports are <strong>client-side only</strong>. There are no server-side exports — the progress bar is a pure client UI.</div>
+      </div>
+
+      <!-- ── 8. File Structure ──────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="file-structure">8 — File Structure</h2>
+        <pre><code>ds_progressbar/
+├── fxmanifest.lua     <span class="c">← Resource manifest</span>
+├── config.lua         <span class="c">← Defaults for size, color, cancel, position (open, editable)</span>
+├── client/
+│   └── main.lua       <span class="c">← Start(), Stop(), IsActive() exports + cancel key thread</span>
+└── html/
+    ├── index.html     <span class="c">← NUI root — widget with corner brackets</span>
+    ├── style.css      <span class="c">← All visual styles — color tokens, size presets, animations</span>
+    └── script.js      <span class="c">← NUI message handler; drives bar fill, spark, percent counter</span></code></pre>
+      </div>
+
+      <!-- ── 9. Notes ───────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="notes">9 — Notes</h2>
+        <ul style="padding-left:20px;line-height:2.2">
+          <li>Only <strong>one bar can be active at a time</strong>. A second <code>Start()</code> call while a bar is running fires the new callback immediately with <code>cancelled = true</code> and does nothing visually.</li>
+          <li>All options are optional — <code>Start({}, callback)</code> is valid and uses the config defaults.</li>
+          <li><code>duration</code> has a minimum of <strong>100 ms</strong>. Values below this are clamped.</li>
+          <li>The cancel key (<code>Config.CancelKeyLabel</code>) only works when <code>Config.AllowCancel = true</code>. You can disable cancelling per-server by setting this to <code>false</code>.</li>
+          <li>DS Progressbar has <strong>no database calls</strong> and <strong>no QBCore dependency</strong> of its own. It is purely a client UI layer.</li>
+          <li>The resource is Escrow-protected except for <code>config.lua</code>, which is fully open.</li>
+        </ul>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+
+  <script src="../script.js"></script>
+</body>
+</html>

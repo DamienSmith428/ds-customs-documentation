@@ -36,6 +36,13 @@
       "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory", "Escrow"]
     },
     {
+      "name": "DS Progressbar",
+      "path": "docs/ds_progressbar.html",
+      "status": "release",
+      "description": "Standalone cinematic progress bar with 4-corner bracket UI, 8 color presets, cancellable with callback, and live percentage counter. No SQL, no dependencies.",
+      "tags": ["QBCore", "FiveM", "Escrow"]
+    },
+    {
       "name": "DS Notify",
       "path": "docs/ds_notify.html",
       "status": "release",
