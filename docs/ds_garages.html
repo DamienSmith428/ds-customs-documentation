@@ -157,7 +157,7 @@ ensure ds_garages
               <tr><td><code>Config.AutoRespawn</code></td><td><code>true</code></td><td>Return all out vehicles to their last garage on resource restart. When <code>false</code>, out vehicles receive a depot fee of 500 instead.</td></tr>
               <tr><td><code>Config.DefaultGarage</code></td><td><code>'pillboxgarage'</code></td><td>Fallback garage key used by AutoRespawn for vehicles with no <code>lastgarage</code> history.</td></tr>
               <tr><td><code>Config.PersistentVehicles</code></td><td><code>true</code></td><td>Re-spawn out vehicles at their exact world coordinates after a server restart. Requires the <code>persist_coords</code> column. Overrides AutoRespawn for out vehicles.</td></tr>
-              <tr><td><code>Config.AllowVehicleTracking</code></td><td><code>false</code></td><td>Show a Track button in the garage UI for out vehicles. Sets a GPS waypoint to the vehicle's current position.</td></tr>
+              <tr><td><code>Config.AllowVehicleTracking</code></td><td><code>true</code></td><td>Show a Track button in the garage UI for out vehicles. Sets a GPS waypoint to the vehicle's current position.</td></tr>
               <tr><td><code>Config.AllowVehicleTransfer</code></td><td><code>true</code></td><td>Allow players to transfer vehicle ownership to a nearby player via a receipt item.</td></tr>
               <tr><td><code>Config.ReceiptItemName</code></td><td><code>'vehiclereceipt'</code></td><td>Internal item name used for vehicle ownership receipts. Must match a <code>QBCore.Shared.Items</code> entry.</td></tr>
               <tr><td><code>Config.VisuallyDamageCars</code></td><td><code>true</code></td><td>Re-apply stored engine, body, and tyre damage when a vehicle is spawned.</td></tr>
@@ -251,12 +251,20 @@ ensure ds_garages
             <tbody>
               <tr><td><code>'public'</code></td><td>Any player can retrieve their own vehicles.</td></tr>
               <tr><td><code>'depot'</code></td><td>Only impounded vehicles appear here. A fee is charged on release.</td></tr>
-              <tr><td><code>'job'</code></td><td>Restricted to players with a matching <code>job</code>. Add <code>job = 'police'</code> to the entry.</td></tr>
+              <tr><td><code>'job'</code></td><td>Restricted to players whose <code>job.name</code> matches the <code>job</code> field. Add <code>job = 'police'</code> to the entry. Optionally add <code>jobType = 'leo'</code> to match by <em>job type</em> instead.</td></tr>
               <tr><td><code>'gang'</code></td><td>Restricted to players with a matching <code>gang</code>. Add <code>gang = 'ballas'</code> to the entry.</td></tr>
               <tr><td><code>'house'</code></td><td>Requires the player to hold the house key via <code>qb-houses</code>.</td></tr>
             </tbody>
           </table>
         </div>
+
+        <h4>Zone vs Ped — coords field</h4>
+        <p>When <code>usePed = false</code>, no ped is spawned and the interaction trigger is a PolyZone circle centred on a top-level <code>coords</code> field instead of <code>pedCoords</code>.</p>
+        <pre><code>Config.Garages[<span class="s">'airportp'</span>] = {
+    <span class="p">usePed</span> = <span class="n">false</span>,
+    <span class="p">coords</span> = vector4(<span class="n">-773.12</span>, <span class="n">-2033.04</span>, <span class="n">8.88</span>, <span class="n">0.0</span>),  <span class="c">-- zone centre + blip position</span>
+    <span class="c">-- pedModel and pedCoords are not used when usePed = false</span>
+}</code></pre>
 
         <h4>usePed vs Zone Interaction</h4>
         <div class="tbl-wrap">
@@ -435,7 +443,7 @@ exports[<span class="s">'ds_garages'</span>]:mergeVehicleMods(<span class="s">'A
         <hr class="divider">
 
         <h3 class="entry-title"><code>ds_garages:server:GetPlayerVehicles</code></h3>
-        <p>Returns all vehicles owned by the calling player, enriched with labels and status strings. Intended for phone apps and external vehicle-list UIs.</p>
+        <p>Returns all vehicles owned by the calling player, enriched with labels and status strings. Intended for phone apps and external vehicle-list UIs. Does <strong>not</strong> require a garage argument — server resolves the caller's citizenid automatically.</p>
         <pre><code>QBCore.Functions.TriggerCallback(<span class="s">'ds_garages:server:GetPlayerVehicles'</span>, <span class="k">function</span>(vehicles)
     <span class="k">if not</span> vehicles <span class="k">then return end</span>
     <span class="k">for</span> _, v <span class="k">in</span> ipairs(vehicles) <span class="k">do</span>
@@ -455,6 +463,22 @@ exports[<span class="s">'ds_garages'</span>]:mergeVehicleMods(<span class="s">'A
             <tr><td><code>fuel</code></td><td>number</td><td>Fuel %</td></tr>
             <tr><td><code>engine</code></td><td>number</td><td>Engine health (0–1000)</td></tr>
             <tr><td><code>body</code></td><td>number</td><td>Body health (0–1000)</td></tr>
+          </tbody>
+        </table></div>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>ds_garages:server:GetGarageVehicles</code></h3>
+        <p>Returns the vehicles available in a specific garage for the calling player. This is the internal callback used by the garage UI — you normally won't call it from an external resource, but it is available if needed.</p>
+        <pre><code>QBCore.Functions.TriggerCallback(<span class="s">'ds_garages:server:GetGarageVehicles'</span>, <span class="k">function</span>(vehicles)
+    <span class="c">-- vehicles is filtered to the calling player's owned vehicles at this garage</span>
+<span class="k">end</span>, garageKey, garageType, categoryArray)</code></pre>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Arg</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>garageKey</code></td><td>string</td><td>Garage config key (e.g. <code>'pillboxgarage'</code>)</td></tr>
+            <tr><td><code>garageType</code></td><td>string</td><td><code>'public'</code> · <code>'depot'</code> · <code>'job'</code> · <code>'gang'</code> · <code>'house'</code></td></tr>
+            <tr><td><code>categoryArray</code></td><td>number[]</td><td>Vehicle class integers to filter by (from the garage's <code>category</code> field)</td></tr>
           </tbody>
         </table></div>
 
@@ -490,6 +514,18 @@ exports[<span class="s">'ds_garages'</span>]:mergeVehicleMods(<span class="s">'A
         <h3 class="entry-title"><code>ds_garages:server:TrackVehicle</code> <code style="color:var(--muted);font-size:12px">(plate)</code></h3>
         <p>Requests the world coordinates of an out vehicle. Server fires <code>ds_garages:client:TrackVehicle</code> back to set a GPS waypoint. Requires <code>Config.AllowVehicleTracking = true</code>.</p>
         <pre><code>TriggerServerEvent(<span class="s">'ds_garages:server:TrackVehicle'</span>, plate)</code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title"><code>ds_garages:server:PayDepotPrice</code> <code style="color:var(--muted);font-size:12px">(data)</code></h3>
+        <p>Charges the player the depot release fee for a specific vehicle. If payment succeeds, the server fires <code>ds_garages:client:ConfirmSpawn</code> back to the caller so the client can spawn the vehicle. Called automatically by the depot UI — not normally fired manually.</p>
+        <pre><code><span class="c">-- data shape assembled by the garage client:</span>
+TriggerServerEvent(<span class="s">'ds_garages:server:PayDepotPrice'</span>, {
+    <span class="p">plate</span>   = <span class="s">'ABC1234'</span>,
+    <span class="p">model</span>   = <span class="s">'police'</span>,
+    <span class="p">coords</span>  = vector4(<span class="n">...</span>),
+    <span class="c">-- additional spawn-data fields</span>
+})</code></pre>
 
         <!-- Net Events S→C -->
         <h3 class="entry-title" id="net-events-server-client">Net Events — Server → Client</h3>

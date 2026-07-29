@@ -109,9 +109,12 @@ ensure qb-policejob
               <tr><td><code>Config.UseTarget</code></td><td><code>false</code></td><td>Reads the <code>UseTarget</code> convar. Set to <code>true</code> in server.cfg to enable target-based interactions instead of proximity prompts.</td></tr>
               <tr><td><code>Config.Inventory</code></td><td><code>'auto'</code></td><td>Inventory bridge. <code>'auto'</code> detects ox → qs → qb at runtime. Force with <code>'ox'</code>, <code>'qs'</code>, or <code>'qb'</code>.</td></tr>
               <tr><td><code>Config.UseDSNotify</code></td><td><code>true</code></td><td>Use <code>ds_notify</code> for all notifications. Falls back to QBCore notifications if ds_notify is not running.</td></tr>
+              <tr><td><code>Config.UseDSGarages</code></td><td><code>false</code></td><td>When <code>true</code>, impounded vehicles are sent to the nearest <code>ds_garages</code> depot (any garage with <code>type = 'depot'</code>) instead of the built-in qb-policejob impound zone. Officers retrieve seized vehicles from the depot ped. Requires <code>ds_garages</code> to be running.</td></tr>
               <tr><td><code>Config.MaxSpikes</code></td><td><code>5</code></td><td>Maximum spike strips an officer can have deployed at once.</td></tr>
               <tr><td><code>Config.HandCuffItem</code></td><td><code>'handcuffs'</code></td><td>Item name for handcuffs.</td></tr>
               <tr><td><code>Config.LicenseRank</code></td><td><code>2</code></td><td>Minimum job grade level required to grant/revoke licenses via <code>/grantlicense</code> and <code>/revokelicense</code>.</td></tr>
+              <tr><td><code>Config.ArmoryWhitelist</code></td><td><code>{}</code></td><td>Array of citizenids allowed to access the armory regardless of job. Leave empty to allow all on-duty officers.</td></tr>
+              <tr><td><code>Config.WhitelistedVehicles</code></td><td><code>{}</code></td><td>Array of vehicle model names that are always exempt from impound. Officers cannot impound these models.</td></tr>
               <tr><td><code>Config.PoliceHelicopter</code></td><td><code>'POLMAV'</code></td><td>Vehicle spawn name of the police helicopter used in the heli system.</td></tr>
               <tr><td><code>Config.FuelResource</code></td><td><code>'LegacyFuel'</code></td><td>Resource name of your fuel script. Must expose <code>GetFuel(veh)</code> and <code>SetFuel(veh, level)</code>.</td></tr>
             </tbody>
@@ -157,6 +160,20 @@ ensure qb-policejob
     <span class="p">tent</span>     = { model = <span class="n">`prop_gazebo_03`</span>,         freeze = <span class="n">true</span>  },
     <span class="p">light</span>    = { model = <span class="n">`prop_worklight_03b`</span>,     freeze = <span class="n">true</span>  },
 }</code></pre>
+
+        <h4>Vehicle Settings</h4>
+        <p>Per-model extra and livery overrides. When a vehicle matching one of these keys is spawned from the police garage, the listed extras are toggled and the livery is applied.</p>
+        <pre><code>Config.VehicleSettings = {
+    [<span class="s">'modelname'</span>] = {
+        [<span class="s">'extras'</span>] = {
+            [<span class="s">'1'</span>] = <span class="n">true</span>,   <span class="c">-- true = extra on, false = extra off</span>
+            [<span class="s">'2'</span>] = <span class="n">false</span>,
+            <span class="c">-- ... up to ['13']</span>
+        },
+        [<span class="s">'livery'</span>] = <span class="n">1</span>,  <span class="c">-- livery index to apply on spawn</span>
+    },
+}</code></pre>
+        <p>The key must exactly match the vehicle's spawn name (e.g. <code>'police'</code>, <code>'sheriff2'</code>). Omit a model entirely to leave its extras/livery unchanged.</p>
       </div>
 
       <!-- ── 4. Garage ───────────────────────────────────────────────── -->
@@ -358,8 +375,7 @@ ensure qb-policejob
           <table>
             <thead><tr><th>Command</th><th>Args</th><th>Description</th></tr></thead>
             <tbody>
-              <tr><td><code>/depot [price]</code></td><td>price</td><td>Impound nearest vehicle with a release fee.</td></tr>
-              <tr><td><code>/impound</code></td><td>—</td><td>Impound nearest vehicle with no release fee.</td></tr>
+              <tr><td><code>/impound</code></td><td>—</td><td>Open the impound UI for the nearest vehicle. A fee-input popup appears before the impound animation — enter 0 for no fee. <code>/depot</code> has been removed; <code>/impound</code> now covers both soft and full seizure.</td></tr>
               <tr><td><code>/spikestrip</code></td><td>—</td><td>Place a spike strip at the officer's position (max <code>Config.MaxSpikes</code>).</td></tr>
               <tr><td><code>/pobject [type]</code></td><td>cone/barrier/roadsign/tent/light/delete</td><td>Place or delete a deployable scene object.</td></tr>
               <tr><td><code>/cam [id]</code></td><td>camera id</td><td>View a security camera by its <code>Config.SecurityCameras</code> index.</td></tr>
