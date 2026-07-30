@@ -153,6 +153,7 @@ Config.HideOnPress = <span class="k">true</span>
               <tr><td><code>label</code></td><td>string</td><td><strong>Yes</strong></td><td><code>''</code></td><td>Action description shown next to the key badge — e.g. <code>'Open Trunk'</code>.</td></tr>
               <tr><td><code>color</code></td><td>string</td><td>No</td><td><code>Config.DefaultColor</code></td><td>Any color preset name — see §3.</td></tr>
               <tr><td><code>size</code></td><td>string</td><td>No</td><td><code>Config.DefaultSize</code></td><td><code>'small'</code>, <code>'medium'</code>, or <code>'large'</code>.</td></tr>
+              <tr><td><code>hideOnPress</code></td><td>boolean</td><td>No</td><td><code>Config.HideOnPress</code></td><td>Per-call override for auto-hide behaviour. Pass <code>false</code> to keep the prompt visible after the key is pressed. Pass <code>true</code> to force auto-hide even if the global config is off. Omit to use the config default.</td></tr>
             </tbody>
           </table>
         </div>
@@ -172,6 +173,14 @@ exports[<span class="s">'ds_prompt'</span>]:Show({
     label = <span class="s">'Hack Terminal'</span>,
     color = <span class="s">'teal'</span>,
     size  = <span class="s">'large'</span>,
+})
+
+<span class="c">-- Keep prompt visible after keypress (e.g. a door that stays nearby)</span>
+exports[<span class="s">'ds_prompt'</span>]:Show({
+    key          = <span class="s">'E'</span>,
+    label        = <span class="s">'Unlock Door'</span>,
+    color        = <span class="s">'gold'</span>,
+    hideOnPress  = <span class="k">false</span>,
 })</code></pre>
 
         <h4>Typical proximity pattern</h4>
@@ -213,6 +222,7 @@ exports[<span class="s">'ds_prompt'</span>]:Show({
               <tr><td><code>label</code></td><td>string</td><td>New action description.</td></tr>
               <tr><td><code>color</code></td><td>string</td><td>New color preset.</td></tr>
               <tr><td><code>size</code></td><td>string</td><td>New size preset.</td></tr>
+              <tr><td><code>hideOnPress</code></td><td>boolean</td><td>Update the auto-hide behaviour while the prompt is already visible. Follows the same logic as the <code>Show()</code> option.</td></tr>
             </tbody>
           </table>
         </div>
@@ -228,7 +238,7 @@ exports[<span class="s">'ds_prompt'</span>]:Show({
       <!-- ── 7. Key Labels Reference ────────────────────────────────── -->
       <div class="section">
         <h2 class="section-title" id="key-labels">7 — Key Labels &amp; Auto-hide</h2>
-        <p>The <code>key</code> field is a display string — whatever you put there is rendered in the badge. When <code>Config.HideOnPress = true</code>, DS Prompt internally maps common label strings to FiveM control indices and hides the prompt when that control fires. The built-in mapping covers the most common interaction keys:</p>
+        <p>The <code>key</code> field is a display string — whatever you put there is rendered in the badge. When auto-hide is active (controlled by <code>Config.HideOnPress</code> globally, or overridden per-call via <code>hideOnPress</code>), DS Prompt internally maps common label strings to FiveM control indices and hides the prompt when that control fires. The built-in mapping covers the most common interaction keys:</p>
         <div class="tbl-wrap">
           <table>
             <thead><tr><th>Label</th><th>FiveM Control</th><th>Label</th><th>FiveM Control</th></tr></thead>
@@ -244,7 +254,7 @@ exports[<span class="s">'ds_prompt'</span>]:Show({
             </tbody>
           </table>
         </div>
-        <div class="callout">Keys not in the table are displayed correctly in the badge but will not trigger auto-hide. Set <code>Config.HideOnPress = false</code> and call <code>Hide()</code> manually for any key not listed above, or extend the <code>KEY_CONTROLS</code> table in <code>client.lua</code>.</div>
+        <div class="callout">Keys not in the table are displayed correctly in the badge but will not trigger auto-hide. Pass <code>hideOnPress = false</code> to <code>Show()</code> or set <code>Config.HideOnPress = false</code> globally, and call <code>Hide()</code> manually — or extend the <code>KEY_CONTROLS</code> table in <code>client.lua</code>.</div>
       </div>
 
       <!-- ── 8. Quick Reference ─────────────────────────────────────── -->
