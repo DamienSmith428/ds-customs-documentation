@@ -57,6 +57,13 @@
       "tags": ["QBCore", "FiveM", "Escrow"]
     },
     {
+      "name": "DS Prompt",
+      "path": "docs/ds_prompt.html",
+      "status": "release",
+      "description": "Standalone interaction prompt with key badge, 8 color presets, 3 size presets, and 9 position anchors. Caller-supplied key label, auto-hide on press, and flicker-free live updates. No SQL, no dependencies.",
+      "tags": ["QBCore", "FiveM", "Escrow"]
+    },
+    {
       "name": "DS Notify",
       "path": "docs/ds_notify.html",
       "status": "release",
