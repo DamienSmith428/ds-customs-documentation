@@ -38,33 +38,28 @@
       <!-- Doc header -->
       <div class="doc-header">
         <h1>DS Vehicle Keys</h1>
-        <p class="subtitle">Database-backed vehicle lock &amp; key ownership system — keyfob NUI, hotwiring, carjacking, job-shared keys, and a full developer export API — by DS Customs / GunSmoke</p>
+        <p class="subtitle">Database-backed vehicle lock &amp; key ownership system. Keyfob NUI, hotwiring, carjacking, lockpicking, job-shared keys, and a full server &amp; client export API — by DS Customs</p>
         <div class="badge-row">
           <span class="badge badge-gray">v1.0.0</span>
           <span class="badge badge-green">QBCore</span>
           <span class="badge badge-blue">FiveM</span>
           <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-purple">qs-inventory</span>
+          <span class="badge badge-purple">ox_inventory</span>
+          <span class="badge badge-purple">qb-inventory</span>
           <span class="badge badge-red">Escrow</span>
         </div>
       </div>
 
-      <!-- ── 1. Overview ─────────────────────────────────────────────── -->
+      <!-- ── 1. Overview ───────────────────────────────────────────────── -->
       <div class="section">
         <h2 class="section-title" id="overview">1 — Overview</h2>
-        <p>DS Vehicle Keys replaces <code>qb-vehiclekeys</code> with a database-backed ownership system. Every key assignment (owner or temporary) is persisted to a dedicated <code>ds_vehiclekeys</code> table and loaded back into an in-memory cache on server start — so keys survive restarts and resource reloads without any data loss.</p>
-        <ul style="padding-left:20px;line-height:2.0">
-          <li><strong>Keyfob NUI</strong> — press <kbd>L</kbd> outside a vehicle to open a radial keyfob panel with lock, unlock, trunk, and engine buttons.</li>
-          <li><strong>Engine toggle</strong> — press <kbd>G</kbd> while standing outside vehicle to start/stop the engine remotely.</li>
-          <li><strong>Hotwire</strong> — press <kbd>H</kbd> in the driver's seat of a vehicle you don't own to begin a timed hotwire progress bar.</li>
-          <li><strong>Carjacking</strong> — aim at an NPC driver with a qualifying weapon to attempt a carjack.</li>
-          <li><strong>Lockpicking</strong> — compatible with the standard <code>lockpicks:UseLockpick</code> event used by QBCore inventory items.</li>
-          <li><strong>Job-shared keys</strong> — define vehicles that all employees of a job can lock/unlock without individual key grants.</li>
-          <li><strong>qb-vehiclekeys backwards compatibility</strong> — the old <code>vehiclekeys:client:SetOwner</code> and <code>vehiclekeys:server:GiveOwnership</code> events are shimmed, so any resource that still fires them works without code changes.</li>
-        </ul>
-        <div class="callout tip"><code>config.lua</code>, all <code>locales/*.lua</code>, and the notify bridge example are <strong>not encrypted</strong>. Everything else is escrow-protected.</div>
+        <p>DS Vehicle Keys is a complete drop-in replacement for <code>qb-vehiclekeys</code>. Every key relationship is stored in a dedicated <code>ds_vehiclekeys</code> database table — ownership persists across restarts and is never lost when the resource stops. An optional keyfob NUI provides lock, unlock, trunk, and engine controls from outside the vehicle.</p>
+        <p>The resource ships with four bridge files so you can swap the notification library, the progress bar, and the inventory without touching any encrypted code. Everything that touches game-feel is exposed through a clean export API callable from any other resource.</p>
+        <div class="callout tip">The following files are <strong>never encrypted</strong>: <code>config.lua</code>, all <code>locales/*.lua</code>, <code>bridge/notify_example.lua</code>, <code>bridge/notify_custom.lua</code>, <code>bridge/progressbar_example.lua</code>, and <code>bridge/progressbar_custom.lua</code>. Core logic is escrow-protected.</div>
       </div>
 
-      <!-- ── 2. Dependencies ─────────────────────────────────────────── -->
+      <!-- ── 2. Dependencies ───────────────────────────────────────────── -->
       <div class="section">
         <h2 class="section-title" id="dependencies">2 — Dependencies</h2>
         <div class="tbl-wrap">
@@ -72,142 +67,126 @@
             <thead><tr><th>Resource</th><th>Required?</th><th>Notes</th></tr></thead>
             <tbody>
               <tr><td><code>qb-core</code></td><td>Yes</td><td>Framework. Must start before ds_vehiclekeys.</td></tr>
-              <tr><td><code>oxmysql</code></td><td>Yes</td><td>Async MySQL library used for all key persistence.</td></tr>
-              <tr><td><code>qb-minigames</code></td><td>Yes</td><td>Used for the lockpick skillbar minigame.</td></tr>
-              <tr><td><code>qb-inventory</code></td><td>Yes</td><td>Used to consume lockpick items on failure.</td></tr>
-              <tr><td><code>InteractSound</code></td><td>Optional</td><td>Plays key-fob click and lock/unlock sounds. The resource works without it — sounds are simply skipped.</td></tr>
-              <tr><td><code>ds_notify</code></td><td>Optional</td><td>Auto-detected when <code>Config.Notify = 'ds_notify'</code>. Falls back gracefully.</td></tr>
+              <tr><td><code>oxmysql</code></td><td>Yes</td><td>Async MySQL library for all DB operations.</td></tr>
+              <tr><td><code>InteractSound</code></td><td>Optional</td><td>Plays keyfob click and lock sounds. Degrades silently if absent.</td></tr>
+              <tr><td><code>qb-minigames</code></td><td>Optional</td><td>Required only for the lockpick skill bar. Remove the lockpick event if not used.</td></tr>
+              <tr><td><code>ds_notify</code></td><td>Optional</td><td>Set <code>Config.Notify = 'ds_notify'</code>. Falls back to QBCore if absent.</td></tr>
+              <tr><td><code>ds_progressbar</code></td><td>Optional</td><td>Set <code>Config.Progressbar = 'ds_progressbar'</code>. Falls back to QBCore if absent.</td></tr>
+              <tr><td><code>qs-inventory</code> / <code>ox_inventory</code> / <code>qb-inventory</code></td><td>One required</td><td>Used for lockpick removal. Auto-detected or set via <code>Config.Inventory</code>.</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- ── 3. Installation ─────────────────────────────────────────── -->
+      <!-- ── 3. Installation ───────────────────────────────────────────── -->
       <div class="section">
         <h2 class="section-title" id="installation">3 — Installation</h2>
         <ol style="padding-left:20px;line-height:2.2;margin-bottom:14px">
           <li>Place the <code>ds_vehiclekeys</code> folder inside your resources directory.</li>
-          <li>Run <code>sql/ds_vehiclekeys.sql</code> against your database to create the <code>ds_vehiclekeys</code> table.</li>
-          <li>Add <code>ensure ds_vehiclekeys</code> to <code>server.cfg</code> <strong>after</strong> <code>qb-core</code> and <code>oxmysql</code>, and <strong>before</strong> any resource that uses its exports (e.g. <code>ds_garages</code>).</li>
-          <li>Set <code>Config.Notify</code> in <code>config.lua</code> to match your notification resource.</li>
-          <li>If you are replacing <code>qb-vehiclekeys</code>, remove or comment out <code>ensure qb-vehiclekeys</code> — the old event names are shimmed so other resources continue to work.</li>
+          <li>Import <code>sql/ds_vehiclekeys.sql</code> into your database — this creates the <code>ds_vehiclekeys</code> table.</li>
+          <li>Add <code>ensure ds_vehiclekeys</code> to <code>server.cfg</code> <strong>after</strong> <code>qb-core</code> and <code>oxmysql</code>.</li>
+          <li>Open <code>config.lua</code> and configure the bridges and gameplay settings to match your server.</li>
+          <li>If you were previously running <code>qb-vehiclekeys</code>, remove it — ds_vehiclekeys listens to the same backwards-compatibility events and will conflict if both run simultaneously.</li>
         </ol>
-        <pre><code><span class="c"># server.cfg — example load order</span>
+        <pre><code><span class="c"># server.cfg — recommended load order</span>
 ensure oxmysql
 ensure qb-core
-ensure qb-minigames
-ensure ds_notify        <span class="c"># optional but recommended</span>
-ensure ds_vehiclekeys   <span class="c"># replaces qb-vehiclekeys</span>
-ensure ds_garages       <span class="c"># any resource that depends on ds_vehiclekeys</span>
+ensure ds_notify         <span class="c"># optional — set Config.Notify = 'ds_notify'</span>
+ensure ds_progressbar    <span class="c"># optional — set Config.Progressbar = 'ds_progressbar'</span>
+ensure ds_vehiclekeys
 </code></pre>
 
-        <h3 id="sql" style="margin-top:24px;font-size:1rem;font-weight:600;color:var(--text)">SQL</h3>
-        <pre><code><span class="c">-- sql/ds_vehiclekeys.sql</span>
-CREATE TABLE IF NOT EXISTS `ds_vehiclekeys` (
-  `id`           INT          NOT NULL AUTO_INCREMENT,
-  `plate`        VARCHAR(<span class="n">12</span>)  NOT NULL,
-  `owner`        VARCHAR(<span class="n">50</span>)  NOT NULL COMMENT <span class="s">'citizenid of the vehicle owner'</span>,
-  `temp_holders` LONGTEXT     NULL     COMMENT <span class="s">'JSON array of citizenids with temp access'</span>,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_plate` (`plate`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-</code></pre>
-        <div class="callout">The table is small and fast — one row per unique plate. All runtime lookups are served from the in-memory <code>VehicleList</code> cache; the database is only written when ownership changes.</div>
+        <h3 id="sql" style="margin-top:24px;font-size:1rem;font-weight:600;color:var(--text)">SQL Table</h3>
+        <p>Run <code>sql/ds_vehiclekeys.sql</code> once on a fresh install. The table created is:</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>plate</code></td><td>VARCHAR(15) PK</td><td>The vehicle plate. Primary key.</td></tr>
+              <tr><td><code>owner</code></td><td>VARCHAR(50)</td><td>citizenid of the current legal owner.</td></tr>
+              <tr><td><code>temp_holders</code></td><td>JSON</td><td>JSON array of citizenids holding temporary (non-owner) keys.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">Key state is cached in memory on resource start and kept in sync on every <code>GiveKeys</code> / <code>RemoveKeys</code> call. Players already online when the resource restarts receive a full key sync push within ~500 ms.</div>
       </div>
 
-      <!-- ── 4. Configuration ────────────────────────────────────────── -->
+      <!-- ── 4. Configuration ──────────────────────────────────────────── -->
       <div class="section">
         <h2 class="section-title" id="configuration">4 — Configuration — config.lua</h2>
-        <p><code>config.lua</code> is open and unencrypted. All settings are documented inline.</p>
+        <p><code>config.lua</code> is open and unencrypted. Every option is documented inline. The most important settings are described below.</p>
 
-        <h3 style="margin-top:20px;font-size:1rem;font-weight:600;color:var(--text)">Notification Bridge</h3>
-        <pre><code><span class="c">-- Which notification resource to use for all ds_vehiclekeys messages.</span>
-<span class="c">--   'qb'       → QBCore built-in notifications (default)</span>
-<span class="c">--   'ds_notify' → GunSmoke ds_notify resource</span>
-<span class="c">--   'custom'   → bring your own — edit bridge/notify_custom.lua</span>
-Config.Notify = <span class="s">'ds_notify'</span>
-</code></pre>
+        <h3 class="entry-title" id="cfg-notify"><code>Config.Notify</code></h3>
+        <p>Controls which notification resource is used for all player-facing messages.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Value</th><th>Behaviour</th></tr></thead>
+            <tbody>
+              <tr><td><code>'qb'</code></td><td>Uses <code>QBCore.Functions.Notify</code> and the <code>QBCore:Notify</code> client event.</td></tr>
+              <tr><td><code>'ds_notify'</code></td><td>Uses <code>exports['ds_notify']:Notify</code> / <code>NotifyClient</code>. Falls back to qb if the resource is not running.</td></tr>
+              <tr><td><code>'custom'</code></td><td>Reads <code>bridge/notify_custom.lua</code>. Implement <code>Notify.Client()</code> and <code>Notify.Server()</code> for any notification resource. See <code>bridge/notify_example.lua</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
 
-        <h3 style="margin-top:20px;font-size:1rem;font-weight:600;color:var(--text)">Keyfob &amp; Lock Settings</h3>
-        <pre><code><span class="c">-- Show the keyfob NUI when pressing the lock key outside a vehicle.</span>
-Config.UseKeyfob = <span class="k">true</span>
+        <h3 class="entry-title" id="cfg-progressbar"><code>Config.Progressbar</code></h3>
+        <p>Controls which progress bar resource is used for hotwire, carjack, and key-loot bars.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Value</th><th>Behaviour</th></tr></thead>
+            <tbody>
+              <tr><td><code>'qb'</code></td><td>Uses <code>QBCore.Functions.Progressbar</code> (default).</td></tr>
+              <tr><td><code>'ds_progressbar'</code></td><td>Uses <code>exports['ds_progressbar']:Start/Stop</code>. Animations are driven internally since ds_progressbar is display-only. Falls back to qb if the resource is not running.</td></tr>
+              <tr><td><code>'custom'</code></td><td>Reads <code>bridge/progressbar_custom.lua</code>. Implement <code>Progressbar.Start()</code> and <code>Progressbar.Cancel()</code>. See <code>bridge/progressbar_example.lua</code> for the full API contract and examples.</td></tr>
+            </tbody>
+          </table>
+        </div>
 
-<span class="c">-- Animation + prop played when the lock key is pressed outside a vehicle.</span>
-Config.LockToggleAnimation = {
-    AnimDict  = <span class="s">'anim@mp_player_intmenu@key_fob@'</span>,
-    Anim      = <span class="s">'fob_click'</span>,
-    Prop      = <span class="s">'prop_cuff_keys_01'</span>,   <span class="c">-- set to nil to disable prop</span>
-    PropBone  = <span class="n">57005</span>,
-    WaitTime  = <span class="n">500</span>,                  <span class="c">-- ms before anim + prop are cleaned up</span>
-}
+        <h3 class="entry-title" id="cfg-inventory"><code>Config.Inventory</code></h3>
+        <p>Controls which inventory resource is used for item operations (e.g. removing a broken lockpick).</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Value</th><th>Behaviour</th></tr></thead>
+            <tbody>
+              <tr><td><code>'auto'</code></td><td>Detects at runtime in priority order: <code>qs-inventory</code> → <code>ox_inventory</code> → <code>qb-inventory</code>. Recommended for most servers.</td></tr>
+              <tr><td><code>'qb'</code></td><td>Forces <code>qb-inventory</code> exports.</td></tr>
+              <tr><td><code>'qs'</code></td><td>Forces <code>qs-inventory</code> exports.</td></tr>
+              <tr><td><code>'ox'</code></td><td>Forces <code>ox_inventory</code> exports.</td></tr>
+            </tbody>
+          </table>
+        </div>
 
-<span class="c">-- InteractSound sound names (requires InteractSound resource)</span>
-Config.LockAnimSound   = <span class="s">'keys'</span>
-Config.LockToggleSound = <span class="s">'lock'</span>
+        <h3 class="entry-title" id="cfg-gameplay">Gameplay Settings</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.UseKeyfob</code></td><td><code>true</code></td><td>Show the keyfob NUI when pressing the lock key outside a vehicle.</td></tr>
+              <tr><td><code>Config.LockToggleDist</code></td><td><code>8.0</code></td><td>Max distance (metres) for the key fob to reach a vehicle.</td></tr>
+              <tr><td><code>Config.LockNPCDrivingCars</code></td><td><code>true</code></td><td>NPC-driven vehicles appear locked to players.</td></tr>
+              <tr><td><code>Config.LockNPCParkedCars</code></td><td><code>true</code></td><td>Parked NPC vehicles are locked to players.</td></tr>
+              <tr><td><code>Config.RemoveLockpickNormal</code></td><td><code>0.5</code></td><td>Probability of consuming a normal lockpick on failure.</td></tr>
+              <tr><td><code>Config.RemoveLockpickAdvanced</code></td><td><code>0.2</code></td><td>Probability of consuming an advanced lockpick on failure.</td></tr>
+              <tr><td><code>Config.HotwireChance</code></td><td><code>0.5</code></td><td>Probability of a successful hotwire attempt.</td></tr>
+              <tr><td><code>Config.TimeBetweenHotwires</code></td><td><code>5000</code></td><td>Cooldown in ms between hotwire attempts.</td></tr>
+              <tr><td><code>Config.MinHotwireTime</code></td><td><code>20000</code></td><td>Minimum progress bar duration (ms) for hotwiring.</td></tr>
+              <tr><td><code>Config.MaxHotwireTime</code></td><td><code>40000</code></td><td>Maximum progress bar duration (ms) for hotwiring.</td></tr>
+              <tr><td><code>Config.CarjackEnable</code></td><td><code>true</code></td><td>Enable / disable the carjacking system entirely.</td></tr>
+              <tr><td><code>Config.CarjackingTime</code></td><td><code>7500</code></td><td>Duration (ms) of the carjack progress bar.</td></tr>
+              <tr><td><code>Config.DelayBetweenCarjackings</code></td><td><code>10000</code></td><td>Cooldown (ms) between carjack attempts per player.</td></tr>
+              <tr><td><code>Config.AlertCooldown</code></td><td><code>10000</code></td><td>Minimum ms between police alert dispatches.</td></tr>
+              <tr><td><code>Config.PoliceAlertChance</code></td><td><code>0.75</code></td><td>Daytime probability of a police alert firing.</td></tr>
+              <tr><td><code>Config.PoliceNightAlertChance</code></td><td><code>0.50</code></td><td>Night-time (01:00–06:00) probability of a police alert.</td></tr>
+            </tbody>
+          </table>
+        </div>
 
-<span class="c">-- Max distance (metres) the keyfob reaches a vehicle.</span>
-Config.LockToggleDist = <span class="n">8.0</span>
-</code></pre>
-
-        <h3 style="margin-top:20px;font-size:1rem;font-weight:600;color:var(--text)">NPC Vehicle Behaviour</h3>
-        <pre><code><span class="c">-- true  = NPC-driven vehicles appear locked to players</span>
-Config.LockNPCDrivingCars = <span class="k">true</span>
-
-<span class="c">-- true  = parked NPC vehicles are locked to players</span>
-Config.LockNPCParkedCars  = <span class="k">true</span>
-</code></pre>
-
-        <h3 style="margin-top:20px;font-size:1rem;font-weight:600;color:var(--text)">Lockpick Settings</h3>
-        <pre><code><span class="c">-- Probability of consuming a lockpick on failed attempt (0.0 – 1.0)</span>
-Config.RemoveLockpickNormal   = <span class="n">0.5</span>
-Config.RemoveLockpickAdvanced = <span class="n">0.2</span>
-</code></pre>
-
-        <h3 style="margin-top:20px;font-size:1rem;font-weight:600;color:var(--text)">Hotwire Settings</h3>
-        <pre><code><span class="c">-- Probability of a successful hotwire (0.0 – 1.0)</span>
-Config.HotwireChance       = <span class="n">0.5</span>
-<span class="c">-- Cooldown (ms) between hotwire attempts on the same vehicle</span>
-Config.TimeBetweenHotwires  = <span class="n">5000</span>
-<span class="c">-- Random progress bar duration range (ms)</span>
-Config.MinHotwireTime       = <span class="n">20000</span>
-Config.MaxHotwireTime       = <span class="n">40000</span>
-</code></pre>
-
-        <h3 style="margin-top:20px;font-size:1rem;font-weight:600;color:var(--text)">Carjack Settings</h3>
-        <pre><code><span class="c">-- Master on/off switch</span>
-Config.CarjackEnable           = <span class="k">true</span>
-Config.CarjackingTime          = <span class="n">7500</span>   <span class="c">-- progress bar duration (ms)</span>
-Config.DelayBetweenCarjackings = <span class="n">10000</span>  <span class="c">-- cooldown between attempts (ms)</span>
-
-<span class="c">-- Success probability per GTA weapon group hash</span>
-Config.CarjackChance = {
-    [<span class="s">'2685387236'</span>] = <span class="n">0.0</span>,   <span class="c">-- melee</span>
-    [<span class="s">'416676503'</span>]  = <span class="n">0.5</span>,   <span class="c">-- handguns</span>
-    [<span class="s">'-957766203'</span>] = <span class="n">0.75</span>,  <span class="c">-- SMG</span>
-    [<span class="s">'860033945'</span>]  = <span class="n">0.90</span>,  <span class="c">-- shotgun</span>
-    [<span class="s">'970310034'</span>]  = <span class="n">0.90</span>,  <span class="c">-- assault rifle</span>
-    [<span class="s">'1159398588'</span>] = <span class="n">0.99</span>,  <span class="c">-- LMG</span>
-    [<span class="s">'3082541095'</span>] = <span class="n">0.99</span>,  <span class="c">-- sniper</span>
-    [<span class="s">'2725924767'</span>] = <span class="n">0.99</span>,  <span class="c">-- heavy</span>
-    [<span class="s">'1548507267'</span>] = <span class="n">0.0</span>,   <span class="c">-- throwable</span>
-    [<span class="s">'4257178988'</span>] = <span class="n">0.0</span>,   <span class="c">-- misc</span>
-}
-</code></pre>
-
-        <h3 style="margin-top:20px;font-size:1rem;font-weight:600;color:var(--text)">Police Alert Settings</h3>
-        <pre><code>Config.AlertCooldown          = <span class="n">10000</span>  <span class="c">-- ms between alerts</span>
-Config.PoliceAlertChance      = <span class="n">0.75</span>   <span class="c">-- daytime (all other hours)</span>
-Config.PoliceNightAlertChance = <span class="n">0.50</span>   <span class="c">-- nighttime (01:00–06:00 in-game)</span>
-</code></pre>
-
-        <h3 style="margin-top:20px;font-size:1rem;font-weight:600;color:var(--text)">Job-Shared Keys</h3>
-        <p>Employees of a configured job can lock/unlock any listed vehicle model without having individual keys. Ownership is <strong>not</strong> recorded in the database — access is purely job-based.</p>
+        <h3 class="entry-title" id="cfg-sharekeys"><code>Config.SharedKeys</code></h3>
+        <p>Employees of a listed job can lock and unlock any of that job's vehicles without owning the key. Set <code>requireOnduty = true</code> to restrict this to on-duty employees.</p>
         <pre><code>Config.SharedKeys = {
     [<span class="s">'police'</span>] = {
-        requireOnduty = <span class="k">false</span>,   <span class="c">-- true = only on-duty officers can access</span>
-        vehicles = {
-            <span class="s">'police'</span>, <span class="s">'police2'</span>, <span class="s">'police3'</span>, <span class="s">'sheriff'</span>, <span class="s">'sheriff2'</span>,
-        }
+        requireOnduty = <span class="k">false</span>,
+        vehicles = { <span class="s">'police'</span>, <span class="s">'police2'</span>, <span class="s">'sheriff'</span> }
     },
     [<span class="s">'mechanic'</span>] = {
         requireOnduty = <span class="k">false</span>,
@@ -216,449 +195,348 @@ Config.PoliceNightAlertChance = <span class="n">0.50</span>   <span class="c">--
 }
 </code></pre>
 
-        <h3 style="margin-top:20px;font-size:1rem;font-weight:600;color:var(--text)">Immune &amp; No-Lock Vehicles</h3>
-        <pre><code><span class="c">-- These vehicles cannot be carjacked.</span>
-Config.ImmuneVehicles = { <span class="s">'stockade'</span> }
+        <h3 class="entry-title" id="cfg-immune"><code>Config.ImmuneVehicles</code> &amp; <code>Config.NoLockVehicles</code></h3>
+        <p><code>Config.ImmuneVehicles</code> — vehicle model names that cannot be carjacked (e.g. <code>'stockade'</code>).<br>
+        <code>Config.NoLockVehicles</code> — model names that are never locked (e.g. bicycles). Bike class (13) and entities with <code>state.ignoreLocks = true</code> are also auto-exempt.</p>
 
-<span class="c">-- These vehicles will never be locked (e.g. bicycles).</span>
-<span class="c">-- Can also be modified at runtime via AddNoLockVehicle / RemoveNoLockVehicle exports.</span>
-Config.NoLockVehicles = {}
-
-<span class="c">-- Melee and throwable weapons that cannot be used to carjack.</span>
-Config.NoCarjackWeapons = {
-    <span class="s">'WEAPON_UNARMED'</span>, <span class="s">'WEAPON_KNIFE'</span>, <span class="s">'WEAPON_NIGHTSTICK'</span>, <span class="s">'WEAPON_GRENADE'</span>, <span class="c">-- etc.</span>
+        <h3 class="entry-title" id="cfg-carjackchance"><code>Config.CarjackChance</code></h3>
+        <p>Per-weapon-group success probability for carjacking, keyed by the weapon group hash string.</p>
+        <pre><code>Config.CarjackChance = {
+    [<span class="s">'2685387236'</span>] = <span class="n">0.0</span>,   <span class="c">-- melee</span>
+    [<span class="s">'416676503'</span>]  = <span class="n">0.5</span>,   <span class="c">-- handguns</span>
+    [<span class="s">'-957766203'</span>] = <span class="n">0.75</span>,  <span class="c">-- SMG</span>
+    [<span class="s">'860033945'</span>]  = <span class="n">0.90</span>,  <span class="c">-- shotgun</span>
+    [<span class="s">'970310034'</span>]  = <span class="n">0.90</span>,  <span class="c">-- assault rifle</span>
 }
 </code></pre>
       </div>
 
-      <!-- ── 5. Key Types ────────────────────────────────────────────── -->
+      <!-- ── 5. Escrow ──────────────────────────────────────────────────── -->
       <div class="section">
-        <h2 class="section-title" id="key-types">5 — Key Types</h2>
-        <p>Every key record carries one of two types, stored in both the database and the server-side <code>VehicleList</code> cache.</p>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Type</th><th>Stored in DB?</th><th>Description</th></tr></thead>
-            <tbody>
-              <tr><td><code>'owner'</code></td><td>Yes — <code>owner</code> column</td><td>The vehicle's registered owner. Assigned when a vehicle is purchased/spawned. When the owner removes their keys the DB row is wiped.</td></tr>
-              <tr><td><code>'temp'</code></td><td>Yes — <code>temp_holders</code> JSON array</td><td>A temporary key holder — e.g. a passenger the owner handed keys to. Cleared per-plate when the owner deletes their key record.</td></tr>
-            </tbody>
-          </table>
+        <h2 class="section-title" id="escrow">5 — Open vs. Encrypted Files</h2>
+        <div class="escrow-row">
+          <div class="escrow-card open-card">
+            <h4>Open (unencrypted)</h4>
+            <ul>
+              <li><code>config.lua</code></li>
+              <li><code>locales/*.lua</code></li>
+              <li><code>bridge/notify_example.lua</code></li>
+              <li><code>bridge/notify_custom.lua</code></li>
+              <li><code>bridge/progressbar_example.lua</code></li>
+              <li><code>bridge/progressbar_custom.lua</code></li>
+            </ul>
+          </div>
+          <div class="escrow-card closed-card">
+            <h4>Escrow-protected</h4>
+            <ul>
+              <li><code>client.lua</code></li>
+              <li><code>server.lua</code></li>
+              <li><code>bridge/notify.lua</code></li>
+              <li><code>bridge/progressbar.lua</code></li>
+              <li><code>bridge/inventory.lua</code></li>
+            </ul>
+          </div>
         </div>
-        <div class="callout">An <code>'owner'</code> key is never silently downgraded to <code>'temp'</code>. If a <code>GiveKeys</code> call is made on a plate where the target player is already the owner, their status stays as <code>'owner'</code>.</div>
       </div>
 
-      <!-- ── 6. Default Key Bindings & Commands ─────────────────────── -->
+      <!-- ── 6. Progressbar Bridge ─────────────────────────────────────── -->
       <div class="section">
-        <h2 class="section-title" id="keybinds">6 — Key Bindings &amp; Commands</h2>
+        <h2 class="section-title" id="progressbar-bridge">6 — Progressbar Bridge</h2>
+        <p>Set <code>Config.Progressbar = 'custom'</code> and edit <code>bridge/progressbar_custom.lua</code> to hook in any progress bar resource. Two functions must be implemented:</p>
+
+        <h3 class="entry-title" id="pb-start"><code>Progressbar.Start(name, label, duration, opts, cb_done, cb_cancel)</code></h3>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>Binding / Command</th><th>Default key</th><th>Behaviour</th></tr></thead>
+            <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
             <tbody>
-              <tr><td><code>ds_togglelocks</code></td><td><kbd>L</kbd></td><td>Inside a vehicle → toggle lock. Outside → open keyfob NUI (if <code>Config.UseKeyfob = true</code>), otherwise toggle the nearest owned vehicle.</td></tr>
-              <tr><td><code>ds_engine</code></td><td><kbd>G</kbd></td><td>While seated in a vehicle, toggle the engine on/off via the server.</td></tr>
-              <tr><td><kbd>H</kbd> (context)</td><td>—</td><td>Shown as an on-screen prompt when seated in the driver's seat of a vehicle you don't own. Begins the hotwire progress bar.</td></tr>
+              <tr><td><code>name</code></td><td>string</td><td>Unique identifier for this bar (e.g. <code>'ds_hotwire'</code>).</td></tr>
+              <tr><td><code>label</code></td><td>string</td><td>Text displayed on the progress bar.</td></tr>
+              <tr><td><code>duration</code></td><td>number</td><td>Duration in milliseconds.</td></tr>
+              <tr><td><code>opts</code></td><td>table</td><td>Control flags and animation data — see below.</td></tr>
+              <tr><td><code>cb_done</code></td><td>function</td><td>Called with no arguments when the bar completes successfully.</td></tr>
+              <tr><td><code>cb_cancel</code></td><td>function</td><td>Called with no arguments when the bar is cancelled or interrupted.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>opts fields</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>disableMovement</code></td><td>boolean</td><td>Freeze player movement during the bar.</td></tr>
+              <tr><td><code>disableCarMovement</code></td><td>boolean</td><td>Freeze vehicle movement during the bar.</td></tr>
+              <tr><td><code>disableMouse</code></td><td>boolean</td><td>Disable mouse look during the bar.</td></tr>
+              <tr><td><code>disableCombat</code></td><td>boolean</td><td>Disable combat controls during the bar.</td></tr>
+              <tr><td><code>animDict</code></td><td>string / nil</td><td>Animation dictionary to play while the bar runs.</td></tr>
+              <tr><td><code>anim</code></td><td>string / nil</td><td>Animation name within the dictionary.</td></tr>
+              <tr><td><code>flags</code></td><td>number / nil</td><td>Animation flags (e.g. <code>16</code> for looping).</td></tr>
             </tbody>
           </table>
         </div>
 
-        <h3 style="margin-top:20px;font-size:1rem;font-weight:600;color:var(--text)">Admin / Chat Commands</h3>
+        <h3 class="entry-title" id="pb-cancel"><code>Progressbar.Cancel()</code></h3>
+        <p>Force-cancel any active progress bar. Called by the carjack loop when the target ped dies or moves too far away.</p>
+
+        <h4>Example — ox_lib progressBar</h4>
+        <pre><code><span class="k">function</span> <span class="f">Progressbar.Start</span>(name, label, duration, opts, cb_done, cb_cancel)
+    <span class="k">local</span> ped = <span class="f">PlayerPedId</span>()
+    <span class="k">if</span> opts.animDict <span class="k">and</span> opts.anim <span class="k">then</span>
+        <span class="f">RequestAnimDict</span>(opts.animDict)
+        <span class="k">while not</span> <span class="f">HasAnimDictLoaded</span>(opts.animDict) <span class="k">do</span> <span class="f">Wait</span>(<span class="n">1</span>) <span class="k">end</span>
+        <span class="f">TaskPlayAnim</span>(ped, opts.animDict, opts.anim, <span class="n">8.0</span>, <span class="n">-8.0</span>, <span class="n">-1</span>, opts.flags <span class="k">or</span> <span class="n">16</span>, <span class="n">0</span>, <span class="k">false</span>, <span class="k">false</span>, <span class="k">false</span>)
+    <span class="k">end</span>
+    <span class="k">local</span> success = lib.progressBar({
+        duration  = duration,
+        label     = label,
+        canCancel = <span class="k">true</span>,
+        disable   = {
+            move   = opts.disableMovement    <span class="k">or</span> <span class="k">false</span>,
+            car    = opts.disableCarMovement <span class="k">or</span> <span class="k">false</span>,
+            combat = opts.disableCombat      <span class="k">or</span> <span class="k">true</span>,
+            mouse  = opts.disableMouse       <span class="k">or</span> <span class="k">false</span>,
+        },
+    })
+    <span class="k">if</span> opts.animDict <span class="k">and</span> opts.anim <span class="k">then</span>
+        <span class="f">StopAnimTask</span>(ped, opts.animDict, opts.anim, <span class="n">1.0</span>)
+    <span class="k">end</span>
+    <span class="k">if</span> success <span class="k">then</span>
+        <span class="k">if</span> cb_done <span class="k">then</span> <span class="f">cb_done</span>() <span class="k">end</span>
+    <span class="k">else</span>
+        <span class="k">if</span> cb_cancel <span class="k">then</span> <span class="f">cb_cancel</span>() <span class="k">end</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="k">function</span> <span class="f">Progressbar.Cancel</span>()
+    lib.progressCancel()
+<span class="k">end</span>
+</code></pre>
+        <div class="callout">The <code>bridge/progressbar_example.lua</code> file (always unencrypted) contains this and additional examples. Copy your implementation into <code>bridge/progressbar_custom.lua</code>.</div>
+      </div>
+
+      <!-- ── 7. Inventory Bridge ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="inventory-bridge">7 — Inventory Bridge</h2>
+        <p>The inventory bridge is server-side only. It exposes two functions used when a lockpick breaks:</p>
+
+        <h3 class="entry-title" id="inv-removeitem"><code>Inventory.RemoveItem(src, itemName, count)</code> <span class="ret">boolean</span></h3>
+        <p>Removes <code>count</code> of <code>itemName</code> from the player identified by server source <code>src</code>. Returns <code>true</code> on success.</p>
+
+        <h3 class="entry-title" id="inv-notifyremove"><code>Inventory.NotifyRemove(src, itemName)</code></h3>
+        <p>Shows the inventory's built-in "item removed" UI feedback to the player (e.g. the qb-inventory item box). A no-op on inventories that handle this internally (ox, qs).</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Config.Inventory</th><th>RemoveItem call</th><th>NotifyRemove call</th></tr></thead>
+            <tbody>
+              <tr><td><code>'qb'</code></td><td><code>exports['qb-inventory']:RemoveItem()</code></td><td><code>qb-inventory:client:ItemBox</code> event</td></tr>
+              <tr><td><code>'qs'</code></td><td><code>exports['qs-inventory']:RemoveItem()</code></td><td>no-op</td></tr>
+              <tr><td><code>'ox'</code></td><td><code>exports.ox_inventory:RemoveItem()</code></td><td>no-op</td></tr>
+              <tr><td><code>'auto'</code></td><td colspan="2">Resolves on first use — detects qs → ox → qb.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 8. Keybinds ───────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="keybinds">8 — Default Keybinds</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Command</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr><td><code>L</code></td><td><code>ds_togglelocks</code></td><td>Lock / unlock nearest owned vehicle; opens keyfob NUI when on foot (if <code>Config.UseKeyfob = true</code>).</td></tr>
+              <tr><td><code>G</code></td><td><code>ds_engine</code></td><td>Toggle engine on / off while seated in an owned vehicle.</td></tr>
+              <tr><td><code>H</code></td><td>—</td><td>Begin hotwire when seated in the driver seat of a keyless vehicle.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">Keybinds are registered with <code>RegisterKeyMapping</code> — players can rebind them in the GTA V Settings → Key Bindings → FiveM menu.</div>
+      </div>
+
+      <!-- ── 9. Commands ───────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="commands">9 — Chat Commands</h2>
         <div class="tbl-wrap">
           <table>
             <thead><tr><th>Command</th><th>Permission</th><th>Description</th></tr></thead>
             <tbody>
-              <tr><td><code>/givekeys [id]</code></td><td>Any player</td><td>Hand keys for your current vehicle to a player by server ID. If no ID is given, gives to the closest player or all passengers.</td></tr>
-              <tr><td><code>/addkeys [id] [plate]</code></td><td>Admin</td><td>Grant a player temp keys for a specific plate.</td></tr>
-              <tr><td><code>/removekeys [id] [plate]</code></td><td>Admin</td><td>Remove a player's keys for a specific plate.</td></tr>
+              <tr><td><code>/givekeys [id]</code></td><td>All players</td><td>Give the nearest player (or player by server ID) keys to your current vehicle.</td></tr>
+              <tr><td><code>/addkeys [id] [plate]</code></td><td>Admin</td><td>Admin command — force-give keys for any plate to any online player.</td></tr>
+              <tr><td><code>/removekeys [id] [plate]</code></td><td>Admin</td><td>Admin command — strip keys for any plate from any online player.</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- ── 7. Server Exports ───────────────────────────────────────── -->
+      <!-- ── 10. Server Exports ─────────────────────────────────────────── -->
       <div class="section">
-        <h2 class="section-title" id="server-exports">7 — Server Exports</h2>
-        <p>All exports below are callable from <strong>any server-side script</strong> using <code>exports['ds_vehiclekeys']:ExportName(...)</code>.</p>
+        <h2 class="section-title" id="server-exports">10 — Server Exports</h2>
+        <p>All server exports are callable from any server-side resource with <code>exports['ds_vehiclekeys']:FunctionName(...)</code>.</p>
 
-        <!-- GiveKeys -->
-        <h3 class="entry-title" id="sv-GiveKeys"><code>GiveKeys(serverId, plate, isOwner)</code></h3>
-        <p>Give a player keys for a vehicle. Updates the in-memory cache and persists to the database. Also sends the key to the player's client cache and shows a notification.</p>
+        <h3 class="entry-title" id="sv-givekeys"><code>GiveKeys(src, plate, isOwner)</code></h3>
+        <p>Give a player keys to a vehicle. <code>isOwner = true</code> marks the player as the legal owner and upserts the DB row. <code>isOwner = false</code> or <code>nil</code> gives a temporary key (persisted in <code>temp_holders</code>).</p>
+        <pre><code>exports[<span class="s">'ds_vehiclekeys'</span>]:GiveKeys(src, <span class="s">'ABC 123'</span>, <span class="k">true</span>)  <span class="c">-- owner</span>
+exports[<span class="s">'ds_vehiclekeys'</span>]:GiveKeys(src, <span class="s">'ABC 123'</span>)        <span class="c">-- temp key</span>
+</code></pre>
+
+        <h3 class="entry-title" id="sv-removekeys"><code>RemoveKeys(src, plate)</code></h3>
+        <p>Remove a player's keys (owner or temp) for a plate. If they were the owner, the owner column is cleared in the database.</p>
+
+        <h3 class="entry-title" id="sv-haskeys"><code>HasKeys(src, plate)</code> <span class="ret">boolean</span></h3>
+        <p>Returns <code>true</code> if the player currently holds any key type for the plate.</p>
+
+        <h3 class="entry-title" id="sv-getkeytype"><code>GetKeyType(src, plate)</code> <span class="ret">'owner' | 'temp' | nil</span></h3>
+        <p>Returns the key type the player holds, or <code>nil</code> if they have no keys.</p>
+
+        <h3 class="entry-title" id="sv-getallkeys"><code>GetAllKeysForPlayer(src)</code> <span class="ret">table</span></h3>
+        <p>Returns <code>{ [plate] = 'owner'|'temp', ... }</code> for every plate the player currently holds.</p>
+
+        <h3 class="entry-title" id="sv-setowner"><code>SetOwner(plate, citizenid)</code></h3>
+        <p>Assign ownership by citizenid directly — no active player session required. Useful for dealership / purchase scripts that run entirely server-side. Pushes <code>AddKeys</code> to the buyer's client automatically if they are online.</p>
+        <pre><code><span class="c">-- Called from a vehicle purchase script after the sale is recorded</span>
+exports[<span class="s">'ds_vehiclekeys'</span>]:SetOwner(plate, Player.PlayerData.citizenid)
+</code></pre>
+
+        <h3 class="entry-title" id="sv-buyvehiclekeys"><code>BuyVehicleKeys(src, plate)</code></h3>
+        <p>Purpose-built export for vehicle shop resources. Trims and uppercases the plate, writes the owner row to DB, updates the in-memory cache, pushes <code>AddKeys</code> to the buyer's client, and sends a success notification.</p>
+
+        <h3 class="entry-title" id="sv-transferownership"><code>TransferOwnership(plate, newSrc)</code></h3>
+        <p>Atomically transfer a vehicle from its current owner to a new owner. Evicts the old owner (strips keys + notifies), sets the new owner in memory and DB, updates <code>player_vehicles</code>, and pushes keys to the new owner's client.</p>
+
+        <h3 class="entry-title" id="sv-removeallkeys"><code>RemoveAllKeysForPlate(plate)</code></h3>
+        <p>Wipe ALL key holders (owner + temp) for a plate from memory and database. Use this when a vehicle is sold out of the system or permanently deleted.</p>
+
+        <h3 class="entry-title" id="sv-getplateowner"><code>GetPlateOwner(plate)</code> <span class="ret">citizenid | nil</span></h3>
+        <p>Returns the owner citizenid for a plate, or <code>nil</code> if unclaimed.</p>
+
+        <h3 class="entry-title" id="sv-dbsetowner"><code>DBSetOwner(plate, citizenid)</code></h3>
+        <p>Low-level helper — directly upserts the owner row in the <code>ds_vehiclekeys</code> table. Prefer <code>SetOwner</code> or <code>GiveKeys</code> unless you need raw DB access.</p>
+      </div>
+
+      <!-- ── 11. Client Exports ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="client-exports">11 — Client Exports</h2>
+        <p>All client exports are callable from any client-side resource with <code>exports['ds_vehiclekeys']:FunctionName(...)</code>.</p>
+
+        <h3 class="entry-title" id="cl-haskeys"><code>HasKeys(plate)</code> <span class="ret">boolean</span></h3>
+        <p>Returns <code>true</code> if the local player currently holds keys for the plate. Uses the local <code>KeysList</code> cache — no server round-trip.</p>
+
+        <h3 class="entry-title" id="cl-getkeytype"><code>GetKeyType(plate)</code> <span class="ret">'owner' | 'temp' | nil</span></h3>
+        <p>Returns what type of key the local player holds for the plate, or <code>nil</code>.</p>
+
+        <h3 class="entry-title" id="cl-togglelocks"><code>ToggleVehicleLocks(vehicle, lock)</code></h3>
+        <p>Trigger a lock toggle from another resource. <code>lock = true</code> locks, <code>false</code> unlocks, <code>nil</code> toggles based on current state.</p>
+
+        <h3 class="entry-title" id="cl-isblacklisted"><code>IsBlacklistedVehicle(vehicle)</code> <span class="ret">boolean</span></h3>
+        <p>Returns <code>true</code> if the vehicle entity is on the no-lock / exempt list (bike class, <code>ignoreLocks</code> state, or in <code>Config.NoLockVehicles</code>).</p>
+
+        <h3 class="entry-title" id="cl-nolock"><code>AddNoLockVehicle(model)</code> / <code>RemoveNoLockVehicle(model)</code></h3>
+        <p>Dynamically add or remove a vehicle model name from the no-lock list at runtime, without restarting the resource.</p>
+
+        <h3 class="entry-title" id="cl-openkeyfob"><code>OpenKeyfob()</code></h3>
+        <p>Programmatically open the keyfob NUI from another resource.</p>
+      </div>
+
+      <!-- ── 12. Server Events ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="server-events">12 — Server Events</h2>
+        <p>These network events can be triggered from client or server code. Prefer the typed exports above where possible.</p>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+            <thead><tr><th>Event</th><th>Parameters</th><th>Description</th></tr></thead>
             <tbody>
-              <tr><td><code>serverId</code></td><td>number</td><td>The player's server source ID.</td></tr>
-              <tr><td><code>plate</code></td><td>string</td><td>Vehicle plate. If <code>nil</code>, falls back to the vehicle the player is currently in.</td></tr>
-              <tr><td><code>isOwner</code></td><td>boolean|nil</td><td><code>true</code> = marks as owner and upserts the DB row. <code>false</code>/<code>nil</code> = marks as temp, persisted in <code>temp_holders</code>.</td></tr>
+              <tr><td><code>ds_vehiclekeys:server:GiveVehicleKeys</code></td><td><code>receiver, plate, forcegive?</code></td><td>Give keys to a receiver (server ID or table of IDs). Giver must hold keys or pass <code>forcegive = true</code>.</td></tr>
+              <tr><td><code>ds_vehiclekeys:server:AcquireVehicleKeys</code></td><td><code>plate</code></td><td>Grant the triggering player temporary keys for a plate.</td></tr>
+              <tr><td><code>ds_vehiclekeys:server:RemoveVehicleKeys</code></td><td><code>plate</code></td><td>Remove the triggering player's keys for a plate.</td></tr>
+              <tr><td><code>ds_vehiclekeys:server:setVehLockState</code></td><td><code>vehNetId, state</code></td><td>Set door lock state (1 = unlocked, 2 = locked) on a vehicle by network ID.</td></tr>
+              <tr><td><code>ds_vehiclekeys:server:setVehEngineState</code></td><td><code>vehNetId, on</code></td><td>Broadcast an engine on/off change to all clients for the given network entity.</td></tr>
+              <tr><td><code>vehiclekeys:server:GiveOwnership</code></td><td><code>id, plate</code></td><td>Backwards-compatibility shim for old <code>qb-vehiclekeys</code> callers.</td></tr>
             </tbody>
           </table>
         </div>
-        <pre><code><span class="c">-- Give temp keys</span>
-exports[<span class="s">'ds_vehiclekeys'</span>]:GiveKeys(source, <span class="s">'ABC1234'</span>)
-
-<span class="c">-- Give owner keys (e.g. after a vehicle purchase)</span>
-exports[<span class="s">'ds_vehiclekeys'</span>]:GiveKeys(source, <span class="s">'ABC1234'</span>, <span class="k">true</span>)
-</code></pre>
-
-        <!-- RemoveKeys -->
-        <h3 class="entry-title" id="sv-RemoveKeys"><code>RemoveKeys(serverId, plate)</code></h3>
-        <p>Remove a player's keys (owner or temp) for a plate. If the player was the owner, the <code>owner</code> column in the DB is cleared. Also fires <code>ds_vehiclekeys:client:RemoveKeys</code> to strip the key from the player's local cache.</p>
-        <pre><code>exports[<span class="s">'ds_vehiclekeys'</span>]:RemoveKeys(source, <span class="s">'ABC1234'</span>)
-</code></pre>
-
-        <!-- HasKeys -->
-        <h3 class="entry-title" id="sv-HasKeys"><code>HasKeys(serverId, plate) → boolean</code></h3>
-        <p>Returns <code>true</code> if the player currently holds keys (any type) for the plate. Purely in-memory — no DB query.</p>
-        <pre><code><span class="k">if</span> exports[<span class="s">'ds_vehiclekeys'</span>]:HasKeys(source, <span class="s">'ABC1234'</span>) <span class="k">then</span>
-    <span class="c">-- player has keys</span>
-<span class="k">end</span>
-</code></pre>
-
-        <!-- GetKeyType -->
-        <h3 class="entry-title" id="sv-GetKeyType"><code>GetKeyType(serverId, plate) → 'owner'|'temp'|nil</code></h3>
-        <p>Returns the type of key the player holds for the plate, or <code>nil</code> if they have none.</p>
-        <pre><code><span class="k">local</span> ktype = exports[<span class="s">'ds_vehiclekeys'</span>]:GetKeyType(source, <span class="s">'ABC1234'</span>)
-<span class="c">-- ktype == 'owner'  |  'temp'  |  nil</span>
-</code></pre>
-
-        <!-- GetAllKeysForPlayer -->
-        <h3 class="entry-title" id="sv-GetAllKeysForPlayer"><code>GetAllKeysForPlayer(serverId) → table</code></h3>
-        <p>Returns a flat table of every plate the player holds, mapped to their key type. Useful for phone app UIs or admin panels.</p>
-        <pre><code><span class="k">local</span> keys = exports[<span class="s">'ds_vehiclekeys'</span>]:GetAllKeysForPlayer(source)
-<span class="c">-- { ['ABC1234'] = 'owner', ['XYZ9999'] = 'temp', ... }</span>
-<span class="k">for</span> plate, ktype <span class="k">in</span> pairs(keys) <span class="k">do</span>
-    print(plate, ktype)
-<span class="k">end</span>
-</code></pre>
-
-        <!-- GetPlateOwner -->
-        <h3 class="entry-title" id="sv-GetPlateOwner"><code>GetPlateOwner(plate) → citizenid|nil</code></h3>
-        <p>Returns the owner citizenid for a plate directly (synchronous, in-memory). Returns <code>nil</code> if the plate has no registered owner. Useful for ownership checks in police, impound, or admin scripts.</p>
-        <pre><code><span class="k">local</span> cid = exports[<span class="s">'ds_vehiclekeys'</span>]:GetPlateOwner(<span class="s">'ABC1234'</span>)
-<span class="k">if</span> cid <span class="k">then</span>
-    print(<span class="s">'Owner:'</span>, cid)
-<span class="k">end</span>
-</code></pre>
-
-        <!-- SetOwner -->
-        <h3 class="entry-title" id="sv-SetOwner"><code>SetOwner(plate, citizenid)</code></h3>
-        <p>Directly assign ownership by citizenid without needing an active server session. Useful for dealership or purchase scripts that run entirely server-side after the player has already logged off, or before the player is available via <code>GetPlayer()</code>. If the player is currently online their client cache is updated automatically.</p>
-        <pre><code><span class="c">-- Called from a vehicle shop after purchase confirmation</span>
-exports[<span class="s">'ds_vehiclekeys'</span>]:SetOwner(<span class="s">'ABC1234'</span>, Player.PlayerData.citizenid)
-</code></pre>
-
-        <!-- BuyVehicleKeys -->
-        <h3 class="entry-title" id="sv-BuyVehicleKeys"><code>BuyVehicleKeys(serverId, plate)</code></h3>
-        <p>Purpose-built export for vehicle shop resources. In a single call it: trims and upper-cases the plate, upserts the owner row to DB, updates the in-memory cache, pushes <code>AddKeys</code> to the buyer's client, and sends a success notification via the configured Notify bridge.</p>
-        <pre><code><span class="c">-- In your vehicle shop server callback after charging the player:</span>
-exports[<span class="s">'ds_vehiclekeys'</span>]:BuyVehicleKeys(source, vehiclePlate)
-</code></pre>
-
-        <!-- TransferOwnership -->
-        <h3 class="entry-title" id="sv-TransferOwnership"><code>TransferOwnership(plate, newServerId)</code></h3>
-        <p>Atomically transfers full ownership from the current owner to a new player. Handles everything in one call:</p>
-        <ol style="padding-left:20px;line-height:2.0">
-          <li>Strips the old owner from <code>VehicleList</code> and fires <code>RemoveKeys</code> to their client if online.</li>
-          <li>Sets the new owner in <code>VehicleList</code>.</li>
-          <li>Upserts the <code>ds_vehiclekeys</code> table (<code>owner</code> column, clears <code>temp_holders</code>).</li>
-          <li>Updates <code>player_vehicles</code> (<code>citizenid</code> + <code>license</code> columns).</li>
-          <li>Pushes <code>AddKeys</code> to the new owner's client.</li>
-          <li>Notifies both parties via the configured Notify bridge.</li>
-        </ol>
-        <pre><code><span class="c">-- Used internally by ds_garages vehicle transfer system</span>
-exports[<span class="s">'ds_vehiclekeys'</span>]:TransferOwnership(plate, newOwnerServerId)
-</code></pre>
-
-        <!-- RemoveAllKeysForPlate -->
-        <h3 class="entry-title" id="sv-RemoveAllKeysForPlate"><code>RemoveAllKeysForPlate(plate)</code></h3>
-        <p>Wipes <strong>all</strong> key holders (owner and temp) for a plate from both the in-memory cache and the database. Use this when a vehicle is permanently deleted or sold off the server (e.g. an admin deletion tool).</p>
-        <pre><code><span class="c">-- When permanently deleting a vehicle from your admin menu:</span>
-exports[<span class="s">'ds_vehiclekeys'</span>]:RemoveAllKeysForPlate(<span class="s">'ABC1234'</span>)
-</code></pre>
       </div>
 
-      <!-- ── 8. Client Exports ───────────────────────────────────────── -->
+      <!-- ── 13. Client Events ──────────────────────────────────────────── -->
       <div class="section">
-        <h2 class="section-title" id="client-exports">8 — Client Exports</h2>
-        <p>All exports below are callable from <strong>any client-side script</strong> using <code>exports['ds_vehiclekeys']:ExportName(...)</code>. They operate on the local <code>KeysList</code> cache — no server round-trip required.</p>
-
-        <!-- HasKeys client -->
-        <h3 class="entry-title" id="cl-HasKeys"><code>HasKeys(plate) → boolean</code></h3>
-        <p>Returns <code>true</code> if the local player currently holds keys (any type) for the plate. Reads directly from the in-memory <code>KeysList</code> cache.</p>
-        <pre><code><span class="k">if</span> exports[<span class="s">'ds_vehiclekeys'</span>]:HasKeys(<span class="s">'ABC1234'</span>) <span class="k">then</span>
-    <span class="c">-- local player has keys</span>
-<span class="k">end</span>
-</code></pre>
-
-        <!-- GetKeyType client -->
-        <h3 class="entry-title" id="cl-GetKeyType"><code>GetKeyType(plate) → 'owner'|'temp'|nil</code></h3>
-        <p>Returns the key type the local player holds for the plate, or <code>nil</code> if they have none. Reads from the local cache.</p>
-        <pre><code><span class="k">local</span> ktype = exports[<span class="s">'ds_vehiclekeys'</span>]:GetKeyType(<span class="s">'ABC1234'</span>)
-</code></pre>
-
-        <!-- IsBlacklistedVehicle -->
-        <h3 class="entry-title" id="cl-IsBlacklistedVehicle"><code>IsBlacklistedVehicle(vehicle) → boolean</code></h3>
-        <p>Returns <code>true</code> if the entity is on the no-lock list, is a bicycle (class 13), or has the <code>ignoreLocks</code> entity state flag set. Use this before attempting any lock/unlock logic in external resources.</p>
-        <pre><code><span class="k">local</span> veh = GetVehiclePedIsIn(PlayerPedId(), <span class="k">false</span>)
-<span class="k">if not</span> exports[<span class="s">'ds_vehiclekeys'</span>]:IsBlacklistedVehicle(veh) <span class="k">then</span>
-    <span class="c">-- safe to interact with locks</span>
-<span class="k">end</span>
-</code></pre>
-
-        <!-- ToggleVehicleLocks -->
-        <h3 class="entry-title" id="cl-ToggleVehicleLocks"><code>ToggleVehicleLocks(vehicle, lock)</code></h3>
-        <p>Trigger a lock or unlock from an external resource (e.g. a target action or phone app). Performs the full ownership check, keyfob animation, light flash, and server sync.</p>
+        <h2 class="section-title" id="client-events">13 — Client Events</h2>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+            <thead><tr><th>Event</th><th>Parameters</th><th>Description</th></tr></thead>
             <tbody>
-              <tr><td><code>vehicle</code></td><td>number</td><td>Entity handle of the vehicle.</td></tr>
-              <tr><td><code>lock</code></td><td>boolean|nil</td><td><code>true</code> = lock · <code>false</code> = unlock · <code>nil</code> = toggle current state</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <pre><code><span class="c">-- Force-lock the vehicle the player is nearest to</span>
-<span class="k">local</span> veh = QBCore.Functions.GetClosestVehicle()
-exports[<span class="s">'ds_vehiclekeys'</span>]:ToggleVehicleLocks(veh, <span class="k">true</span>)
-
-<span class="c">-- Toggle (no argument)</span>
-exports[<span class="s">'ds_vehiclekeys'</span>]:ToggleVehicleLocks(veh)
-</code></pre>
-
-        <!-- AddNoLockVehicle / RemoveNoLockVehicle -->
-        <h3 class="entry-title" id="cl-NoLock"><code>AddNoLockVehicle(model)</code> / <code>RemoveNoLockVehicle(model)</code></h3>
-        <p>Dynamically add or remove a vehicle model name from the no-lock list at runtime. Changes are local to the calling client and do not persist across sessions.</p>
-        <pre><code><span class="c">-- Prevent BMX bikes from ever being locked</span>
-exports[<span class="s">'ds_vehiclekeys'</span>]:AddNoLockVehicle(<span class="s">'bmx'</span>)
-
-<span class="c">-- Re-enable locking for a model previously added</span>
-exports[<span class="s">'ds_vehiclekeys'</span>]:RemoveNoLockVehicle(<span class="s">'bmx'</span>)
-</code></pre>
-
-        <!-- OpenKeyfob -->
-        <h3 class="entry-title" id="cl-OpenKeyfob"><code>OpenKeyfob()</code></h3>
-        <p>Programmatically open the keyfob NUI from another resource (e.g. a phone app or custom menu).</p>
-        <pre><code>exports[<span class="s">'ds_vehiclekeys'</span>]:OpenKeyfob()
-</code></pre>
-      </div>
-
-      <!-- ── 9. QBCore Callbacks ─────────────────────────────────────── -->
-      <div class="section">
-        <h2 class="section-title" id="callbacks">9 — QBCore Callbacks</h2>
-        <p>These are triggered from <strong>client-side scripts</strong> using <code>QBCore.Functions.TriggerCallback</code>.</p>
-
-        <h3 class="entry-title" id="cb-GetVehicleKeys"><code>ds_vehiclekeys:server:GetVehicleKeys</code></h3>
-        <p>Returns <code>{ [plate] = 'owner'|'temp', ... }</code> for every plate the calling player holds. This is the same data that is pushed to the client on login — you would only call this manually if you need a guaranteed-fresh snapshot.</p>
-        <pre><code>QBCore.Functions.TriggerCallback(<span class="s">'ds_vehiclekeys:server:GetVehicleKeys'</span>, <span class="k">function</span>(keys)
-    <span class="k">for</span> plate, ktype <span class="k">in</span> pairs(keys) <span class="k">do</span>
-        print(plate, ktype)
-    <span class="k">end</span>
-<span class="k">end</span>)
-</code></pre>
-
-        <h3 class="entry-title" id="cb-checkPlayerOwned"><code>ds_vehiclekeys:server:checkPlayerOwned</code></h3>
-        <p>Returns <code>true</code> if the plate has any registered holder in <code>VehicleList</code> (i.e. is a player-owned vehicle, not just an NPC car). Used internally to decide whether to lock parked vehicles.</p>
-        <pre><code>QBCore.Functions.TriggerCallback(<span class="s">'ds_vehiclekeys:server:checkPlayerOwned'</span>, <span class="k">function</span>(owned)
-    <span class="k">if not</span> owned <span class="k">then</span>
-        <span class="c">-- NPC / unregistered vehicle</span>
-    <span class="k">end</span>
-<span class="k">end</span>, plate)
-</code></pre>
-
-        <h3 class="entry-title" id="cb-GetPlateOwner"><code>ds_vehiclekeys:server:GetPlateOwner</code></h3>
-        <p>Returns the owner citizenid for a plate via callback, or <code>nil</code> if none.</p>
-        <pre><code>QBCore.Functions.TriggerCallback(<span class="s">'ds_vehiclekeys:server:GetPlateOwner'</span>, <span class="k">function</span>(citizenid)
-    print(<span class="s">'Owner citizenid:'</span>, citizenid)
-<span class="k">end</span>, plate)
-</code></pre>
-      </div>
-
-      <!-- ── 10. Net Events ─────────────────────────────────────────── -->
-      <div class="section">
-        <h2 class="section-title" id="net-events">10 — Net Events</h2>
-
-        <h3 style="margin-top:4px;font-size:1rem;font-weight:600;color:var(--text)">Client → Server</h3>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Event</th><th>Arguments</th><th>Description</th></tr></thead>
-            <tbody>
-              <tr><td><code>ds_vehiclekeys:server:GiveVehicleKeys</code></td><td><code>receiver, plate, forcegive</code></td><td>Give keys to one or more players. <code>forcegive = true</code> skips the ownership check on the giver.</td></tr>
-              <tr><td><code>ds_vehiclekeys:server:AcquireVehicleKeys</code></td><td><code>plate</code></td><td>Request temp keys for a plate for yourself (used by garage spawn, hotwire, lockpick, carjack).</td></tr>
-              <tr><td><code>ds_vehiclekeys:server:RemoveVehicleKeys</code></td><td><code>plate</code></td><td>Remove your own keys for a plate.</td></tr>
-              <tr><td><code>ds_vehiclekeys:server:setVehLockState</code></td><td><code>vehNetId, state</code></td><td>Set door lock state on the server. <code>state 1</code> = unlocked, <code>state 2</code> = locked.</td></tr>
-              <tr><td><code>ds_vehiclekeys:server:setVehEngineState</code></td><td><code>vehNetId, on</code></td><td>Toggle engine state; broadcast to all clients so entity state is synced.</td></tr>
-              <tr><td><code>ds_vehiclekeys:server:breakLockpick</code></td><td><code>itemName</code></td><td>Consume a <code>'lockpick'</code> or <code>'advancedlockpick'</code> item from the player's inventory.</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <h3 style="margin-top:20px;font-size:1rem;font-weight:600;color:var(--text)">Server → Client</h3>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Event</th><th>Arguments</th><th>Description</th></tr></thead>
-            <tbody>
-              <tr><td><code>ds_vehiclekeys:client:AddKeys</code></td><td><code>plate</code></td><td>Add a plate to the local <code>KeysList</code> cache. Also starts the engine if the player is seated in that vehicle.</td></tr>
-              <tr><td><code>ds_vehiclekeys:client:RemoveKeys</code></td><td><code>plate</code></td><td>Remove a plate from the local <code>KeysList</code> cache.</td></tr>
-              <tr><td><code>ds_vehiclekeys:client:SyncKeys</code></td><td><code>keys</code></td><td>Full replacement of <code>KeysList</code>. Fired by the server after its DB load completes on restart to fix the race-condition window.</td></tr>
-              <tr><td><code>ds_vehiclekeys:client:ToggleEngine</code></td><td>—</td><td>Toggle engine on the vehicle the player is in (must hold keys).</td></tr>
-              <tr><td><code>ds_vehiclekeys:client:setEngineState</code></td><td><code>vehNetId, on</code></td><td>Set engine state on all clients (broadcast from server).</td></tr>
-              <tr><td><code>ds_vehiclekeys:client:GiveKeys</code></td><td><code>id</code></td><td>Fired by the <code>/givekeys</code> command — prompts the client to hand keys to player <code>id</code> or the closest player.</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <h3 style="margin-top:20px;font-size:1rem;font-weight:600;color:var(--text)">Backwards-Compatibility Shims</h3>
-        <p>These legacy event names are forwarded to the ds_vehiclekeys equivalents so any resource still using <code>qb-vehiclekeys</code> event names works without any code changes.</p>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Legacy event</th><th>Forwarded to</th></tr></thead>
-            <tbody>
-              <tr><td><code>vehiclekeys:client:SetOwner</code> (client event)</td><td><code>ds_vehiclekeys:server:AcquireVehicleKeys</code></td></tr>
-              <tr><td><code>vehiclekeys:server:GiveOwnership</code> (server event)</td><td><code>GiveKeys(id, plate, true)</code></td></tr>
+              <tr><td><code>ds_vehiclekeys:client:AddKeys</code></td><td><code>plate</code></td><td>Add a plate to the local KeysList cache. Fired by server after GiveKeys.</td></tr>
+              <tr><td><code>ds_vehiclekeys:client:RemoveKeys</code></td><td><code>plate</code></td><td>Remove a plate from the local KeysList cache.</td></tr>
+              <tr><td><code>ds_vehiclekeys:client:SyncKeys</code></td><td><code>keys</code></td><td>Full key-list push — completely replaces the local cache. Fired on resource restart.</td></tr>
+              <tr><td><code>ds_vehiclekeys:client:GiveKeys</code></td><td><code>id?</code></td><td>Open the give-keys flow from a command or another script.</td></tr>
+              <tr><td><code>ds_vehiclekeys:client:ToggleEngine</code></td><td>—</td><td>Toggle the engine on the current vehicle if the player holds keys.</td></tr>
+              <tr><td><code>ds_vehiclekeys:client:setEngineState</code></td><td><code>vehNetId, on</code></td><td>Broadcast from server — set engine state on the specified networked vehicle.</td></tr>
+              <tr><td><code>lockpicks:UseLockpick</code></td><td><code>isAdvanced</code></td><td>QBCore lockpick item event. Triggers the lockpick mini-game on the nearest vehicle.</td></tr>
+              <tr><td><code>vehiclekeys:client:SetOwner</code></td><td><code>plate</code></td><td>Backwards-compatibility shim — maps to <code>AcquireVehicleKeys</code>.</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- ── 11. Notify Bridge ───────────────────────────────────────── -->
+      <!-- ── 14. Integration Examples ──────────────────────────────────── -->
       <div class="section">
-        <h2 class="section-title" id="notify-bridge">11 — Notify Bridge</h2>
-        <p>All player-facing notifications are routed through a <code>Notify</code> global table set up in <code>bridge/notify.lua</code>. The active implementation is selected by <code>Config.Notify</code>.</p>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Value</th><th>What it uses</th></tr></thead>
-            <tbody>
-              <tr><td><code>'qb'</code></td><td>QBCore built-in <code>QBCore.Functions.Notify</code> / <code>TriggerClientEvent('QBCore:Notify', ...)</code>.</td></tr>
-              <tr><td><code>'ds_notify'</code></td><td><code>exports['ds_notify']:Notify</code> (client) / <code>exports['ds_notify']:NotifyClient</code> (server).</td></tr>
-              <tr><td><code>'custom'</code></td><td>Your implementation in <code>bridge/notify_custom.lua</code>. See template below.</td></tr>
-            </tbody>
-          </table>
-        </div>
+        <h2 class="section-title" id="integration">14 — Integration Examples</h2>
 
-        <h4 style="margin-top:18px">Using a custom notify resource</h4>
-        <ol style="padding-left:20px;line-height:2.2;margin-bottom:14px">
-          <li>Set <code>Config.Notify = 'custom'</code> in <code>config.lua</code>.</li>
-          <li>Copy <code>bridge/notify_example.lua</code> to <code>bridge/notify_custom.lua</code>.</li>
-          <li>Implement <code>Notify.Client(message, ntype, duration)</code> and/or <code>Notify.Server(src, message, ntype, duration)</code>.</li>
-        </ol>
-        <pre><code><span class="c">-- bridge/notify_custom.lua</span>
-<span class="k">if</span> Config.Notify ~= <span class="s">'custom'</span> <span class="k">then return end</span>
-
-<span class="c">-- CLIENT side</span>
-<span class="k">if not</span> IsDuplicityVersion() <span class="k">then</span>
-    <span class="k">function</span> Notify.Client(message, ntype, duration)
-        <span class="c">-- ox_lib example:</span>
-        lib.notify({ title = <span class="s">'Vehicle Keys'</span>, description = message, type = ntype })
-    <span class="k">end</span>
-<span class="k">end</span>
-
-<span class="c">-- SERVER side</span>
-<span class="k">if</span> IsDuplicityVersion() <span class="k">then</span>
-    <span class="k">function</span> Notify.Server(src, message, ntype, duration)
-        TriggerClientEvent(<span class="s">'ox_lib:notify'</span>, src, { title = <span class="s">'Vehicle Keys'</span>, description = message, type = ntype })
-    <span class="k">end</span>
-<span class="k">end</span>
-</code></pre>
-        <div class="callout"><code>bridge/notify_example.lua</code> and <code>bridge/notify_custom.lua</code> are <strong>not encrypted</strong> — you can always read the example as a reference.</div>
-      </div>
-
-      <!-- ── 12. Localisation ───────────────────────────────────────── -->
-      <div class="section">
-        <h2 class="section-title" id="localisation">12 — Localisation</h2>
-        <p>All player-facing text lives in <code>locales/en.lua</code>, which is unencrypted. To translate, duplicate the file, rename it (e.g. <code>fr.lua</code>), and update the strings. All <code>locales/*.lua</code> files are auto-loaded.</p>
-        <pre><code><span class="c">-- locales/en.lua (abridged)</span>
-<span class="k">local</span> Translations = {
-    notify = {
-        ydhk       = <span class="s">"You don't have keys to this vehicle."</span>,
-        vlock      = <span class="s">'Vehicle locked!'</span>,
-        vunlock    = <span class="s">'Vehicle unlocked!'</span>,
-        vlockpick  = <span class="s">'You managed to pick the door lock open!'</span>,
-        vgkeys     = <span class="s">'You hand over the keys.'</span>,
-        vgetkeys   = <span class="s">'You received the vehicle keys!'</span>,
-        cjackfail  = <span class="s">'Carjacking failed!'</span>,
-    },
-    progress = {
-        takekeys = <span class="s">'Taking keys from body...'</span>,
-        hskeys   = <span class="s">'Searching for the car keys...'</span>,
-        acjack   = <span class="s">'Attempting Carjacking...'</span>,
-    },
-    info = {
-        skeys  = <span class="s">'~g~[H]~w~ - Search for Keys'</span>,
-        tlock  = <span class="s">'Toggle Vehicle Locks'</span>,
-        engine = <span class="s">'Toggle Engine'</span>,
-    },
-}
-</code></pre>
-      </div>
-
-      <!-- ── 13. Integration Guide ──────────────────────────────────── -->
-      <div class="section">
-        <h2 class="section-title" id="integration">13 — Integration Guide</h2>
-
-        <h4>Vehicle shops / dealerships</h4>
-        <p>When a player successfully buys a vehicle, call <a href="#sv-BuyVehicleKeys"><code>BuyVehicleKeys</code></a> from your server callback. This is the recommended single-call path — it handles DB write, cache update, client push, and notification.</p>
-        <pre><code><span class="c">-- Server callback after successful purchase</span>
-exports[<span class="s">'ds_vehiclekeys'</span>]:BuyVehicleKeys(source, vehiclePlate)
+        <h3 class="entry-title" id="int-purchase">Vehicle Purchase (server-side)</h3>
+        <pre><code><span class="c">-- In your vehicle shop server script, after writing to player_vehicles:</span>
+exports[<span class="s">'ds_vehiclekeys'</span>]:BuyVehicleKeys(src, plate)
+<span class="c">-- or, if you need to pass a citizenid directly (offline safe):</span>
+exports[<span class="s">'ds_vehiclekeys'</span>]:SetOwner(plate, citizenid)
 </code></pre>
 
-        <h4>Admin / impound systems</h4>
-        <p>Use <a href="#sv-HasKeys"><code>HasKeys</code></a> for ownership checks and <a href="#sv-setVehicleState"><code>setVehicleState</code> (ds_garages)</a> for moving the vehicle. Use <a href="#sv-RemoveKeys"><code>RemoveKeys</code></a> or <a href="#sv-RemoveAllKeysForPlate"><code>RemoveAllKeysForPlate</code></a> to revoke access.</p>
+        <h3 class="entry-title" id="int-spawn">Spawn / Garage Retrieve (server-side)</h3>
+        <pre><code><span class="c">-- Give the player keys when their vehicle is spawned from a garage:</span>
+exports[<span class="s">'ds_vehiclekeys'</span>]:GiveKeys(src, plate, <span class="k">true</span>)  <span class="c">-- marks as owner</span>
+</code></pre>
 
-        <h4>Police / detective resources</h4>
-        <p>Use <a href="#sv-GetPlateOwner"><code>GetPlateOwner(plate)</code></a> to look up the citizenid of any registered vehicle's owner. This is synchronous and in-memory — no DB round-trip.</p>
-        <pre><code><span class="k">local</span> ownerCid = exports[<span class="s">'ds_vehiclekeys'</span>]:GetPlateOwner(<span class="s">'ABC1234'</span>)
-<span class="k">if</span> ownerCid <span class="k">then</span>
-    <span class="k">local</span> Player = exports[<span class="s">'qb-core'</span>]:GetPlayerByCitizenId(ownerCid)
-    <span class="c">-- Player is the vehicle owner</span>
+        <h3 class="entry-title" id="int-transfer">Ownership Transfer (server-side)</h3>
+        <pre><code><span class="c">-- When a player sells their vehicle to another player:</span>
+exports[<span class="s">'ds_vehiclekeys'</span>]:TransferOwnership(plate, buyerSrc)
+</code></pre>
+
+        <h3 class="entry-title" id="int-delete">Vehicle Sale / Deletion (server-side)</h3>
+        <pre><code><span class="c">-- When a vehicle is permanently removed from the server:</span>
+exports[<span class="s">'ds_vehiclekeys'</span>]:RemoveAllKeysForPlate(plate)
+</code></pre>
+
+        <h3 class="entry-title" id="int-haskeys">Check Keys (client-side)</h3>
+        <pre><code><span class="c">-- Any client script can check whether the local player holds keys:</span>
+<span class="k">if</span> exports[<span class="s">'ds_vehiclekeys'</span>]:HasKeys(plate) <span class="k">then</span>
+    <span class="c">-- player can drive this vehicle</span>
 <span class="k">end</span>
 </code></pre>
 
-        <h4>External lock/unlock triggers</h4>
-        <p>Use the <a href="#cl-ToggleVehicleLocks"><code>ToggleVehicleLocks</code></a> client export from a target action, NPC interaction, or phone app. Ownership and blacklist checks are applied internally.</p>
-        <pre><code><span class="c">-- From a ds_target or qb-target action callback:</span>
-exports[<span class="s">'ds_vehiclekeys'</span>]:ToggleVehicleLocks(entity)
-</code></pre>
-
-        <h4>Marking a vehicle as exempt from locking</h4>
-        <p>Set the <code>ignoreLocks</code> entity state flag on the vehicle entity, or add its model to <code>Config.NoLockVehicles</code>. The <code>IsBlacklistedVehicle</code> client export respects both.</p>
-        <pre><code><span class="c">-- Mark a spawned entity as exempt at runtime</span>
-Entity(vehicle).state.ignoreLocks = <span class="k">true</span>
-
-<span class="c">-- Or add the model permanently in config.lua</span>
-Config.NoLockVehicles = { <span class="s">'bicycle'</span>, <span class="s">'bmx'</span>, <span class="s">'fixter'</span> }
+        <h3 class="entry-title" id="int-lock">Programmatic Lock (client-side)</h3>
+        <pre><code><span class="c">-- Lock a specific vehicle entity from another resource:</span>
+exports[<span class="s">'ds_vehiclekeys'</span>]:ToggleVehicleLocks(vehicleEntity, <span class="k">true</span>)
 </code></pre>
       </div>
 
-      <!-- ── 14. FAQ ─────────────────────────────────────────────────── -->
+      <!-- ── 15. FAQ ─────────────────────────────────────────────────────── -->
       <div class="section">
-        <h2 class="section-title" id="faq">14 — Frequently Asked Questions</h2>
+        <h2 class="section-title" id="faq">15 — FAQ</h2>
 
-        <h4>Keys are gone after a server restart</h4>
-        <p>Make sure you ran <code>sql/ds_vehiclekeys.sql</code> to create the <code>ds_vehiclekeys</code> table. Owner keys are persisted to the DB on every <code>GiveKeys(isOwner=true)</code> / <code>BuyVehicleKeys</code> / <code>SetOwner</code> call and re-loaded on startup. Temp keys are also persisted in the <code>temp_holders</code> JSON column.</p>
+        <h3 class="entry-title" id="faq-migrate">Can I migrate from qb-vehiclekeys?</h3>
+        <p>Yes. DS Vehicle Keys listens to all legacy <code>qb-vehiclekeys</code> events and exports. Simply stop <code>qb-vehiclekeys</code>, start <code>ds_vehiclekeys</code>, and run the SQL. Existing <code>player_vehicles</code> rows are unaffected — ownership is derived from the new <code>ds_vehiclekeys</code> table, which is populated automatically the first time each vehicle is spawned.</p>
 
-        <h4>Players can enter locked NPC vehicles</h4>
-        <p>Check that <code>Config.LockNPCDrivingCars</code> and <code>Config.LockNPCParkedCars</code> are both <code>true</code>. Note that locking NPC vehicles is client-enforced — a high-latency player may still enter before the lock state is applied.</p>
+        <h3 class="entry-title" id="faq-nokeys">Players lose their keys on resource restart</h3>
+        <p>This should not happen — keys are loaded from the database on every resource start and pushed to all online players. If you observe lost keys, check that <code>oxmysql</code> starts before <code>ds_vehiclekeys</code> and that the DB connection is healthy.</p>
 
-        <h4>Carjacking never succeeds / always succeeds</h4>
-        <p>Tune <code>Config.CarjackChance</code>. The key used in the table is the GTA weapon group hash as a string. Values are probability floats from <code>0.0</code> (never) to <code>1.0</code> (always). Weapons not listed in the table default to <code>0.5</code>.</p>
+        <h3 class="entry-title" id="faq-hotwire">Hotwire bar does not appear</h3>
+        <p>Make sure <code>Config.Progressbar</code> matches a running resource. If you set it to <code>'ds_progressbar'</code> but that resource is not started, the bridge logs a warning and falls back to the QBCore bar automatically.</p>
 
-        <h4>The /givekeys command hands keys to the wrong player</h4>
-        <p>The command without an ID gives to the closest player within 1.5 m. If no one is within range the "nobody nearby" notification shows. Use <code>/givekeys [id]</code> to specify a target by server ID.</p>
+        <h3 class="entry-title" id="faq-lockpick">Lockpick does not remove from inventory</h3>
+        <p>Check <code>Config.Inventory</code>. Set it to <code>'auto'</code> and verify that at least one of <code>qs-inventory</code>, <code>ox_inventory</code>, or <code>qb-inventory</code> is running. The bridge logs which inventory it detects on first use.</p>
 
-        <h4>Notifications are not showing up</h4>
-        <p>Verify <code>Config.Notify</code> matches the resource actually running on your server. If using <code>'ds_notify'</code>, confirm that resource is started and not erroring.</p>
-
-        <h4>Can I use ds_vehiclekeys with a non-QBCore framework?</h4>
-        <p>Not directly — the resource uses <code>qb-core</code> exports for player data and callbacks throughout. A complete bridge rewrite would be required for other frameworks.</p>
-
-        <h4>How do I disable carjacking entirely?</h4>
-        <p>Set <code>Config.CarjackEnable = false</code> in <code>config.lua</code>. The carjack loop will not start and the <code>CarjackVehicle</code> function will return immediately.</p>
-
-        <h4>How do I give all officers of a job access to police vehicles without individual key grants?</h4>
-        <p>Add the job and vehicle model list to <code>Config.SharedKeys</code>. Set <code>requireOnduty = true</code> if you only want on-duty officers to have access. No DB records are created — it is purely config-driven.</p>
+        <h3 class="entry-title" id="faq-npc">NPC vehicles are not locking</h3>
+        <p>Confirm that both <code>Config.LockNPCDrivingCars</code> and <code>Config.LockNPCParkedCars</code> are <code>true</code>. The lock is applied client-side when a player attempts to enter the vehicle — it does not affect vehicles they are not near.</p>
       </div>
 
       <footer class="site-footer">
-        <p>&copy; DS Customs / GunSmoke Scripts. All rights reserved.</p>
+        <p>&copy; DS Customs. All rights reserved.</p>
       </footer>
 
     </main>
