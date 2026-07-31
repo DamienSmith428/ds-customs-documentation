@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -38,562 +38,732 @@
       <!-- Doc header -->
       <div class="doc-header">
         <h1>DS Garages</h1>
-        <p class="subtitle">Overhauled garage system with live camera preview, ped attendants, and cinematic UI — by DS Customs</p>
+        <p class="subtitle">Overhauled garage system with live camera preview, ped attendants, cinematic UI, and a full developer export API — by DS Customs</p>
         <div class="badge-row">
-          <span class="badge badge-gray">v1.0.2</span>
+          <span class="badge badge-gray">v1.0.5</span>
           <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-blue">FiveM</span>
+          <span class="badge badge-orange">Lua 5.4</span>
           <span class="badge badge-purple">qs-inventory</span>
           <span class="badge badge-purple">ox_inventory</span>
           <span class="badge badge-purple">qb-inventory</span>
-          <span class="badge badge-orange">Lua 5.4</span>
           <span class="badge badge-red">Escrow</span>
         </div>
       </div>
 
-      <!-- ── 1. Requirements ─────────────────────────────────────────── -->
+      <!-- ── 1. Overview ─────────────────────────────────────────────── -->
       <div class="section">
-        <h2 class="section-title" id="requirements">1 — Requirements</h2>
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS Garages replaces the default QBCore garage system with a cinematic experience: live 3D camera previews of your vehicle before you retrieve it, NPC ped attendants at each location, a sleek dark-glass UI card, vehicle class enforcement, optional valet delivery, and an impound/depot flow with configurable release fees.</p>
+        <p>All garage definitions live in individual files inside <code>garages/</code> and are loaded automatically — you never edit <code>config.lua</code> to add a garage. The resource ships with ready-made garages for public cars, air hangars, boathouses, job garages (police), gang garages (Ballas / Families), and a vehicle depot.</p>
+        <div class="callout tip">The <code>config.lua</code>, all <code>locales/*.lua</code>, and the vehicle-keys bridge files are <strong>not encrypted</strong>. Everything else is escrow-protected to keep your purchase licence intact.</div>
+      </div>
+
+      <!-- ── 2. Dependencies ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="dependencies">2 — Dependencies</h2>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>Resource</th><th>Notes</th></tr></thead>
+            <thead><tr><th>Resource</th><th>Required?</th><th>Notes</th></tr></thead>
             <tbody>
-              <tr><td><code>qb-core</code></td><td>Required framework. Must start before ds_garages.</td></tr>
-              <tr><td><code>oxmysql</code></td><td>Required for all database operations.</td></tr>
-              <tr><td><code>PolyZone</code></td><td>Required for garage zone detection on the client.</td></tr>
-              <tr><td><code>qs-inventory</code> <em>or</em> <code>ox_inventory</code> <em>or</em> <code>qb-inventory</code></td><td>One inventory must be running. Auto-detected at startup in that priority order.</td></tr>
-              <tr><td><code>LegacyFuel</code> <em>(or custom)</em></td><td>Configurable via <code>Config.FuelResource</code>. Must expose <code>GetFuel()</code> / <code>SetFuel()</code>.</td></tr>
-              <tr><td><code>ds_notify</code> <em>(optional)</em></td><td>If running, used for notifications. Falls back to QBCore notifications automatically.</td></tr>
+              <tr><td><code>qb-core</code></td><td>Yes</td><td>Framework. Must start before ds_garages.</td></tr>
+              <tr><td><code>oxmysql</code></td><td>Yes</td><td>Async MySQL library used for all database calls.</td></tr>
+              <tr><td><code>PolyZone</code></td><td>Yes</td><td>Used for interaction zones around garage locations.</td></tr>
+              <tr><td><code>qb-vehiclekeys</code> / <code>ds_vehiclekeys</code></td><td>One required</td><td>Key ownership after spawn. Configurable — see <a href="#vehicle-keys-bridge">Vehicle Keys Bridge</a>.</td></tr>
+              <tr><td><code>ds_notify</code></td><td>Optional</td><td>Auto-detected. Falls back to QBCore notifications if absent.</td></tr>
+              <tr><td><code>ds_prompt</code></td><td>Optional</td><td>Auto-detected. Falls back to built-in HUD prompt if absent.</td></tr>
+              <tr><td><code>LegacyFuel</code></td><td>Optional</td><td>Default fuel resource. Change <code>Config.FuelResource</code> to match your fuel script.</td></tr>
             </tbody>
           </table>
         </div>
-      </div>
-
-      <!-- ── 2. Escrow ───────────────────────────────────────────────── -->
-      <div class="section">
-        <h2 class="section-title" id="escrow">2 — Escrow &amp; Open Files</h2>
-        <p>DS Garages is protected with <strong>FiveM Escrow</strong>. The core scripts are encrypted and tied to your licence key. The following files are excluded from escrow — you have full access to read and edit them.</p>
-        <div class="escrow-row">
-          <div class="escrow-card open-card">
-            <h4 style="color:var(--green)">Open — editable by you</h4>
-            <ul>
-              <li><code>config.lua</code></li>
-              <li><code>locales/*.lua</code></li>
-              <li><code>garages/*.lua</code></li>
-            </ul>
-          </div>
-          <div class="escrow-card closed-card">
-            <h4 style="color:var(--red)">Encrypted — Escrow protected</h4>
-            <ul>
-              <li><code>client/client.lua</code></li>
-              <li><code>client/valet_client.lua</code></li>
-              <li><code>server/server.lua</code></li>
-              <li><code>server/valet_server.lua</code></li>
-              <li><code>bridge/notify.lua</code></li>
-              <li><code>html/*</code></li>
-            </ul>
-          </div>
-        </div>
-        <div class="callout tip">All day-to-day customisation — garage locations, class restrictions, prompt text, locale strings, and all global settings — lives entirely in the open files.</div>
       </div>
 
       <!-- ── 3. Installation ─────────────────────────────────────────── -->
       <div class="section">
         <h2 class="section-title" id="installation">3 — Installation</h2>
-
-        <h3 class="entry-title" id="install-sql">Database Setup</h3>
-        <p>Choose <strong>one</strong> SQL file from the <code>sql/</code> folder based on your situation.</p>
-
-        <h4>Fresh install — no existing player_vehicles table</h4>
-        <p>Run <code>sql/fresh_install.sql</code>. Creates the full <code>player_vehicles</code> table with all required columns including <code>lastgarage</code> and <code>persist_coords</code>.</p>
-
-        <h4>Existing server — player_vehicles already present</h4>
-        <p>Run <code>sql/update.sql</code>. Safely adds the two columns ds_garages needs and back-fills historical data. Safe to run more than once.</p>
-        <pre><code><span class="c">-- sql/update.sql adds these two columns:</span>
-ALTER TABLE `player_vehicles`
-    ADD COLUMN IF NOT EXISTS `lastgarage`
-        VARCHAR(50) NULL DEFAULT NULL AFTER `garage`;
-
-ALTER TABLE `player_vehicles`
-    ADD COLUMN IF NOT EXISTS `persist_coords`
-        JSON NULL DEFAULT NULL AFTER `lastgarage`;
-</code></pre>
-
-        <h3 class="entry-title" id="install-item">Receipt Item (Vehicle Transfer)</h3>
-        <p>If <code>Config.AllowVehicleTransfer = true</code>, add this item to your QBCore shared items file:</p>
-        <pre><code><span class="p">['vehiclereceipt']</span> = {
-    <span class="p">name</span>        = <span class="s">'vehiclereceipt'</span>,
-    <span class="p">label</span>       = <span class="s">'Vehicle Receipt'</span>,
-    <span class="p">weight</span>      = <span class="n">0</span>,
-    <span class="p">type</span>        = <span class="s">'item'</span>,
-    <span class="p">image</span>       = <span class="s">'vehiclereceipt.png'</span>,
-    <span class="p">unique</span>      = <span class="n">true</span>,
-    <span class="p">useable</span>     = <span class="n">true</span>,
-    <span class="p">shouldClose</span> = <span class="n">true</span>,
-    <span class="p">description</span> = <span class="s">'An ownership receipt for a vehicle.'</span>,
-},</code></pre>
-        <div class="callout warn">The item must be <code>unique = true</code> and <code>useable = true</code>. The item name must exactly match <code>Config.ReceiptItemName</code> (default: <code>'vehiclereceipt'</code>).</div>
-
-        <h3 class="entry-title" id="install-cfg">server.cfg Start Order</h3>
-        <pre><code>ensure qb-core
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Place the <code>ds_garages</code> folder inside your resources directory (e.g. <code>[GunSmoke]</code>).</li>
+          <li>Run the correct SQL file for your setup — see <a href="#sql">SQL Setup</a> below.</li>
+          <li>Add <code>ensure ds_garages</code> to <code>server.cfg</code> <strong>after</strong> <code>qb-core</code>, <code>oxmysql</code>, <code>PolyZone</code>, and your vehicle-keys resource.</li>
+          <li>Set <code>Config.VehicleKeys</code> in <code>config.lua</code> to match the key resource running on your server.</li>
+          <li>Optionally remove or keep <code>qb-garages</code> — ds_garages is a full replacement, not an add-on.</li>
+        </ol>
+        <pre><code><span class="c"># server.cfg — example load order</span>
 ensure oxmysql
+ensure qb-core
 ensure PolyZone
-ensure qs-inventory   <span class="c"># or ox_inventory / qb-inventory</span>
-ensure LegacyFuel     <span class="c"># or your fuel resource</span>
+ensure ds_vehiclekeys   <span class="c"># or qb-vehiclekeys / your custom keys resource</span>
+ensure ds_notify        <span class="c"># optional but recommended</span>
+ensure ds_prompt        <span class="c"># optional but recommended</span>
 ensure ds_garages
 </code></pre>
-        <div class="callout">ds_garages auto-detects whichever inventory resource is running. Only one needs to be active.</div>
+
+        <h3 id="sql" style="margin-top:24px;font-size:1rem;font-weight:600;color:var(--text)">SQL Setup</h3>
+        <p>Two SQL files are included in <code>sql/</code>. Use whichever matches your situation:</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>File</th><th>When to use</th></tr></thead>
+            <tbody>
+              <tr><td><code>sql/fresh_install.sql</code></td><td>New server with no existing <code>player_vehicles</code> table. Creates the full table with all required columns.</td></tr>
+              <tr><td><code>sql/update.sql</code></td><td>Existing server already running QBCore garages. Adds the <code>lastgarage</code> and <code>persist_coords</code> columns and back-fills them. Safe to run more than once.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn">Do <strong>not</strong> run <code>fresh_install.sql</code> on a server that already has a <code>player_vehicles</code> table — it will attempt to create a duplicate table. Always use <code>update.sql</code> on existing servers.</div>
+
+        <h4 style="margin-top:18px">Key columns added by ds_garages</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>lastgarage</code></td><td>VARCHAR(50)</td><td>The last garage a vehicle was stored in. Displayed as "Last seen at …" when the vehicle is out.</td></tr>
+              <tr><td><code>persist_coords</code></td><td>JSON</td><td>World coordinates saved on resource stop so out vehicles re-spawn at the same spot. Only used when <code>Config.PersistentVehicles = true</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <!-- ── 4. Config ───────────────────────────────────────────────── -->
+      <!-- ── 4. Configuration ────────────────────────────────────────── -->
       <div class="section">
         <h2 class="section-title" id="configuration">4 — Configuration — config.lua</h2>
-        <p>All global settings live in <code>config.lua</code>, which is open and unencrypted.</p>
+        <p><code>config.lua</code> is open and unencrypted. All top-level behaviour options are listed below.</p>
+        <pre><code><span class="c">-- Which vehicle-keys resource handles key ownership on this server.</span>
+<span class="c">--   'qb-vehiclekeys'  → built-in QBCore vehicle keys</span>
+<span class="c">--   'ds_vehiclekeys'  → DS Customs ds_vehiclekeys resource (default)</span>
+<span class="c">--   'custom'          → bring your own — see bridge/vehiclekeys_example.lua</span>
+Config.VehicleKeys = <span class="s">'ds_vehiclekeys'</span>
 
-        <h4>Behaviour</h4>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
-            <tbody>
-              <tr><td><code>Config.AutoRespawn</code></td><td><code>true</code></td><td>Return all out vehicles to their last garage on resource restart. When <code>false</code>, out vehicles receive a depot fee of 500 instead.</td></tr>
-              <tr><td><code>Config.DefaultGarage</code></td><td><code>'pillboxgarage'</code></td><td>Fallback garage key used by AutoRespawn for vehicles with no <code>lastgarage</code> history.</td></tr>
-              <tr><td><code>Config.PersistentVehicles</code></td><td><code>true</code></td><td>Re-spawn out vehicles at their exact world coordinates after a server restart. Requires the <code>persist_coords</code> column. Overrides AutoRespawn for out vehicles.</td></tr>
-              <tr><td><code>Config.AllowVehicleTracking</code></td><td><code>true</code></td><td>Show a Track button in the garage UI for out vehicles. Sets a GPS waypoint to the vehicle's current position.</td></tr>
-              <tr><td><code>Config.AllowVehicleTransfer</code></td><td><code>true</code></td><td>Allow players to transfer vehicle ownership to a nearby player via a receipt item.</td></tr>
-              <tr><td><code>Config.ReceiptItemName</code></td><td><code>'vehiclereceipt'</code></td><td>Internal item name used for vehicle ownership receipts. Must match a <code>QBCore.Shared.Items</code> entry.</td></tr>
-              <tr><td><code>Config.VisuallyDamageCars</code></td><td><code>true</code></td><td>Re-apply stored engine, body, and tyre damage when a vehicle is spawned.</td></tr>
-              <tr><td><code>Config.ClassSystem</code></td><td><code>true</code></td><td>Enforce per-garage vehicle class restrictions. A boat garage will not show cars.</td></tr>
-              <tr><td><code>Config.Warp</code></td><td><code>true</code></td><td>Warp the player into the driver seat on vehicle spawn.</td></tr>
-              <tr><td><code>Config.FuelResource</code></td><td><code>'LegacyFuel'</code></td><td>Resource name of your fuel script. Must expose <code>GetFuel(veh)</code> and <code>SetFuel(veh, level)</code>.</td></tr>
-            </tbody>
-          </table>
-        </div>
+<span class="c">-- Return all out-of-garage vehicles to their lastgarage on resource restart.</span>
+Config.AutoRespawn   = <span class="k">true</span>
 
-        <h4>Notifications</h4>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
-            <tbody>
-              <tr><td><code>Config.UseDSNotify</code></td><td><code>true</code></td><td>Use <code>ds_notify</code> if running; auto-falls back to QBCore notifications.</td></tr>
-            </tbody>
-          </table>
-        </div>
+<span class="c">-- Fallback garage key for AutoRespawn when a vehicle has no lastgarage history.</span>
+Config.DefaultGarage = <span class="s">'pillboxgarage'</span>
 
-        <h4>Prompt Text</h4>
-        <pre><code>Config.PromptText = {
-    <span class="p">garage</span> = <span class="s">'Open Garage'</span>,
-    <span class="p">park</span>   = <span class="s">'Park Vehicle'</span>,
-    <span class="p">depot</span>  = <span class="s">'Open Depot'</span>,
-    <span class="p">house</span>  = <span class="s">'House Garage'</span>,
-}</code></pre>
+<span class="c">-- Allow players to GPS-track their Out vehicles from the garage UI.</span>
+Config.AllowVehicleTracking = <span class="k">true</span>
 
-        <h4>Vehicle Class Presets</h4>
-        <p>Referenced in garage files as <code>Config.VehicleClass['car']</code> etc. Add custom presets freely.</p>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Key</th><th>Included Classes</th></tr></thead>
-            <tbody>
-              <tr><td><code>all</code></td><td>0–22 (every vehicle class)</td></tr>
-              <tr><td><code>car</code></td><td>Compacts, Sedans, SUVs, Coupes, Muscle, Sports Classics, Sports, Super, Motorcycles, Off-road, Vans, Cycles, Emergency, Open Wheel</td></tr>
-              <tr><td><code>air</code></td><td>Helicopters (15), Planes (16)</td></tr>
-              <tr><td><code>sea</code></td><td>Boats (14)</td></tr>
-              <tr><td><code>rig</code></td><td>Industrial, Utility, Service, Military, Commercial</td></tr>
-              <tr><td><code>bike</code></td><td>Motorcycles (8) only</td></tr>
-            </tbody>
-          </table>
-        </div>
+<span class="c">-- Show a Transfer button on vehicle cards to send ownership receipts to other players.</span>
+Config.AllowVehicleTransfer = <span class="k">true</span>
+
+<span class="c">-- Item name used for vehicle ownership receipts (must exist in QBCore.Shared.Items).</span>
+Config.ReceiptItemName = <span class="s">'vehiclereceipt'</span>
+
+<span class="c">-- Out vehicles re-spawn at their saved world coordinates after a server restart.</span>
+<span class="c">-- Overrides AutoRespawn for out vehicles when true. Requires persist_coords column.</span>
+Config.PersistentVehicles = <span class="k">true</span>
+
+<span class="c">-- Apply stored engine/body/tyre damage when a vehicle is spawned from a garage.</span>
+Config.VisuallyDamageCars = <span class="k">true</span>
+
+<span class="c">-- Enforce per-garage vehicle-class restrictions (see Config.VehicleClass presets).</span>
+Config.ClassSystem = <span class="k">true</span>
+
+<span class="c">-- Warp the player into the driver's seat immediately after the vehicle spawns.</span>
+Config.Warp = <span class="k">true</span>
+
+<span class="c">-- Name of the fuel resource that exposes GetFuel() / SetFuel().</span>
+Config.FuelResource = <span class="s">'LegacyFuel'</span>
+
+<span class="c">-- Use ds_notify for notifications (auto-falls back to QBCore if not running).</span>
+Config.UseDSNotify = <span class="k">true</span>
+
+<span class="c">-- Use ds_prompt for interaction prompts (auto-falls back to built-in HUD prompt).</span>
+Config.UseDSPrompt = <span class="k">true</span>
+
+<span class="c">-- Text shown on the interaction prompt for each zone type.</span>
+Config.PromptText = {
+    garage = <span class="s">'Open Garage'</span>,
+    park   = <span class="s">'Park Vehicle'</span>,
+    depot  = <span class="s">'Open Depot'</span>,
+    house  = <span class="s">'House Garage'</span>,
+}
+
+<span class="c">-- Vehicle class arrays referenced inside garages/*.lua files.</span>
+<span class="c">-- See: https://docs.fivem.net/natives/?_0x29439776AAA00A62</span>
+Config.VehicleClass = {
+    all  = { <span class="n">0</span>,<span class="n">1</span>,<span class="n">2</span>,<span class="n">3</span>,<span class="n">4</span>,<span class="n">5</span>,<span class="n">6</span>,<span class="n">7</span>,<span class="n">8</span>,<span class="n">9</span>,<span class="n">10</span>,<span class="n">11</span>,<span class="n">12</span>,<span class="n">13</span>,<span class="n">14</span>,<span class="n">15</span>,<span class="n">16</span>,<span class="n">17</span>,<span class="n">18</span>,<span class="n">19</span>,<span class="n">20</span>,<span class="n">21</span>,<span class="n">22</span> },
+    car  = { <span class="n">0</span>,<span class="n">1</span>,<span class="n">2</span>,<span class="n">3</span>,<span class="n">4</span>,<span class="n">5</span>,<span class="n">6</span>,<span class="n">7</span>,<span class="n">8</span>,<span class="n">9</span>,<span class="n">12</span>,<span class="n">13</span>,<span class="n">18</span>,<span class="n">22</span> },
+    air  = { <span class="n">15</span>,<span class="n">16</span> },
+    sea  = { <span class="n">14</span> },
+    rig  = { <span class="n">10</span>,<span class="n">11</span>,<span class="n">17</span>,<span class="n">19</span>,<span class="n">20</span> },
+    bike = { <span class="n">8</span> },
+}
+</code></pre>
       </div>
 
-      <!-- ── 5. Garages ──────────────────────────────────────────────── -->
+      <!-- ── 5. Garage Definitions ───────────────────────────────────── -->
       <div class="section">
-        <h2 class="section-title" id="garages">5 — Garages — garages/*.lua</h2>
-        <p>Every file inside <code>garages/</code> is auto-loaded. Files populate <code>Config.Garages</code> with one or more garage definitions. <strong>This folder is fully open.</strong> Add, remove, or rename files freely.</p>
+        <h2 class="section-title" id="garage-definitions">5 — Garage Definitions</h2>
+        <p>Every garage is a Lua table added to <code>Config.Garages</code> inside one of the files in <code>garages/</code>. The <code>fxmanifest.lua</code> loads all files in that folder automatically via <code>garages/*.lua</code>, so adding a new file is enough — no manifest editing required.</p>
 
-        <h3 class="entry-title" id="garages-schema">Garage Entry Schema</h3>
-        <pre><code>Config.Garages[<span class="s">'mygaragename'</span>] = {
-    <span class="c">-- Required</span>
-    <span class="p">label</span>    = <span class="s">'My Garage'</span>,
-    <span class="p">type</span>     = <span class="s">'public'</span>,   <span class="c">-- 'public' | 'depot' | 'job' | 'gang' | 'house'</span>
-    <span class="p">category</span> = Config.VehicleClass[<span class="s">'car'</span>],
+        <h3 style="margin-top:20px;font-size:1rem;font-weight:600;color:var(--text)">Garage entry schema</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>label</code></td><td>string</td><td>Yes</td><td>Human-readable name shown in blips and the UI.</td></tr>
+              <tr><td><code>type</code></td><td>string</td><td>Yes</td><td><code>'public'</code> · <code>'depot'</code> · <code>'job'</code> · <code>'gang'</code> · <code>'house'</code></td></tr>
+              <tr><td><code>category</code></td><td>number[]</td><td>Yes</td><td>Array of GTA vehicle class integers. Use a <code>Config.VehicleClass</code> preset.</td></tr>
+              <tr><td><code>spawnPoints</code></td><td>vector4[]</td><td>Yes</td><td>One or more spawn positions (x, y, z, heading) for retrieved vehicles.</td></tr>
+              <tr><td><code>usePed</code></td><td>boolean</td><td>Yes</td><td><code>true</code> = NPC attendant at <code>pedCoords</code>; zone and blip use <code>pedCoords</code>. <code>false</code> = zone and blip use <code>coords</code>.</td></tr>
+              <tr><td><code>pedModel</code></td><td>string</td><td>If usePed=true</td><td>Ped model name (e.g. <code>'s_m_m_autoshop_01'</code>).</td></tr>
+              <tr><td><code>pedCoords</code></td><td>vector4</td><td>If usePed=true</td><td>Where the ped stands. Used as the garage's world position when <code>usePed = true</code>.</td></tr>
+              <tr><td><code>coords</code></td><td>vector4</td><td>If usePed=false</td><td>World position of the garage zone and blip when no ped is used.</td></tr>
+              <tr><td><code>zoneRadius</code></td><td>number</td><td>No</td><td>Interaction zone radius in metres. Defaults to <code>2.0</code>.</td></tr>
+              <tr><td><code>previewSpawn</code></td><td>vector4</td><td>Yes</td><td>Temporary spawn position used for the live camera preview.</td></tr>
+              <tr><td><code>previewCamera</code></td><td>vector4</td><td>Yes</td><td>Camera origin (x, y, z) and horizontal rotation used for the preview shot.</td></tr>
+              <tr><td><code>previewCameraAngle</code></td><td>number</td><td>Yes</td><td>Vertical tilt of the preview camera in degrees (negative = looking slightly down).</td></tr>
+              <tr><td><code>exitTeleport</code></td><td>table</td><td>Yes</td><td><code>{ enabled = bool, coords = vector3 }</code>. When <code>enabled = true</code> the player is teleported to <code>coords</code> after parking (useful for water garages).</td></tr>
+              <tr><td><code>blip</code></td><td>table</td><td>Yes</td><td><code>{ show, sprite, color, scale, name }</code>. Set <code>show = false</code> to hide from the map.</td></tr>
+              <tr><td><code>job</code></td><td>string</td><td>If type is job/gang</td><td>QBCore job name required to access this garage.</td></tr>
+              <tr><td><code>jobType</code></td><td>string</td><td>No</td><td>QBCore job type check (e.g. <code>'leo'</code>). Used alongside or instead of <code>job</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
 
-    <span class="c">-- Spawn points (at least one required)</span>
-    <span class="p">spawnPoints</span> = {
+        <h3 style="margin-top:24px;font-size:1rem;font-weight:600;color:var(--text)">Garage type reference</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>type</th><th>Who can access it</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>'public'</code></td><td>Any player</td><td>Standard vehicle storage. No job/gang check.</td></tr>
+              <tr><td><code>'depot'</code></td><td>Any player</td><td>Impound lot. Vehicles here have a release fee stored in <code>depotprice</code>.</td></tr>
+              <tr><td><code>'job'</code></td><td>Players whose job matches <code>job</code> / <code>jobType</code></td><td>Police, mechanic, EMS, etc.</td></tr>
+              <tr><td><code>'gang'</code></td><td>Players whose gang matches <code>job</code></td><td>Uses QBCore gang data, not job data.</td></tr>
+              <tr><td><code>'house'</code></td><td>House owner only</td><td>Managed by the house script integration.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top:24px;font-size:1rem;font-weight:600;color:var(--text)">Example — public car garage with ped attendant</h3>
+        <pre><code>Config.Garages[<span class="s">'pillboxgarage'</span>] = {
+    label    = <span class="s">'Pillbox Garage'</span>,
+    type     = <span class="s">'public'</span>,
+    category = Config.VehicleClass[<span class="s">'car'</span>],
+
+    spawnPoints = {
         vector4(<span class="n">222.02</span>, <span class="n">-804.19</span>, <span class="n">30.26</span>, <span class="n">248.19</span>),
+        vector4(<span class="n">223.93</span>, <span class="n">-799.11</span>, <span class="n">30.25</span>, <span class="n">248.53</span>),
     },
 
-    <span class="c">-- Cinematic preview camera</span>
-    <span class="p">previewSpawn</span>       = vector4(<span class="n">222.03</span>, <span class="n">-804.2</span>, <span class="n">30.26</span>, <span class="n">248.2</span>),
-    <span class="p">previewCamera</span>      = vector4(<span class="n">225.52</span>, <span class="n">-808.75</span>, <span class="n">31.57</span>, <span class="n">30.77</span>),
-    <span class="p">previewCameraAngle</span> = <span class="n">-15.0</span>,
+    exitTeleport = { enabled = <span class="k">false</span> },
 
-    <span class="c">-- Exit teleport</span>
-    <span class="p">exitTeleport</span> = { <span class="p">enabled</span> = <span class="n">false</span> },
+    previewSpawn       = vector4(<span class="n">222.03</span>, <span class="n">-804.2</span>, <span class="n">30.26</span>, <span class="n">248.2</span>),
+    previewCamera      = vector4(<span class="n">225.52</span>, <span class="n">-808.75</span>, <span class="n">31.57</span>, <span class="n">30.77</span>),
+    previewCameraAngle = <span class="n">-15.0</span>,
 
-    <span class="c">-- Ped attendant</span>
-    <span class="p">usePed</span>     = <span class="n">true</span>,
-    <span class="p">pedModel</span>   = <span class="s">'s_m_m_autoshop_01'</span>,
-    <span class="p">pedCoords</span>  = vector4(<span class="n">215.25</span>, <span class="n">-806.28</span>, <span class="n">30.8</span>, <span class="n">343.97</span>),
-    <span class="p">zoneRadius</span> = <span class="n">4.0</span>,  <span class="c">-- optional, defaults to 2.0</span>
+    usePed    = <span class="k">true</span>,
+    pedModel  = <span class="s">'s_m_m_autoshop_01'</span>,
+    pedCoords = vector4(<span class="n">215.25</span>, <span class="n">-806.28</span>, <span class="n">30.8</span>, <span class="n">343.97</span>),
+    zoneRadius = <span class="n">4.0</span>,
 
-    <span class="c">-- Map blip</span>
-    <span class="p">blip</span> = {
-        <span class="p">show</span>   = <span class="n">true</span>,
-        <span class="p">name</span>   = <span class="s">'Public Parking'</span>,
-        <span class="p">sprite</span> = <span class="n">357</span>,
-        <span class="p">color</span>  = <span class="n">3</span>,
-        <span class="p">scale</span>  = <span class="n">0.60</span>,
-    },
-}</code></pre>
-
-        <h4>Garage Types</h4>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>type</th><th>Behaviour</th></tr></thead>
-            <tbody>
-              <tr><td><code>'public'</code></td><td>Any player can retrieve their own vehicles.</td></tr>
-              <tr><td><code>'depot'</code></td><td>Only impounded vehicles appear here. A fee is charged on release.</td></tr>
-              <tr><td><code>'job'</code></td><td>Restricted to players whose <code>job.name</code> matches the <code>job</code> field. Add <code>job = 'police'</code> to the entry. Optionally add <code>jobType = 'leo'</code> to match by <em>job type</em> instead.</td></tr>
-              <tr><td><code>'gang'</code></td><td>Restricted to players with a matching <code>gang</code>. Add <code>gang = 'ballas'</code> to the entry.</td></tr>
-              <tr><td><code>'house'</code></td><td>Requires the player to hold the house key via <code>qb-houses</code>.</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <h4>Zone vs Ped — coords field</h4>
-        <p>When <code>usePed = false</code>, no ped is spawned and the interaction trigger is a PolyZone circle centred on a top-level <code>coords</code> field instead of <code>pedCoords</code>.</p>
-        <pre><code>Config.Garages[<span class="s">'airportp'</span>] = {
-    <span class="p">usePed</span> = <span class="n">false</span>,
-    <span class="p">coords</span> = vector4(<span class="n">-773.12</span>, <span class="n">-2033.04</span>, <span class="n">8.88</span>, <span class="n">0.0</span>),  <span class="c">-- zone centre + blip position</span>
-    <span class="c">-- pedModel and pedCoords are not used when usePed = false</span>
-}</code></pre>
-
-        <h4>usePed vs Zone Interaction</h4>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>usePed</th><th>Trigger</th></tr></thead>
-            <tbody>
-              <tr><td><code>true</code></td><td>A ped spawns at <code>pedCoords</code>. Player interacts via prompt near the ped.</td></tr>
-              <tr><td><code>false</code></td><td>A PolyZone circle at <code>coords</code>. No ped. Player interacts on zone entry.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- ── 6. Locales ──────────────────────────────────────────────── -->
-      <div class="section">
-        <h2 class="section-title" id="locales">6 — Locales — locales/*.lua</h2>
-        <p>All notification and UI text is defined in <code>locales/en.lua</code>. This file is fully open. Edit any string to match your language or server tone. To add a new language create <code>locales/fr.lua</code> using the same structure — all files in the folder are loaded automatically.</p>
-        <pre><code><span class="k">local</span> Translations = {
-    <span class="p">error</span> = {
-        <span class="p">no_vehicles</span>       = <span class="s">'No vehicles found at this location.'</span>,
-        <span class="p">not_owned</span>         = <span class="s">'You cannot store this vehicle.'</span>,
-        <span class="p">not_enough</span>        = <span class="s">'You do not have enough money.'</span>,
-        <span class="p">transfer_disabled</span> = <span class="s">'Vehicle transfers are currently disabled.'</span>,
-        <span class="p">receipt_invalid</span>   = <span class="s">'This receipt is invalid or has already been used.'</span>,
-        <span class="c">-- ... full list in locales/en.lua</span>
-    },
-    <span class="p">success</span> = {
-        <span class="p">vehicle_parked</span>    = <span class="s">'Vehicle successfully stored.'</span>,
-        <span class="p">transfer_complete</span> = <span class="s">'Vehicle ownership transferred successfully.'</span>,
-        <span class="c">-- ...</span>
-    },
-}</code></pre>
-      </div>
-
-      <!-- ── 7. Valet ────────────────────────────────────────────────── -->
-      <div class="section">
-        <h2 class="section-title" id="valet">7 — Valet System</h2>
-        <p>The valet system dispatches an NPC driver to deliver a garaged vehicle to the player's current location. Included by default and can be disabled if not needed.</p>
-
-        <h4>Disabling the valet system</h4>
-        <p>Remove these two lines from <code>fxmanifest.lua</code> and restart the resource:</p>
-        <pre><code><span class="c">-- client_scripts block:</span>
-<span class="s">'client/valet_client.lua'</span>,   <span class="c">-- remove</span>
-
-<span class="c">-- server_scripts block:</span>
-<span class="s">'server/valet_server.lua'</span>,   <span class="c">-- remove</span>
+    blip = { show = <span class="k">true</span>, name = <span class="s">'Public Parking'</span>, sprite = <span class="n">357</span>, color = <span class="n">3</span>, scale = <span class="n">0.60</span> },
+}
 </code></pre>
-        <p>Also remove <code>'RequestValet'</code> from the <code>server_exports</code> block. All other garage functionality continues working.</p>
 
-        <h4>Triggering valet from another resource</h4>
-        <pre><code><span class="c">-- Server-side (from another server script)</span>
+        <h3 style="margin-top:24px;font-size:1rem;font-weight:600;color:var(--text)">Example — job garage (police)</h3>
+        <pre><code>Config.Garages[<span class="s">'police'</span>] = {
+    label    = <span class="s">'Police Garage'</span>,
+    type     = <span class="s">'job'</span>,
+    job      = <span class="s">'police'</span>,
+    jobType  = <span class="s">'leo'</span>,
+    category = Config.VehicleClass[<span class="s">'car'</span>],
+
+    spawnPoints = {
+        vector4(<span class="n">446.16</span>, <span class="n">-1025.79</span>, <span class="n">28.23</span>, <span class="n">6.59</span>),
+    },
+
+    exitTeleport       = { enabled = <span class="k">false</span> },
+    previewSpawn       = vector4(<span class="n">448.0</span>, <span class="n">-1024.0</span>, <span class="n">28.23</span>, <span class="n">6.0</span>),
+    previewCamera      = vector4(<span class="n">460.0</span>, <span class="n">-1012.0</span>, <span class="n">31.0</span>, <span class="n">350.0</span>),
+    previewCameraAngle = <span class="n">-10.0</span>,
+
+    usePed    = <span class="k">true</span>,
+    pedModel  = <span class="s">'s_m_m_autoshop_01'</span>,
+    pedCoords = vector4(<span class="n">462.0</span>, <span class="n">-1019.0</span>, <span class="n">28.1</span>, <span class="n">270.0</span>),
+
+    blip = { show = <span class="k">false</span>, name = <span class="s">'Police Garage'</span>, sprite = <span class="n">357</span>, color = <span class="n">3</span>, scale = <span class="n">0.60</span> },
+}
+</code></pre>
+
+        <h3 style="margin-top:24px;font-size:1rem;font-weight:600;color:var(--text)">Example — boathouse with exit teleport</h3>
+        <pre><code>Config.Garages[<span class="s">'lsymc'</span>] = {
+    label    = <span class="s">'LSYMC Boathouse'</span>,
+    type     = <span class="s">'public'</span>,
+    category = Config.VehicleClass[<span class="s">'sea'</span>],
+
+    spawnPoints = {
+        vector4(<span class="n">-796.64</span>, <span class="n">-1502.6</span>, <span class="n">-0.09</span>, <span class="n">111.49</span>),
+    },
+
+    <span class="c">-- Teleport the player to dry land after parking so they don't fall in the water</span>
+    exitTeleport = {
+        enabled = <span class="k">true</span>,
+        coords  = vector3(<span class="n">-783.0</span>, <span class="n">-1490.0</span>, <span class="n">1.2</span>),
+    },
+
+    previewSpawn       = vector4(<span class="n">-793.0</span>, <span class="n">-1500.0</span>, <span class="n">0.2</span>, <span class="n">111.0</span>),
+    previewCamera      = vector4(<span class="n">-774.0</span>, <span class="n">-1492.0</span>, <span class="n">4.0</span>, <span class="n">200.0</span>),
+    previewCameraAngle = <span class="n">-5.0</span>,
+
+    usePed    = <span class="k">true</span>,
+    pedModel  = <span class="s">'s_m_m_dockwork_01'</span>,
+    pedCoords = vector4(<span class="n">-784.5</span>, <span class="n">-1496.5</span>, <span class="n">0.5</span>, <span class="n">120.0</span>),
+
+    blip = { show = <span class="k">true</span>, name = <span class="s">'Boathouse'</span>, sprite = <span class="n">356</span>, color = <span class="n">3</span>, scale = <span class="n">0.60</span> },
+}
+</code></pre>
+      </div>
+
+      <!-- ── 6. Vehicle Keys Bridge ──────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="vehicle-keys-bridge">6 — Vehicle Keys Bridge</h2>
+        <p>DS Garages does not tie itself to any single vehicle-keys resource. Instead it calls a thin bridge that you configure via <code>Config.VehicleKeys</code>.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Value</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code>'qb-vehiclekeys'</code></td><td>Fires the legacy <code>vehiclekeys:client:SetOwner</code> client event.</td></tr>
+              <tr><td><code>'ds_vehiclekeys'</code></td><td>Calls <code>ds_vehiclekeys:server:AcquireVehicleKeys</code>. Also handles full ownership transfer through <code>ds_vehiclekeys</code> exports.</td></tr>
+              <tr><td><code>'custom'</code></td><td>Loads your implementation from <code>bridge/vehiclekeys_custom.lua</code>. See template below.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 style="margin-top:18px">Using a custom keys resource</h4>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Set <code>Config.VehicleKeys = 'custom'</code> in <code>config.lua</code>.</li>
+          <li>Copy <code>bridge/vehiclekeys_example.lua</code> to <code>bridge/vehiclekeys_custom.lua</code>.</li>
+          <li>Implement <code>VehicleKeys.SetOwner(plate)</code> inside that file to call your resource.</li>
+        </ol>
+        <pre><code><span class="c">-- bridge/vehiclekeys_custom.lua</span>
+<span class="c">-- VehicleKeys is already declared in bridge/vehiclekeys.lua — just add to it.</span>
+
+<span class="c">--- Called on the CLIENT after every garage vehicle spawn.</span>
+<span class="c">---@param plate string  trimmed, upper-cased plate</span>
+<span class="k">function</span> VehicleKeys.SetOwner(plate)
+    <span class="c">-- Option A: fire a server event</span>
+    TriggerServerEvent(<span class="s">'myvehiclekeys:server:giveOwnership'</span>, plate)
+
+    <span class="c">-- Option B: call a client export</span>
+    <span class="c">-- exports['myvehiclekeys']:GiveOwnerKeys(plate)</span>
+
+    <span class="c">-- Option C: fire a local client event</span>
+    <span class="c">-- TriggerEvent('myvehiclekeys:client:setOwner', plate)</span>
+<span class="k">end</span>
+</code></pre>
+      </div>
+
+      <!-- ── 7. Vehicle State Reference ─────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="vehicle-state">7 — Vehicle State Reference</h2>
+        <p>The <code>state</code> integer column in <code>player_vehicles</code> controls where a vehicle appears across every system in ds_garages.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th><code>state</code></th><th>Meaning</th><th><code>garage</code> field</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>0</code></td><td><strong>Out</strong> — vehicle is in the world</td><td><code>NULL</code></td><td><code>lastgarage</code> tracks where it was last stored. <code>persist_coords</code> saves its position for the next restart.</td></tr>
+              <tr><td><code>1</code></td><td><strong>Garaged</strong> — vehicle is stored</td><td>Garage key</td><td>Both <code>garage</code> and <code>lastgarage</code> are written when a player parks.</td></tr>
+              <tr><td><code>2</code></td><td><strong>Impounded</strong> — vehicle is at a depot</td><td>Depot key or <code>NULL</code></td><td><code>depotprice</code> holds the fee the player must pay to retrieve it.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">The <code>stateCode</code> key returned by the <code>getVehicleState</code> export and the <code>GetPlayerVehicles</code> callback is always the raw integer above. The locale-translated <code>state</code> string (<code>'Out'</code> / <code>'Garaged'</code> / <code>'Impounded'</code>) should only be used for display, never for comparisons.</div>
+      </div>
+
+      <!-- ── 8. Server Exports ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="server-exports">8 — Server Exports</h2>
+        <p>All exports below are callable from <strong>any server-side script</strong> in any resource using <code>exports['ds_garages']:ExportName(...)</code>.</p>
+
+        <!-- RequestValet -->
+        <h3 class="entry-title" id="RequestValet"><code>RequestValet(source, plate)</code></h3>
+        <p>Dispatches a valet ped to drive the player's garaged vehicle to their current location. Performs full ownership validation and a duplicate-valet guard internally.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>source</code></td><td>number</td><td>Player server source ID.</td></tr>
+              <tr><td><code>plate</code></td><td>string</td><td>Vehicle plate (auto upper-cased internally).</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>Returns</strong> <code>ok: boolean, errCode: string|nil</code></p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th><code>ok</code></th><th><code>errCode</code></th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>true</code></td><td><code>nil</code></td><td>Valet successfully dispatched.</td></tr>
+              <tr><td><code>false</code></td><td><code>'invalid_player'</code></td><td>Source is not a valid QBCore player.</td></tr>
+              <tr><td><code>false</code></td><td><code>'already_active'</code></td><td>A valet is already running for this player.</td></tr>
+              <tr><td><code>false</code></td><td><code>'not_found'</code></td><td>Plate not owned by the player, or vehicle is not garaged (<code>state ≠ 1</code>).</td></tr>
+              <tr><td><code>false</code></td><td><code>'spawn_failed'</code></td><td>Server-side vehicle entity failed to create.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre><code><span class="c">-- Fire and forget</span>
+exports[<span class="s">'ds_garages'</span>]:RequestValet(source, plate)
+
+<span class="c">-- With error handling</span>
 <span class="k">local</span> ok, err = exports[<span class="s">'ds_garages'</span>]:RequestValet(source, plate)
-<span class="k">if not</span> ok <span class="k">then</span> print(<span class="s">'Valet failed:'</span>, err) <span class="k">end</span>
-
-<span class="c">-- Client-side (triggers the server via net event)</span>
-TriggerServerEvent(<span class="s">'ds_garages:server:RequestValet'</span>, plate)
+<span class="k">if not</span> ok <span class="k">then</span>
+    print(<span class="s">'Valet failed:'</span>, err)
+<span class="k">end</span>
 </code></pre>
-      </div>
+        <div class="callout">From a <strong>client</strong> script, use the net event instead — server exports cannot be called from the client side:<br><code>TriggerServerEvent('ds_garages:server:RequestValet', plate)</code></div>
 
-      <!-- ── 8. Developer API ────────────────────────────────────────── -->
-      <div class="section">
-        <h2 class="section-title" id="developer-api">8 — Developer API</h2>
-        <p>DS Garages exposes server exports, QBCore callbacks, and net events for use in other resources — phone apps, mechanic scripts, impound systems, dealerships, etc.</p>
-
-        <!-- Server Exports -->
-        <h3 class="entry-title" id="server-exports">Server Exports</h3>
-        <p>Call these from any <strong>server-side</strong> script in any resource.</p>
-
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>RequestValet(source, plate)</code> <span class="ret">bool, string|nil</span></h3>
-        <p>Dispatches a valet ped to deliver the player's garaged vehicle. Validates ownership and guards against duplicate requests internally.</p>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>ok</th><th>errCode</th><th>Meaning</th></tr></thead>
-          <tbody>
-            <tr><td><code>true</code></td><td><code>nil</code></td><td>Valet dispatched successfully</td></tr>
-            <tr><td><code>false</code></td><td><code>'invalid_player'</code></td><td>Source is not a valid QBCore player</td></tr>
-            <tr><td><code>false</code></td><td><code>'already_active'</code></td><td>A valet is already running for this player</td></tr>
-            <tr><td><code>false</code></td><td><code>'not_found'</code></td><td>Plate not owned by the player, or vehicle not garaged</td></tr>
-            <tr><td><code>false</code></td><td><code>'spawn_failed'</code></td><td>Server entity failed to create</td></tr>
-          </tbody>
-        </table></div>
-        <pre><code><span class="k">local</span> ok, err = exports[<span class="s">'ds_garages'</span>]:RequestValet(source, <span class="s">'ABC1234'</span>)
-<span class="k">if not</span> ok <span class="k">then</span> print(err) <span class="k">end</span></code></pre>
-
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>getAllGarages()</code> <span class="ret">table[]</span></h3>
-        <p>Returns every garage in <code>Config.Garages</code> as a flat array. Useful for phone apps, maps, or external vehicle lists.</p>
+        <!-- getAllGarages -->
+        <h3 class="entry-title" id="getAllGarages"><code>getAllGarages()</code></h3>
+        <p>Returns a flat array of every garage registered in <code>Config.Garages</code>. Useful for maps, phone apps, or any resource that needs to list or inspect garage locations.</p>
+        <p><strong>Returns</strong> <code>table[]</code></p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>name</code></td><td>string</td><td>Garage config key (e.g. <code>'pillboxgarage'</code>).</td></tr>
+              <tr><td><code>label</code></td><td>string</td><td>Human-readable display name.</td></tr>
+              <tr><td><code>type</code></td><td>string</td><td><code>'public'</code> · <code>'depot'</code> · <code>'job'</code> · <code>'gang'</code> · <code>'house'</code></td></tr>
+              <tr><td><code>zone</code></td><td>vector4|nil</td><td>World position of the garage zone. Present when <code>usePed = false</code>.</td></tr>
+              <tr><td><code>spawnPoints</code></td><td>vector4[]</td><td>Vehicle spawn points for this garage.</td></tr>
+              <tr><td><code>blip</code></td><td>table|nil</td><td>Blip config: <code>{ show, sprite, color, scale, name }</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
         <pre><code><span class="k">local</span> garages = exports[<span class="s">'ds_garages'</span>]:getAllGarages()
 <span class="k">for</span> _, g <span class="k">in</span> ipairs(garages) <span class="k">do</span>
     print(g.name, g.label, g.type)
-<span class="k">end</span></code></pre>
+<span class="k">end</span>
+</code></pre>
 
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>getGarage(name)</code> <span class="ret">table|nil</span></h3>
-        <p>Returns the raw config entry for a single garage key, or <code>nil</code> if not found.</p>
+        <!-- getGarage -->
+        <h3 class="entry-title" id="getGarage"><code>getGarage(name)</code></h3>
+        <p>Returns the raw <code>Config.Garages[name]</code> table for a single named garage. Returns <code>nil</code> if the key doesn't exist.</p>
         <pre><code><span class="k">local</span> g = exports[<span class="s">'ds_garages'</span>]:getGarage(<span class="s">'pillboxgarage'</span>)
-<span class="k">if</span> g <span class="k">then</span> print(g.label) <span class="k">end</span></code></pre>
+<span class="k">if</span> g <span class="k">then</span>
+    print(g.label, g.type)
+<span class="k">end</span>
+</code></pre>
 
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>getVehicleState(plate)</code> <span class="ret">table|nil</span></h3>
-        <p>Looks up a vehicle by plate and returns its current database row. Returns <code>nil</code> if the plate is not found.</p>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>Key</th><th>Type</th><th>Description</th></tr></thead>
-          <tbody>
-            <tr><td><code>plate</code></td><td>string</td><td>Plate text (upper-cased)</td></tr>
-            <tr><td><code>citizenid</code></td><td>string</td><td>Owner's QBCore citizen ID</td></tr>
-            <tr><td><code>stateCode</code></td><td>number</td><td>0 = out · 1 = garaged · 2 = impounded</td></tr>
-            <tr><td><code>stateLabel</code></td><td>string</td><td><code>'Out'</code> / <code>'Garaged'</code> / <code>'Impounded'</code></td></tr>
-            <tr><td><code>garage</code></td><td>string|nil</td><td>Current garage key, or nil if out</td></tr>
-            <tr><td><code>lastgarage</code></td><td>string|nil</td><td>Last garage the vehicle was stored in</td></tr>
-            <tr><td><code>fuel</code></td><td>number</td><td>Fuel percentage</td></tr>
-            <tr><td><code>engine</code></td><td>number</td><td>Engine health (0–1000)</td></tr>
-            <tr><td><code>body</code></td><td>number</td><td>Body health (0–1000)</td></tr>
-          </tbody>
-        </table></div>
+        <!-- getVehicleState -->
+        <h3 class="entry-title" id="getVehicleState"><code>getVehicleState(plate)</code></h3>
+        <p>Looks up a single vehicle by plate and returns its current database state. Returns <code>nil</code> if the plate is not in the database. Useful for police/mechanic scripts that need to check whether a vehicle is out, garaged, or impounded without querying the DB themselves.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Returned Key</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>plate</code></td><td>string</td><td>Plate text (upper-cased).</td></tr>
+              <tr><td><code>citizenid</code></td><td>string</td><td>Owner's QBCore citizen ID.</td></tr>
+              <tr><td><code>state</code></td><td>number</td><td>Raw DB value — see <a href="#vehicle-state">Vehicle State Reference</a>.</td></tr>
+              <tr><td><code>stateCode</code></td><td>number</td><td>Alias of <code>state</code> — identical value, provided for convenience.</td></tr>
+              <tr><td><code>stateLabel</code></td><td>string</td><td>Human-readable: <code>'Out'</code> / <code>'Garaged'</code> / <code>'Impounded'</code>.</td></tr>
+              <tr><td><code>garage</code></td><td>string|nil</td><td>Current garage key, or <code>nil</code> if the vehicle is out.</td></tr>
+              <tr><td><code>lastgarage</code></td><td>string|nil</td><td>Last garage the vehicle was stored in.</td></tr>
+              <tr><td><code>fuel</code></td><td>number</td><td>Fuel percentage.</td></tr>
+              <tr><td><code>engine</code></td><td>number</td><td>Engine health (0–1000).</td></tr>
+              <tr><td><code>body</code></td><td>number</td><td>Body health (0–1000).</td></tr>
+            </tbody>
+          </table>
+        </div>
         <pre><code><span class="k">local</span> info = exports[<span class="s">'ds_garages'</span>]:getVehicleState(<span class="s">'ABC1234'</span>)
-<span class="k">if</span> info <span class="k">and</span> info.stateCode == <span class="n">2</span> <span class="k">then</span>
-    print(info.plate .. <span class="s">' is impounded'</span>)
-<span class="k">end</span></code></pre>
+<span class="k">if</span> info <span class="k">then</span>
+    <span class="k">if</span> info.stateCode == <span class="n">2</span> <span class="k">then</span>
+        print(info.plate .. <span class="s">' is impounded at '</span> .. tostring(info.garage))
+    <span class="k">end</span>
+<span class="k">end</span>
+</code></pre>
 
-        <hr class="divider">
+        <!-- setVehicleState -->
+        <h3 class="entry-title" id="setVehicleState"><code>setVehicleState(plate, state, garageKey)</code></h3>
+        <p>Directly writes state and garage into the database for a single vehicle. <strong>Does not validate ownership</strong> — the caller is responsible for any authorisation checks. Useful for impound systems, admin tools, or any script that needs to move a vehicle into/out of a garage programmatically.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>plate</code></td><td>string</td><td>Vehicle plate (auto upper-cased).</td></tr>
+              <tr><td><code>state</code></td><td>number</td><td><code>0</code> = out · <code>1</code> = garaged · <code>2</code> = impounded</td></tr>
+              <tr><td><code>garageKey</code></td><td>string|nil</td><td>Garage config key to store the vehicle at, or <code>nil</code> to clear the garage field.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>Returns</strong> <code>boolean</code> — <code>true</code> on success, <code>false</code> if the plate was not found.</p>
+        <pre><code><span class="c">-- Impound a vehicle at the depot</span>
+<span class="k">local</span> ok = exports[<span class="s">'ds_garages'</span>]:setVehicleState(<span class="s">'ABC1234'</span>, <span class="n">2</span>, <span class="s">'depotLot'</span>)
 
-        <h3 class="entry-title"><code>setVehicleState(plate, state, garageKey)</code> <span class="ret">boolean</span></h3>
-        <p>Directly writes state and garage for a vehicle. <strong>Does not validate ownership</strong> — caller is responsible for any auth checks. Ideal for impound systems and admin tools.</p>
-        <pre><code><span class="c">-- Impound a vehicle</span>
-exports[<span class="s">'ds_garages'</span>]:setVehicleState(<span class="s">'ABC1234'</span>, <span class="n">2</span>, <span class="s">'depotLot'</span>)
+<span class="c">-- Mark a vehicle as out (remove from any garage)</span>
+exports[<span class="s">'ds_garages'</span>]:setVehicleState(<span class="s">'ABC1234'</span>, <span class="n">0</span>, <span class="k">nil</span>)
 
 <span class="c">-- Return a vehicle to a specific garage</span>
-exports[<span class="s">'ds_garages'</span>]:setVehicleState(<span class="s">'ABC1234'</span>, <span class="n">1</span>, <span class="s">'pillboxgarage'</span>)</code></pre>
+exports[<span class="s">'ds_garages'</span>]:setVehicleState(<span class="s">'ABC1234'</span>, <span class="n">1</span>, <span class="s">'pillboxgarage'</span>)
+</code></pre>
 
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>getPlayerVehicleCount(citizenid)</code> <span class="ret">number</span></h3>
-        <p>Returns the total number of vehicles owned by a player. Returns 0 if none or citizenid is invalid. Useful for capping purchases at dealerships.</p>
+        <!-- getPlayerVehicleCount -->
+        <h3 class="entry-title" id="getPlayerVehicleCount"><code>getPlayerVehicleCount(citizenid)</code></h3>
+        <p>Returns the total number of vehicles registered to a player in <code>player_vehicles</code>. Useful for dealerships, scripts that cap vehicle ownership, or admin tools.</p>
         <pre><code><span class="k">local</span> Player = exports[<span class="s">'qb-core'</span>]:GetPlayer(source)
 <span class="k">local</span> count  = exports[<span class="s">'ds_garages'</span>]:getPlayerVehicleCount(Player.PlayerData.citizenid)
 <span class="k">if</span> count >= <span class="n">5</span> <span class="k">then</span>
     <span class="c">-- block the purchase</span>
-<span class="k">end</span></code></pre>
+<span class="k">end</span>
+</code></pre>
 
-        <hr class="divider">
+        <!-- saveVehicleMods -->
+        <h3 class="entry-title" id="saveVehicleMods"><code>saveVehicleMods(plate, props)</code></h3>
+        <p>Writes a full <code>QBCore.Functions.GetVehicleProperties()</code> blob to the <code>mods</code> column for a vehicle. This is a <strong>full overwrite</strong> — the entire existing mods blob is replaced. If you only need to update specific keys use <a href="#mergeVehicleMods"><code>mergeVehicleMods</code></a> instead.</p>
+        <pre><code><span class="c">-- In your mechanic script (server-side), after a player installs parts:</span>
+<span class="c">-- props is sent from client via TriggerServerEvent after GetVehicleProperties(veh)</span>
+exports[<span class="s">'ds_garages'</span>]:saveVehicleMods(plate, props)
+</code></pre>
 
-        <h3 class="entry-title"><code>saveVehicleMods(plate, props)</code> <span class="ret">boolean</span></h3>
-        <p>Writes a full <code>QBCore.Functions.GetVehicleProperties()</code> blob to the <code>mods</code> column. <strong>Full overwrite</strong> — replaces everything previously stored. Use <code>mergeVehicleMods</code> if you only need to update specific keys.</p>
-        <pre><code><span class="c">-- After a player installs parts (props collected client-side, sent to server)</span>
-exports[<span class="s">'ds_garages'</span>]:saveVehicleMods(plate, props)</code></pre>
-
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>getVehicleMods(plate)</code> <span class="ret">table|nil</span></h3>
-        <p>Returns the decoded mods table for a vehicle, or <code>nil</code> if none has been saved yet.</p>
+        <!-- getVehicleMods -->
+        <h3 class="entry-title" id="getVehicleMods"><code>getVehicleMods(plate)</code></h3>
+        <p>Returns the decoded mods table currently stored for a vehicle, or <code>nil</code> if none has been saved yet.</p>
         <pre><code><span class="k">local</span> mods = exports[<span class="s">'ds_garages'</span>]:getVehicleMods(<span class="s">'ABC1234'</span>)
-<span class="k">if</span> mods <span class="k">then</span> print(mods.color1) <span class="k">end</span></code></pre>
+<span class="k">if</span> mods <span class="k">then</span>
+    print(<span class="s">'primary colour:'</span>, mods.color1)
+<span class="k">end</span>
+</code></pre>
 
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>mergeVehicleMods(plate, patch)</code> <span class="ret">boolean</span></h3>
-        <p>Shallow-merges a partial table into the stored mods. Only keys in <code>patch</code> are changed — all other stored keys are preserved. Preferred for scripts that only manage a subset of vehicle data.</p>
-        <pre><code><span class="c">-- Paint shop — only colours change, performance mods untouched</span>
+        <!-- mergeVehicleMods -->
+        <h3 class="entry-title" id="mergeVehicleMods"><code>mergeVehicleMods(plate, patch)</code></h3>
+        <p>Shallow-merges a partial table into the existing mods and writes the result back. Only keys present in <code>patch</code> are changed — all other stored keys are preserved. Use this when your script only manages a subset of vehicle data (e.g. a paint shop that only touches colours).</p>
+        <pre><code><span class="c">-- Paint shop — only updates colours, leaves performance mods untouched</span>
 exports[<span class="s">'ds_garages'</span>]:mergeVehicleMods(<span class="s">'ABC1234'</span>, {
-    <span class="p">color1</span>           = { <span class="n">255</span>, <span class="n">0</span>, <span class="n">0</span> },
-    <span class="p">pearlescentColor</span> = <span class="n">0</span>,
+    color1           = { <span class="n">255</span>, <span class="n">0</span>, <span class="n">0</span> },
+    color2           = { <span class="n">200</span>, <span class="n">0</span>, <span class="n">0</span> },
+    pearlescentColor = <span class="n">0</span>,
 })
 
-<span class="c">-- Mechanic installs a turbo — only that key changes</span>
-exports[<span class="s">'ds_garages'</span>]:mergeVehicleMods(<span class="s">'ABC1234'</span>, { <span class="p">modTurbo</span> = <span class="n">true</span> })</code></pre>
+<span class="c">-- Mechanic installs a turbo — only that single key changes</span>
+exports[<span class="s">'ds_garages'</span>]:mergeVehicleMods(<span class="s">'ABC1234'</span>, { modTurbo = <span class="k">true</span> })
+</code></pre>
+      </div>
 
-        <!-- QBCore Callbacks -->
-        <h3 class="entry-title" id="qbcore-callbacks">QBCore Callbacks</h3>
-        <p>Triggered from <strong>client-side</strong> scripts via <code>QBCore.Functions.TriggerCallback</code>.</p>
+      <!-- ── 9. QBCore Callbacks ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="callbacks">9 — QBCore Callbacks</h2>
+        <p>These are triggered from <strong>client-side scripts</strong> using <code>QBCore.Functions.TriggerCallback</code>.</p>
 
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>ds_garages:server:GetPlayerVehicles</code></h3>
-        <p>Returns all vehicles owned by the calling player, enriched with labels and status strings. Intended for phone apps and external vehicle-list UIs. Does <strong>not</strong> require a garage argument — server resolves the caller's citizenid automatically.</p>
+        <h3 class="entry-title" id="cb-GetPlayerVehicles"><code>ds_garages:server:GetPlayerVehicles</code></h3>
+        <p>Returns all vehicles owned by the calling player, enriched with labels and status strings. Intended for phone apps, external UIs, or any resource that needs a full vehicle list for the current player.</p>
         <pre><code>QBCore.Functions.TriggerCallback(<span class="s">'ds_garages:server:GetPlayerVehicles'</span>, <span class="k">function</span>(vehicles)
     <span class="k">if not</span> vehicles <span class="k">then return end</span>
     <span class="k">for</span> _, v <span class="k">in</span> ipairs(vehicles) <span class="k">do</span>
         print(v.plate, v.stateCode, v.garage)
     <span class="k">end</span>
-<span class="k">end</span>)</code></pre>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>Key</th><th>Type</th><th>Description</th></tr></thead>
-          <tbody>
-            <tr><td><code>plate</code></td><td>string</td><td>Plate text</td></tr>
-            <tr><td><code>fullname</code></td><td>string</td><td>Brand + model (e.g. <code>'Bravado Buffalo STX'</code>)</td></tr>
-            <tr><td><code>brand</code></td><td>string</td><td>Vehicle brand</td></tr>
-            <tr><td><code>model</code></td><td>string</td><td>Vehicle model name</td></tr>
-            <tr><td><code>garage</code></td><td>string</td><td>Human-readable garage label</td></tr>
-            <tr><td><code>state</code></td><td>string</td><td>Locale-translated: <code>'Out'</code> / <code>'Garaged'</code> / <code>'Impounded'</code></td></tr>
-            <tr><td><code>stateCode</code></td><td>number</td><td>Raw integer 0/1/2. <strong>Use this for comparisons.</strong></td></tr>
-            <tr><td><code>fuel</code></td><td>number</td><td>Fuel %</td></tr>
-            <tr><td><code>engine</code></td><td>number</td><td>Engine health (0–1000)</td></tr>
-            <tr><td><code>body</code></td><td>number</td><td>Body health (0–1000)</td></tr>
-          </tbody>
-        </table></div>
+<span class="k">end</span>)
+</code></pre>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>plate</code></td><td>string</td><td>Plate text.</td></tr>
+              <tr><td><code>fullname</code></td><td>string</td><td>Brand + model concatenated (e.g. <code>'Bravado Buffalo STX'</code>).</td></tr>
+              <tr><td><code>brand</code></td><td>string</td><td>Vehicle brand.</td></tr>
+              <tr><td><code>model</code></td><td>string</td><td>Vehicle model name.</td></tr>
+              <tr><td><code>garage</code></td><td>string</td><td>Human-readable garage label, or locale fallback if garage is unknown.</td></tr>
+              <tr><td><code>state</code></td><td>string</td><td>Locale string: <code>'Out'</code> / <code>'Garaged'</code> / <code>'Impounded'</code>. Display only.</td></tr>
+              <tr><td><code>stateCode</code></td><td>number</td><td>Raw integer: <code>0</code> = out · <code>1</code> = garaged · <code>2</code> = impounded. Use for comparisons.</td></tr>
+              <tr><td><code>fuel</code></td><td>number</td><td>Fuel percentage.</td></tr>
+              <tr><td><code>engine</code></td><td>number</td><td>Engine health (0–1000).</td></tr>
+              <tr><td><code>body</code></td><td>number</td><td>Body health (0–1000).</td></tr>
+            </tbody>
+          </table>
+        </div>
 
-        <hr class="divider">
+        <h3 class="entry-title" id="cb-GetGarageVehicles"><code>ds_garages:server:GetGarageVehicles</code></h3>
+        <p>Returns vehicles that belong to a specific garage. This is the internal callback used by the garage UI — documented here for completeness. You will not normally call this from external resources.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Argument</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>garage</code></td><td>string</td><td>Garage config key.</td></tr>
+              <tr><td><code>gtype</code></td><td>string</td><td><code>'public'</code> · <code>'depot'</code> · <code>'job'</code> · <code>'gang'</code> · <code>'house'</code></td></tr>
+              <tr><td><code>category</code></td><td>number[]</td><td>Array of vehicle class integers to filter by.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-        <h3 class="entry-title"><code>ds_garages:server:GetGarageVehicles</code></h3>
-        <p>Returns the vehicles available in a specific garage for the calling player. This is the internal callback used by the garage UI — you normally won't call it from an external resource, but it is available if needed.</p>
-        <pre><code>QBCore.Functions.TriggerCallback(<span class="s">'ds_garages:server:GetGarageVehicles'</span>, <span class="k">function</span>(vehicles)
-    <span class="c">-- vehicles is filtered to the calling player's owned vehicles at this garage</span>
-<span class="k">end</span>, garageKey, garageType, categoryArray)</code></pre>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>Arg</th><th>Type</th><th>Description</th></tr></thead>
-          <tbody>
-            <tr><td><code>garageKey</code></td><td>string</td><td>Garage config key (e.g. <code>'pillboxgarage'</code>)</td></tr>
-            <tr><td><code>garageType</code></td><td>string</td><td><code>'public'</code> · <code>'depot'</code> · <code>'job'</code> · <code>'gang'</code> · <code>'house'</code></td></tr>
-            <tr><td><code>categoryArray</code></td><td>number[]</td><td>Vehicle class integers to filter by (from the garage's <code>category</code> field)</td></tr>
-          </tbody>
-        </table></div>
+      <!-- ── 10. Net Events — Client → Server ───────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="net-events-c2s">10 — Net Events — Client → Server</h2>
+        <p>Triggered from client scripts via <code>TriggerServerEvent</code>. The server resolves <code>source</code> automatically.</p>
 
-        <!-- Net Events C→S -->
-        <h3 class="entry-title" id="net-events-client-server">Net Events — Client → Server</h3>
-
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>ds_garages:server:RequestValet</code> <code style="color:var(--muted);font-size:12px">(plate)</code></h3>
-        <p>Client-side equivalent of the <code>RequestValet</code> export.</p>
+        <h3 class="entry-title" id="ev-RequestValet"><code>ds_garages:server:RequestValet</code> <span style="font-weight:400;font-size:0.9em">(plate)</span></h3>
+        <p>Client-side equivalent of the <code>RequestValet</code> server export.</p>
         <pre><code>TriggerServerEvent(<span class="s">'ds_garages:server:RequestValet'</span>, <span class="s">'ABC1234'</span>)</code></pre>
 
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>ds_garages:server:SetVehicleOut</code> <code style="color:var(--muted);font-size:12px">(plate)</code></h3>
-        <p>Marks a vehicle as out (<code>state = 0</code>) and clears its garage field.</p>
+        <h3 class="entry-title" id="ev-SetVehicleOut"><code>ds_garages:server:SetVehicleOut</code> <span style="font-weight:400;font-size:0.9em">(plate)</span></h3>
+        <p>Marks a vehicle as out (<code>state = 0</code>) and clears its garage field. Called by the garage client when a player takes their vehicle out.</p>
         <pre><code>TriggerServerEvent(<span class="s">'ds_garages:server:SetVehicleOut'</span>, plate)</code></pre>
 
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>ds_garages:server:SetVehicleIn</code> <code style="color:var(--muted);font-size:12px">(plate, garageKey)</code></h3>
-        <p>Marks a vehicle as garaged (<code>state = 1</code>) and writes both <code>garage</code> and <code>lastgarage</code>.</p>
+        <h3 class="entry-title" id="ev-SetVehicleIn"><code>ds_garages:server:SetVehicleIn</code> <span style="font-weight:400;font-size:0.9em">(plate, garageKey)</span></h3>
+        <p>Marks a vehicle as garaged (<code>state = 1</code>) and writes <code>garage</code> and <code>lastgarage</code>. Called when a player parks their vehicle.</p>
         <pre><code>TriggerServerEvent(<span class="s">'ds_garages:server:SetVehicleIn'</span>, plate, <span class="s">'pillboxgarage'</span>)</code></pre>
 
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>ds_garages:server:UpdateVehicleStats</code> <code style="color:var(--muted);font-size:12px">(plate, fuel, engine, body)</code></h3>
-        <p>Writes current fuel, engine health, and body health to the database on vehicle park.</p>
+        <h3 class="entry-title" id="ev-UpdateVehicleStats"><code>ds_garages:server:UpdateVehicleStats</code> <span style="font-weight:400;font-size:0.9em">(plate, fuel, engine, body)</span></h3>
+        <p>Writes current fuel, engine health, and body health to the database. Called when a player parks so stats are preserved across sessions.</p>
         <pre><code>TriggerServerEvent(<span class="s">'ds_garages:server:UpdateVehicleStats'</span>, plate, fuel, engine, body)</code></pre>
 
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>ds_garages:server:TrackVehicle</code> <code style="color:var(--muted);font-size:12px">(plate)</code></h3>
-        <p>Requests the world coordinates of an out vehicle. Server fires <code>ds_garages:client:TrackVehicle</code> back to set a GPS waypoint. Requires <code>Config.AllowVehicleTracking = true</code>.</p>
+        <h3 class="entry-title" id="ev-TrackVehicle"><code>ds_garages:server:TrackVehicle</code> <span style="font-weight:400;font-size:0.9em">(plate)</span></h3>
+        <p>Requests the server to look up the world coordinates of a vehicle that is currently out, then fires <code>ds_garages:client:TrackVehicle</code> back with the coordinates. Only works when <code>Config.AllowVehicleTracking = true</code>.</p>
         <pre><code>TriggerServerEvent(<span class="s">'ds_garages:server:TrackVehicle'</span>, plate)</code></pre>
 
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>ds_garages:server:PayDepotPrice</code> <code style="color:var(--muted);font-size:12px">(data)</code></h3>
-        <p>Charges the player the depot release fee for a specific vehicle. If payment succeeds, the server fires <code>ds_garages:client:ConfirmSpawn</code> back to the caller so the client can spawn the vehicle. Called automatically by the depot UI — not normally fired manually.</p>
-        <pre><code><span class="c">-- data shape assembled by the garage client:</span>
-TriggerServerEvent(<span class="s">'ds_garages:server:PayDepotPrice'</span>, {
-    <span class="p">plate</span>   = <span class="s">'ABC1234'</span>,
-    <span class="p">model</span>   = <span class="s">'police'</span>,
-    <span class="p">coords</span>  = vector4(<span class="n">...</span>),
-    <span class="c">-- additional spawn-data fields</span>
-})</code></pre>
-
-        <!-- Net Events S→C -->
-        <h3 class="entry-title" id="net-events-server-client">Net Events — Server → Client</h3>
-
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>ds_garages:client:StartValet</code> <code style="color:var(--muted);font-size:12px">(data)</code></h3>
-        <p>Tells the valet client to begin the delivery sequence. Fired automatically by <code>RequestValet</code> — do not fire manually. Fields: <code>netId</code>, <code>plate</code>, <code>mods</code>, <code>fuel</code>.</p>
-
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>ds_garages:client:ConfirmSpawn</code> <code style="color:var(--muted);font-size:12px">(data)</code></h3>
-        <p>Tells the client to spawn the vehicle after depot payment is confirmed.</p>
-
-        <hr class="divider">
-
-        <h3 class="entry-title"><code>ds_garages:client:TrackVehicle</code> <code style="color:var(--muted);font-size:12px">(coords)</code></h3>
-        <p>Delivers the vehicle's current world coordinates to the client. Used to set a GPS waypoint after a <code>TrackVehicle</code> server event.</p>
+        <h3 class="entry-title" id="ev-PayDepotPrice"><code>ds_garages:server:PayDepotPrice</code> <span style="font-weight:400;font-size:0.9em">(data)</span></h3>
+        <p>Charges the player the depot release fee and, if payment succeeds, fires <code>ds_garages:client:ConfirmSpawn</code> back to the caller. <code>data</code> is the spawn-data table the client assembled: <code>{ plate, model, coords, ... }</code>.</p>
       </div>
 
-      <!-- ── 9. Vehicle State Reference ──────────────────────────────── -->
+      <!-- ── 11. Net Events — Server → Client ───────────────────────── -->
       <div class="section">
-        <h2 class="section-title" id="state-reference">9 — Vehicle State Reference</h2>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>state</th><th>Meaning</th><th>garage field</th><th>Notes</th></tr></thead>
-          <tbody>
-            <tr class="state-0"><td>0</td><td>Out — vehicle is in the world</td><td>NULL</td><td><code>lastgarage</code> tracks where it was last stored</td></tr>
-            <tr class="state-1"><td>1</td><td>Garaged — stored in a garage</td><td>Garage key</td><td>Both <code>garage</code> and <code>lastgarage</code> are written on park</td></tr>
-            <tr class="state-2"><td>2</td><td>Impounded — in the depot</td><td>Depot key or NULL</td><td><code>depotprice</code> column holds the release fee</td></tr>
-          </tbody>
-        </table></div>
-        <div class="callout">Always use <code>stateCode</code> (the integer) for conditional logic. The translated <code>state</code> string is locale-dependent and for display only.</div>
+        <h2 class="section-title" id="net-events-s2c">11 — Net Events — Server → Client</h2>
+        <p>Fired <strong>by the server</strong> to a specific player's client. You do not fire these manually — they are internal responses to the events above.</p>
+
+        <h3 class="entry-title" id="ev-StartValet"><code>ds_garages:client:StartValet</code> <span style="font-weight:400;font-size:0.9em">(data)</span></h3>
+        <p>Tells the valet client to begin the delivery sequence. Fired automatically by <code>RequestValet</code>. <code>data</code> fields: <code>netId</code>, <code>plate</code>, <code>mods</code>, <code>fuel</code>.</p>
+
+        <h3 class="entry-title" id="ev-ConfirmSpawn"><code>ds_garages:client:ConfirmSpawn</code> <span style="font-weight:400;font-size:0.9em">(data)</span></h3>
+        <p>Tells the client to spawn the vehicle after the depot fee has been successfully paid.</p>
+
+        <h3 class="entry-title" id="ev-TrackVehicleClient"><code>ds_garages:client:TrackVehicle</code> <span style="font-weight:400;font-size:0.9em">(coords)</span></h3>
+        <p>Delivers the vehicle's current world coordinates to the client after a <code>TrackVehicle</code> server event. The client uses these to set a GPS waypoint.</p>
       </div>
 
-      <!-- ── 10. FAQ ──────────────────────────────────────────────────── -->
+      <!-- ── 12. Valet System ────────────────────────────────────────── -->
       <div class="section">
-        <h2 class="section-title" id="faq">10 — FAQ &amp; Troubleshooting</h2>
+        <h2 class="section-title" id="valet">12 — Valet System</h2>
+        <p>The valet feature dispatches an NPC driver to collect a garaged vehicle and bring it directly to the player's position. It is optional and ships enabled by default.</p>
 
-        <h4>Which inventory resource takes priority?</h4>
-        <p>ds_garages checks in this order: <strong>qs-inventory → ox_inventory → qb-inventory → plain qb-core</strong>. The first running resource wins. Only one needs to be active.</p>
+        <h4>Disabling the valet system</h4>
+        <p>Comment out or remove the two valet script lines from <code>fxmanifest.lua</code> and remove the export from the exports block:</p>
+        <pre><code><span class="c">-- fxmanifest.lua</span>
+client_scripts {
+    <span class="c">-- 'client/valet_client.lua',  ← remove this line</span>
+    ...
+}
 
-        <h4>Vehicles showing as Out after a server restart</h4>
-        <p>If <code>PersistentVehicles</code> and <code>AutoRespawn</code> are both <code>false</code>, out vehicles are left in state=0 and assigned a depot fee. Enable <code>AutoRespawn</code> to return them to garages, or <code>PersistentVehicles</code> to re-spawn them at their last known coordinates.</p>
+server_scripts {
+    <span class="c">-- 'server/valet_server.lua',  ← remove this line</span>
+    ...
+}
 
-        <h4>persist_coords column missing error</h4>
-        <p>Run <code>sql/update.sql</code> on your database. It adds the <code>persist_coords</code> JSON column required when <code>Config.PersistentVehicles = true</code>.</p>
+server_exports {
+    <span class="c">-- 'RequestValet',  ← remove this line</span>
+    <span class="s">'getAllGarages'</span>,
+    <span class="s">'getGarage'</span>,
+    <span class="s">'getVehicleState'</span>,
+    <span class="s">'setVehicleState'</span>,
+    <span class="s">'getPlayerVehicleCount'</span>,
+    <span class="s">'saveVehicleMods'</span>,
+    <span class="s">'getVehicleMods'</span>,
+    <span class="s">'mergeVehicleMods'</span>,
+}
+</code></pre>
+        <div class="callout tip">All core garage functionality (retrieve, park, depot, tracking, vehicle transfer) continues to work without the valet system.</div>
+      </div>
 
-        <h4>Receipt item is not working</h4>
-        <p>Confirm the item is registered in <code>QBCore.Shared.Items</code> with <code>unique = true</code> and <code>useable = true</code>, and that <code>Config.ReceiptItemName</code> exactly matches the item's <code>name</code> key.</p>
+      <!-- ── 13. Localisation ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="localisation">13 — Localisation</h2>
+        <p>All player-facing text is stored in <code>locales/en.lua</code> and is unencrypted. To translate ds_garages, duplicate <code>en.lua</code>, rename it (e.g. <code>fr.lua</code>), and update the strings. The locale loader will pick up all <code>locales/*.lua</code> files automatically.</p>
+        <pre><code><span class="c">-- locales/en.lua  (abridged)</span>
+<span class="k">local</span> Translations = {
+    error = {
+        no_vehicles          = <span class="s">'No vehicles found at this location.'</span>,
+        not_depot            = <span class="s">'Your vehicle is not in the depot.'</span>,
+        not_owned            = <span class="s">'You cannot store this vehicle.'</span>,
+        not_correct_type     = <span class="s">'This vehicle type is not allowed here.'</span>,
+        not_enough           = <span class="s">'You do not have enough money.'</span>,
+        vehicle_occupied     = <span class="s">'All spawn spots are occupied. Try again shortly.'</span>,
+        transfer_disabled    = <span class="s">'Vehicle transfers are currently disabled.'</span>,
+        receipt_invalid      = <span class="s">'This receipt is invalid or has already been used.'</span>,
+    },
+    success = {
+        vehicle_parked       = <span class="s">'Vehicle successfully stored.'</span>,
+        vehicle_tracked      = <span class="s">'Waypoint set to your vehicle.'</span>,
+        vehicle_spawned      = <span class="s">'Vehicle retrieved from garage.'</span>,
+        transfer_sent        = <span class="s">'Vehicle receipt sent to player.'</span>,
+        transfer_complete    = <span class="s">'Vehicle ownership transferred successfully.'</span>,
+        payment_complete     = <span class="s">'Payment confirmed. The vehicle is now yours.'</span>,
+    },
+    status = {
+        out     = <span class="s">'Out'</span>,
+        garaged = <span class="s">'Garaged'</span>,
+        impound = <span class="s">'Impounded'</span>,
+    },
+}
+</code></pre>
+      </div>
 
-        <h4>Vehicle class filter not working</h4>
-        <p>Check <code>Config.ClassSystem = true</code> in <code>config.lua</code> and that the garage's <code>category</code> field references a valid <code>Config.VehicleClass</code> preset or a custom number array.</p>
+      <!-- ── 14. Vehicle Transfer System ───────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="vehicle-transfer">14 — Vehicle Transfer System</h2>
+        <p>When <code>Config.AllowVehicleTransfer = true</code>, each garaged vehicle card in the UI shows a <strong>Transfer</strong> button. The owner sets an asking price, and the system generates a physical item (<code>Config.ReceiptItemName</code>) that is sent to the target player. The receiver uses the item from their inventory to pay and claim the vehicle.</p>
 
-        <h4>How do I add a job-restricted garage?</h4>
-        <pre><code>Config.Garages[<span class="s">'policeparking'</span>] = {
-    <span class="p">label</span>    = <span class="s">'Police Parking'</span>,
-    <span class="p">type</span>     = <span class="s">'job'</span>,
-    <span class="p">job</span>      = <span class="s">'police'</span>,
-    <span class="p">category</span> = Config.VehicleClass[<span class="s">'car'</span>],
-    <span class="c">-- ... spawnPoints, ped, blip</span>
-}</code></pre>
+        <div class="callout warn">The receipt item must exist in <code>QBCore.Shared.Items</code> and must be registered as useable. The item name must match <code>Config.ReceiptItemName</code> exactly.</div>
 
-        <h4>Valet ped not appearing</h4>
-        <p>Ensure <code>client/valet_client.lua</code> and <code>server/valet_server.lua</code> are both in <code>fxmanifest.lua</code> and that <code>'RequestValet'</code> is listed in <code>server_exports</code>. Restart the resource after any manifest changes.</p>
+        <h4>Adding the receipt item to QBCore shared items</h4>
+        <pre><code><span class="c">-- qb-core/shared/items.lua</span>
+[<span class="s">'vehiclereceipt'</span>] = {
+    name        = <span class="s">'vehiclereceipt'</span>,
+    label       = <span class="s">'Vehicle Receipt'</span>,
+    weight      = <span class="n">10</span>,
+    type        = <span class="s">'item'</span>,
+    image       = <span class="s">'vehiclereceipt.png'</span>,
+    unique      = <span class="k">true</span>,
+    useable     = <span class="k">true</span>,
+    shouldClose = <span class="k">true</span>,
+    combinable  = <span class="k">nil</span>,
+    description = <span class="s">'A legal document transferring vehicle ownership.'</span>,
+},
+</code></pre>
+      </div>
+
+      <!-- ── 15. Persistent Vehicles ────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="persistent-vehicles">15 — Persistent Vehicles</h2>
+        <p>When <code>Config.PersistentVehicles = true</code>, any vehicle left in the world when the server stops is saved with its exact world coordinates in the <code>persist_coords</code> JSON column. On the next server start those vehicles re-spawn at the same positions instead of being returned to their last garage.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Setting</th><th>Behaviour on server restart</th></tr></thead>
+            <tbody>
+              <tr><td><code>PersistentVehicles = true</code></td><td>Out vehicles re-appear at their saved coordinates. AutoRespawn is bypassed for these vehicles.</td></tr>
+              <tr><td><code>PersistentVehicles = false</code></td><td>AutoRespawn returns all out vehicles to their <code>lastgarage</code> (or <code>Config.DefaultGarage</code> if no history exists).</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">Persistent vehicles require the <code>persist_coords</code> column. Make sure you have run <code>sql/update.sql</code> or used <code>sql/fresh_install.sql</code>.</div>
+      </div>
+
+      <!-- ── 16. FAQ ─────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="faq">16 — Frequently Asked Questions</h2>
+
+        <h4>Vehicles are not appearing in my garage UI</h4>
+        <p>Check that the <code>state</code> column in <code>player_vehicles</code> is set to <code>1</code> (garaged). Vehicles with <code>state = 0</code> are Out and will not appear in garage lists. Use <a href="#setVehicleState"><code>setVehicleState</code></a> or the SQL console to correct any bad rows.</p>
+
+        <h4>Keys are not given when a vehicle spawns</h4>
+        <p>Confirm <code>Config.VehicleKeys</code> matches the key resource that is actually running on your server. If you are using a custom resource, follow the <a href="#vehicle-keys-bridge">Vehicle Keys Bridge</a> steps to implement <code>VehicleKeys.SetOwner</code>.</p>
+
+        <h4>The valet ped spawns but doesn't move</h4>
+        <p>Ensure <code>server/valet_server.lua</code> is loaded (check it is not commented out in <code>fxmanifest.lua</code>) and that the vehicle's garage is a valid garage key that exists in <code>Config.Garages</code>.</p>
+
+        <h4>Error: "depotprice" column missing</h4>
+        <p>Your <code>player_vehicles</code> table predates the standard QBCore schema. Run <code>sql/update.sql</code> — it adds all required columns safely.</p>
+
+        <h4>How do I add a house garage?</h4>
+        <p>Create an entry with <code>type = 'house'</code> in a new file inside <code>garages/</code>. Your house script should call <code>setVehicleState</code> to move vehicles in and out as players interact with the house property.</p>
+
+        <h4>Can I use this without ds_notify or ds_prompt?</h4>
+        <p>Yes. Both are optional. Set <code>Config.UseDSNotify = false</code> and/or <code>Config.UseDSPrompt = false</code> to force the built-in QBCore fallbacks, or simply don't install those resources and the auto-detect will fall back gracefully.</p>
+
+        <h4>The "Transfer" button is not visible</h4>
+        <p>Ensure <code>Config.AllowVehicleTransfer = true</code> and that the <code>vehiclereceipt</code> item (or whatever you set <code>Config.ReceiptItemName</code> to) exists in <code>QBCore.Shared.Items</code> and is registered as useable.</p>
       </div>
 
       <footer class="site-footer">
-        <p>&copy; DS Customs. All rights reserved.</p>
+        <p>&copy; DS Customs / GunSmoke Scripts. All rights reserved.</p>
       </footer>
 
     </main>
