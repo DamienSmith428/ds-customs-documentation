@@ -22,6 +22,13 @@
       "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory", "Escrow"]
     },
     {
+      "name": "DS Vehicle Keys",
+      "path": "docs/ds_vehiclekeys.html",
+      "status": "release",
+      "description": "Database-backed vehicle lock & key ownership system. Keyfob NUI, hotwiring, carjacking, lockpicking, job-shared keys, and a full server & client export API.",
+      "tags": ["QBCore", "FiveM", "Escrow"]
+    },
+    {
       "name": "DS MDT",
       "path": "docs/ds_mdt.html",
       "status": "coming soon",
