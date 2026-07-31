@@ -5,7 +5,7 @@
       "path": "docs/ds_djbooths.html",
       "status": "release",
       "description": "Server-synced DJ booth system with positional 3D audio, a professional music player UI, song history, and full ds_target / qb-target integration.",
-      "tags": ["QBCore", "FiveM", "xsound", "Free"]
+      "tags": ["QBCore", "FiveM", "xsound", "Escrow"]
     },
     {
       "name": "DS Target",
