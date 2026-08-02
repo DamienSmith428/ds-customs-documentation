@@ -56,9 +56,9 @@
         <ul style="padding-left:20px;line-height:2.2;margin-bottom:14px">
           <li>Create, edit, and delete jobs and grade tiers in the NUI panel.</li>
           <li>Changes are applied <strong>live</strong> to <code>QBCore.Shared.Jobs</code> via <code>AddJob</code> / <code>UpdateJob</code> / <code>RemoveJob</code> exports — no restart needed.</li>
-          <li>All job data is stored in the <code>ds_jobs</code> MySQL table. On every resource start or restart, jobs are automatically loaded from the database back into QBCore — <strong><code>qb-core/shared/jobs.lua</code> is never touched</strong>.</li>
+          <li>All job data is stored in the <code>ds_jobs</code> MySQL table. On every resource start or restart, jobs are automatically loaded from the database back into QBCore — any jobs in <code>QBCore.Shared.Jobs</code> that are <em>not</em> in <code>ds_jobs</code> are removed. <strong><code>qb-core/shared/jobs.lua</code> is never touched.</strong></li>
           <li>Job type colors are stored in <code>ds_jobtype_colors</code> — no JSON settings file needed.</li>
-          <li>Both tables are created automatically on first start — no SQL import required.</li>
+          <li>All three database tables are created automatically on first start — no SQL import required.</li>
           <li>In-game <strong>Boss Menu</strong> lets job bosses hire, fire, promote, and demote employees at a configurable in-world location.</li>
           <li>Per-job <strong>Stash</strong> locations give all job members access to a shared inventory at a configurable in-world point.</li>
         </ul>
@@ -73,7 +73,7 @@
             <thead><tr><th>Resource</th><th>Notes</th></tr></thead>
             <tbody>
               <tr><td><code>qb-core</code></td><td>Required framework. Must start before ds_jobcreator.</td></tr>
-              <tr><td><code>oxmysql</code></td><td>Required for boss-menu roster queries and location storage.</td></tr>
+              <tr><td><code>oxmysql</code></td><td>Required for all database operations.</td></tr>
               <tr><td><code>ds_notify</code> <em>(optional)</em></td><td>Used when <code>Config.Notify = 'ds_notify'</code>. Falls back to the QBCore built-in notify if not running.</td></tr>
               <tr><td><code>ds_prompt</code> <em>(optional)</em></td><td>Used when <code>Config.Prompt = 'ds_prompt'</code>. Falls back to the built-in NUI HUD card if not running.</td></tr>
               <tr><td><code>ox_inventory</code> / <code>qs-inventory</code> / <code>qb-inventory</code> <em>(optional)</em></td><td>One must be running to use the job stash feature. Auto-detected at runtime (ox → qs → qb priority).</td></tr>
@@ -134,39 +134,52 @@ Config.Prompt = <span class="s">'ds_prompt'</span>   <span class="c">-- 'built-i
       <!-- ── 5. Job Creator Panel ────────────────────────────────────── -->
       <div class="section">
         <h2 class="section-title" id="job-creator-panel">5 — Job Creator Panel — /jobcreator</h2>
-        <p>Open the panel in-game with <code>/jobcreator</code>. Your server ID must have the <code>admin</code>, <code>command</code>, or <code>god</code> ace permission. The command also appears as a chat suggestion for admins (cosmetic only — the server enforces the real permission check).</p>
+        <p>Open the panel in-game with <code>/jobcreator</code>. Your server ID must have the <code>admin</code>, <code>command</code>, or <code>god</code> ace permission. The command also appears as a chat suggestion for admins (cosmetic only — the server enforces the real permission check). Press <kbd>Escape</kbd> or click <strong>✕</strong> to close the panel.</p>
 
         <h3 class="entry-title" id="panel-jobs">Managing Jobs</h3>
-        <p>The left panel lists all current jobs loaded from the <code>ds_jobs</code> database table (or from <code>QBCore.Shared.Jobs</code> on first run before any save). For each job you can:</p>
+        <p>The left panel lists all current jobs loaded from the <code>ds_jobs</code> database table (or from <code>QBCore.Shared.Jobs</code> on first run before any save). The list supports:</p>
+        <ul style="padding-left:20px;line-height:2.2;margin-bottom:12px">
+          <li><strong>Search</strong> — type in the search box to filter jobs by key name in real time.</li>
+          <li><strong>Sort</strong> — toggle between <em>A → Z</em> alphabetical order and <em>By Type</em> grouped order via the sort dropdown.</li>
+        </ul>
+        <p>Clicking a job opens it in the editor on the right. For each job you can:</p>
         <ul style="padding-left:20px;line-height:2.2;margin-bottom:12px">
           <li>Edit the <strong>label</strong>, <strong>type</strong>, <strong>defaultDuty</strong>, and <strong>offDutyPay</strong> fields.</li>
           <li>Add, rename, reorder, and remove <strong>grade tiers</strong>. Each grade has a name, payment amount, and optional boss flag.</li>
-          <li>Delete the job entirely.</li>
-          <li>Create a brand-new job with a unique key name.</li>
+          <li>Delete the job entirely (disabled for the <code>unemployed</code> job).</li>
+          <li>Click <strong>Discard Changes</strong> to revert the editor back to the last saved state for that job.</li>
+          <li>Create a brand-new job with <strong>+ New Job</strong>.</li>
         </ul>
 
-        <h3 class="entry-title" id="panel-write">Writing Jobs</h3>
-        <p>Clicking <strong>Write to Database</strong> does two things simultaneously:</p>
+        <h3 class="entry-title" id="panel-boss-grade">Boss Grade Assignment</h3>
+        <p>When saving a job, the boss grade is determined as follows: if any grade row has its <strong>Boss</strong> checkbox manually checked, those grades receive <code>isboss = true</code>. If no boss checkbox is checked, the highest-numbered grade is automatically assigned as boss. Only one grade needs to be the boss grade — the Boss Menu checks this server-side on every action.</p>
+
+        <h3 class="entry-title" id="panel-save">Saving a Job</h3>
+        <p>Clicking <strong>Save Job</strong> saves the currently open job immediately — it does not batch all jobs at once. Each save:</p>
         <ol style="padding-left:20px;line-height:2.2;margin-bottom:12px">
-          <li>Upserts every job into the <code>ds_jobs</code> table and deletes any removed jobs — the database is always the authoritative source.</li>
-          <li>Applies every change <strong>live</strong> to the running server via <code>AddJob</code>, <code>UpdateJob</code>, and <code>RemoveJob</code> exports. No restart needed.</li>
+          <li>Upserts the job into the <code>ds_jobs</code> table via <code>INSERT … ON DUPLICATE KEY UPDATE</code>.</li>
+          <li>Applies the change <strong>live</strong> to the running server via <code>AddJob</code> or <code>UpdateJob</code>. No restart needed.</li>
         </ol>
-        <p>A success notification reports how many jobs were added, updated, and removed.</p>
+        <p>A status message at the top of the panel confirms the save with the job name.</p>
         <div class="callout tip">On every resource start or restart, all rows from <code>ds_jobs</code> are pushed back into <code>QBCore.Shared.Jobs</code> automatically — <code>qb-core/shared/jobs.lua</code> is never touched.</div>
+
+        <h3 class="entry-title" id="panel-firstrun">First-Run Import</h3>
+        <p>On first run, when <code>ds_jobs</code> is empty, the panel seeds itself from <code>QBCore.Shared.Jobs</code> (the live in-memory table) and shows an <strong>Import to Database</strong> button at the top. Clicking it bulk-inserts all displayed jobs into the database in one operation. The button disappears permanently once the database has been populated.</p>
 
         <h3 class="entry-title" id="panel-locations">Setting Locations</h3>
         <p>Each job can have a <strong>Boss Menu</strong> location and a <strong>Stash</strong> location. To set one:</p>
         <ol style="padding-left:20px;line-height:2.2;margin-bottom:12px">
-          <li>Select a job in the panel and open its Locations section.</li>
-          <li>Click <strong>Set Boss Menu Location</strong> or <strong>Set Stash Location</strong>.</li>
+          <li>Select a job in the panel and scroll to its Locations section at the bottom of the editor.</li>
+          <li>Click <strong>Place…</strong> next to Boss Menu or Stash.</li>
           <li>The NUI panel hides and your character can move freely.</li>
           <li>Walk to the desired in-world spot and press <kbd>E</kbd> to confirm, or <kbd>Backspace</kbd> to cancel.</li>
           <li>The panel re-opens automatically and shows the saved coordinates.</li>
+          <li>Click <strong>Clear</strong> next to a location to delete it from the database.</li>
         </ol>
-        <p>Coordinates are saved to the <code>ds_jobcreatorlocations</code> database table and broadcast to all online clients immediately so their proximity caches update without a reconnect.</p>
+        <p>Coordinates are saved to the <code>ds_jobcreatorlocations</code> database table. After saving, the server broadcasts a <code>ds_jobcreator:locationUpdated</code> event to all online clients so their proximity caches update immediately without a reconnect.</p>
 
         <h3 class="entry-title" id="panel-type-colors">Job Type Colors</h3>
-        <p>The panel includes a <strong>Type Colors</strong> section where you can assign a hex display color to each job type string (e.g. <code>leo</code>, <code>ems</code>, <code>mechanic</code>). Colors are saved to the <code>ds_jobtype_colors</code> table and loaded from the database every time the panel opens.</p>
+        <p>The panel includes a <strong>⊟ Type Colors</strong> button in the top bar that opens a modal where you can assign a hex display color to each job type string (e.g. <code>leo</code>, <code>ems</code>, <code>mechanic</code>). Colors are saved to the <code>ds_jobtype_colors</code> table and loaded from the database every time the panel opens. The color appears as a badge on each job row in the job list.</p>
       </div>
 
       <!-- ── 6. Boss Menu ────────────────────────────────────────────── -->
@@ -183,15 +196,15 @@ Config.Prompt = <span class="s">'ds_prompt'</span>   <span class="c">-- 'built-i
           <table>
             <thead><tr><th>Action</th><th>Who can use it</th><th>Description</th></tr></thead>
             <tbody>
-              <tr><td><strong>Hire</strong></td><td>Boss</td><td>Hires a nearby player (within 10 m) into the job at grade 0. Uses the <em>Nearby</em> dropdown which lists players within 10 metres.</td></tr>
-              <tr><td><strong>Fire</strong></td><td>Boss</td><td>Sets the target's job to <code>unemployed</code> grade 0. Cannot fire yourself — use Quit instead.</td></tr>
-              <tr><td><strong>Promote</strong></td><td>Boss</td><td>Sets the target to a higher grade. Cannot promote to boss grade (that would create a second boss).</td></tr>
-              <tr><td><strong>Demote</strong></td><td>Boss</td><td>Sets the target to a lower grade. Cannot demote yourself.</td></tr>
+              <tr><td><strong>Hire</strong></td><td>Boss</td><td>Hires a nearby player (within 10 m) into the job at grade 0. Uses the <em>Nearby Players</em> dropdown in the Hire tab which lists players within 10 metres.</td></tr>
+              <tr><td><strong>Fire</strong></td><td>Boss</td><td>Sets the target's job to <code>unemployed</code> grade 0. Cannot fire yourself — use Quit instead. Target must be online.</td></tr>
+              <tr><td><strong>Promote</strong></td><td>Boss</td><td>Sets the target to a higher grade. Cannot promote to boss grade or above. Target must be online.</td></tr>
+              <tr><td><strong>Demote</strong></td><td>Boss</td><td>Sets the target to a lower grade. Cannot demote yourself. Target must be online.</td></tr>
               <tr><td><strong>Quit</strong></td><td>Boss</td><td>Sets your own job to <code>unemployed</code> grade 0 and closes the menu.</td></tr>
             </tbody>
           </table>
         </div>
-        <p>All online targets receive a notification when hired or fired via the configured <code>Config.Notify</code> system.</p>
+        <p>Online targets receive a notification when hired or fired via the configured <code>Config.Notify</code> system.</p>
       </div>
 
       <!-- ── 7. Job Stash ────────────────────────────────────────────── -->
@@ -213,7 +226,7 @@ Config.Prompt = <span class="s">'ds_prompt'</span>   <span class="c">-- 'built-i
         </div>
       </div>
 
-      <!-- ── 8. sync_jobs.bat ────────────────────────────────────────── -->
+      <!-- ── 8. Migrating away ───────────────────────────────────────── -->
       <div class="section">
         <h2 class="section-title" id="migration">8 — Migrating away from DS Job Creator</h2>
         <p>If you ever decide to stop using DS Job Creator you can export your jobs back to QBCore's shared file manually:</p>
@@ -281,7 +294,7 @@ add_principal identifier.fivem:XXXXXXX group.admin
           <table>
             <thead><tr><th>Table</th><th>Description</th></tr></thead>
             <tbody>
-              <tr><td><code>ds_jobs</code></td><td>Authoritative job store. One row per job — jobname (PK), label, type, defaultDuty, offDutyPay, and grades as a JSON object. Upserted on every panel save.</td></tr>
+              <tr><td><code>ds_jobs</code></td><td>Authoritative job store. One row per job — jobname (PK), label, type, defaultDuty, offDutyPay, and grades as a JSON object. Upserted on every Save Job.</td></tr>
               <tr><td><code>ds_jobtype_colors</code></td><td>One row per job type string. Stores the hex color used by the panel's type badges. Replaced entirely on each color save.</td></tr>
               <tr><td><code>ds_jobcreatorlocations</code></td><td>Boss-menu and stash world coordinates per job. One row per <code>(jobname, loc_type)</code> pair, enforced by a unique key. Upserted on every location save.</td></tr>
             </tbody>
@@ -322,13 +335,12 @@ add_principal identifier.fivem:XXXXXXX group.admin
 </code></pre>
       </div>
 
-      <!-- ── 13. File Structure ──────────────────────────────────────── -->
+      <!-- ── 12. File Structure ──────────────────────────────────────── -->
       <div class="section">
-        <h2 class="section-title" id="file-structure">13 — File Structure</h2>
+        <h2 class="section-title" id="file-structure">12 — File Structure</h2>
         <pre><code>ds_jobcreator/
 ├── config.lua                  <span class="c">← Notify, Prompt options (open, editable)</span>
 ├── fxmanifest.lua              <span class="c">← Resource manifest (v1.4.0)</span>
-├── README.md
 │
 ├── bridge/
 │   ├── notify.lua              <span class="c">← Notify() entry-point, routes to chosen system (open)</span>
@@ -353,27 +365,27 @@ add_principal identifier.fivem:XXXXXXX group.admin
     └── bossmenu.js             <span class="c">← Boss menu NUI logic</span></code></pre>
       </div>
 
-      <!-- ── 14. FAQ ─────────────────────────────────────────────────── -->
+      <!-- ── 13. FAQ ─────────────────────────────────────────────────── -->
       <div class="section">
-        <h2 class="section-title" id="faq">14 — FAQ</h2>
+        <h2 class="section-title" id="faq">13 — FAQ</h2>
 
         <h3 class="entry-title" id="faq-restart">Do my jobs disappear after a server restart?</h3>
-        <p>No. On every resource start and restart, <code>server.lua</code> queries <code>ds_jobs</code> and pushes every row into <code>QBCore.Shared.Jobs</code> via <code>AddJob</code> / <code>UpdateJob</code>. As long as <code>ds_jobcreator</code> is ensured in your <code>server.cfg</code>, your jobs are always loaded automatically — <code>qb-core/shared/jobs.lua</code> is never touched.</p>
+        <p>No. On every resource start and restart, <code>server.lua</code> queries <code>ds_jobs</code> and pushes every row into <code>QBCore.Shared.Jobs</code> via <code>AddJob</code> / <code>UpdateJob</code>. Any job in QBCore's memory that is <em>not</em> in <code>ds_jobs</code> is also removed, making the database the single source of truth. As long as <code>ds_jobcreator</code> is ensured in your <code>server.cfg</code>, your jobs are always loaded automatically — <code>qb-core/shared/jobs.lua</code> is never touched.</p>
 
-        <h3 class="entry-title" id="faq-firstrun">The panel is empty on first run</h3>
-        <p>On first run before any save, the <code>ds_jobs</code> table is empty so the panel seeds from <code>QBCore.Shared.Jobs</code> (the live in-memory table). Once you click <strong>Write to Database</strong> for the first time, subsequent opens read from <code>ds_jobs</code> which is the authoritative source from that point on.</p>
+        <h3 class="entry-title" id="faq-firstrun">The panel shows an "Import to Database" button</h3>
+        <p>This button only appears on first run, when the <code>ds_jobs</code> table is empty. The panel seeds itself from <code>QBCore.Shared.Jobs</code> (live in-memory data) and shows the button so you can bulk-import all of those jobs into the database in one click. Once the database has been populated the button is hidden permanently and the panel reads only from <code>ds_jobs</code>.</p>
 
         <h3 class="entry-title" id="faq-noaccess">I get "Access denied" when opening /jobcreator</h3>
         <p>Your player does not have the <code>admin</code>, <code>command</code>, or <code>god</code> ace permission. Add one of those aces to your identifier in <code>server.cfg</code> and restart (or use the server console to add it live with <code>add_ace</code>).</p>
 
         <h3 class="entry-title" id="faq-nobossmenu">The Boss Menu prompt never appears</h3>
-        <p>Two things to check: (1) A boss-menu location must be set for the job in the panel — walk to the location point and click <strong>Set Boss Menu Location</strong>. (2) Your current job grade must have <code>isboss = true</code>. Both conditions must be met for the proximity prompt to appear.</p>
+        <p>Two things to check: (1) A boss-menu location must be set for the job in the panel — select the job, scroll to Locations, and click <strong>Place…</strong> next to Boss Menu. (2) Your current job grade must have <code>isboss = true</code>. Both conditions must be met for the proximity prompt to appear.</p>
 
         <h3 class="entry-title" id="faq-nostash">The stash prompt never appears</h3>
         <p>A stash location must be set for the job in the panel. You must also be actively employed in that job (any grade). Check that one of <code>ox_inventory</code>, <code>qs-inventory</code>, or <code>qb-inventory</code> is started — the stash will not open if no inventory resource is detected.</p>
 
         <h3 class="entry-title" id="faq-typecolors">My type colors disappeared</h3>
-        <p>Type colors are stored in <code>ds_jobtype_colors</code> in your database, so they persist across restarts automatically. If they appear missing, open the <strong>Type Colors</strong> modal in the panel and re-save — this will re-insert all current type/color pairs into the table.</p>
+        <p>Type colors are stored in <code>ds_jobtype_colors</code> in your database, so they persist across restarts automatically. If they appear missing, open the <strong>⊟ Type Colors</strong> modal in the panel and re-save — this will re-insert all current type/color pairs into the table.</p>
       </div>
 
       <footer class="site-footer">
