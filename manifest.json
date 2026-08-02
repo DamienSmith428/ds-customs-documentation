@@ -1,6 +1,13 @@
 {
   "resources": [
     {
+      "name": "DS Job Creator",
+      "path": "docs/ds_jobcreator.html",
+      "status": "release",
+      "description": "In-game admin NUI panel for creating, editing, and managing QBCore jobs on a live server. Live job apply, boss menu, job stash, and sync bat generation — no restarts required.",
+      "tags": ["QBCore", "FiveM", "oxmysql", "Escrow"]
+    },
+    {
       "name": "DS DJ Booths",
       "path": "docs/ds_djbooths.html",
       "status": "release",

@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Job Creator — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+    <a class="topbar-link" href="https://discord.gg/ZhYRUQ6K6R" target="_blank" rel="noopener">Discord ↗</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS Job Creator</h1>
+        <p class="subtitle">In-game admin NUI panel for creating, editing, and managing QBCore jobs on a live server — no file editing required — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.3.0</span>
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-blue">FiveM</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-purple">oxmysql</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS Job Creator is a fully in-game admin tool for managing every QBCore job on your live server. Open the <code>/jobcreator</code> NUI panel, add or edit jobs and grades, set boss-menu and stash locations by walking to them in-world, and write everything back to <code>jobs.lua</code> — all without ever restarting the server or touching a file manually.</p>
+        <ul style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Create, edit, and delete jobs and grade tiers in the NUI panel.</li>
+          <li>Changes are applied <strong>live</strong> to <code>QBCore.Shared.Jobs</code> via <code>AddJob</code> / <code>UpdateJob</code> / <code>RemoveJob</code> exports — no restart needed.</li>
+          <li>Every save writes a clean <code>jobs.lua</code> to the resource folder so jobs survive a full server restart.</li>
+          <li>A <code>sync_jobs.bat</code> helper is auto-generated to copy that file into <code>qb-core/shared/jobs.lua</code> with a double-click.</li>
+          <li>In-game <strong>Boss Menu</strong> lets job bosses hire, fire, promote, and demote employees at a configurable in-world location.</li>
+          <li>Per-job <strong>Stash</strong> locations give all job members access to a shared inventory at a configurable in-world point.</li>
+        </ul>
+        <div class="callout tip">All admin actions — including location placement — are restricted server-side to players with the <code>admin</code>, <code>command</code>, or <code>god</code> ace permission. The Boss Menu is restricted to boss-grade employees of that specific job.</div>
+      </div>
+
+      <!-- ── 2. Requirements ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="requirements">2 — Requirements</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Resource</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>qb-core</code></td><td>Required framework. Must start before ds_jobcreator.</td></tr>
+              <tr><td><code>oxmysql</code></td><td>Required for boss-menu roster queries and location storage.</td></tr>
+              <tr><td><code>ds_notify</code> <em>(optional)</em></td><td>Used when <code>Config.Notify = 'ds_notify'</code>. Falls back to the QBCore built-in notify if not running.</td></tr>
+              <tr><td><code>ds_prompt</code> <em>(optional)</em></td><td>Used when <code>Config.Prompt = 'ds_prompt'</code>. Falls back to the built-in NUI HUD card if not running.</td></tr>
+              <tr><td><code>ox_inventory</code> / <code>qs-inventory</code> / <code>qb-inventory</code> <em>(optional)</em></td><td>One must be running to use the job stash feature. Auto-detected at runtime (ox → qs → qb priority).</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 3. Installation ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">3 — Installation</h2>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Place the <code>ds_jobcreator</code> folder inside your <code>resources</code> directory (e.g. <code>resources/[admin]/ds_jobcreator</code>).</li>
+          <li>Add <code>ensure ds_jobcreator</code> to your <code>server.cfg</code> <strong>after</strong> <code>qb-core</code> and <code>oxmysql</code>.</li>
+          <li>Grant the <code>admin</code> ace permission to any player who should access the panel.</li>
+          <li>Start or restart the resource — the <code>ds_jobcreatorlocations</code> table is created automatically by <code>oxmysql</code> on first run.</li>
+          <li>In-game, type <code>/jobcreator</code> to open the panel.</li>
+        </ol>
+
+        <h3 class="entry-title" id="install-cfg">server.cfg Start Order</h3>
+        <pre><code>ensure qb-core
+ensure oxmysql
+ensure ds_notify      <span class="c"># optional — only needed if Config.Notify = 'ds_notify'</span>
+ensure ds_prompt      <span class="c"># optional — only needed if Config.Prompt = 'ds_prompt'</span>
+ensure ds_jobcreator
+</code></pre>
+        <div class="callout">The <code>ds_jobcreatorlocations</code> MySQL table is created automatically with <code>CREATE TABLE IF NOT EXISTS</code> — no manual SQL import is required.</div>
+      </div>
+
+      <!-- ── 4. Configuration ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">4 — Configuration — config.lua</h2>
+        <p><code>config.lua</code> is unescrow'd and fully open. Three options are available:</p>
+        <pre><code><span class="c">-- Notification system to use for player-facing messages</span>
+Config.Notify = <span class="s">'ds_notify'</span>   <span class="c">-- 'built-in' | 'ds_notify' | 'custom'</span>
+
+<span class="c">-- Interaction prompt system to use near boss-menu and stash locations</span>
+Config.Prompt = <span class="s">'ds_prompt'</span>   <span class="c">-- 'built-in' | 'ds_prompt' | 'custom'</span>
+
+<span class="c">-- Auto-generate sync_jobs.bat on every "Write to jobs.lua" click</span>
+Config.GenerateSyncBat = <span class="n">true</span>  <span class="c">-- true | false</span>
+</code></pre>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Option</th><th>Values</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.Notify</code></td><td><code>'built-in'</code> / <code>'ds_notify'</code> / <code>'custom'</code></td><td><code>'built-in'</code> uses QBCore's default <code>QBCore:Notify</code>. <code>'ds_notify'</code> uses the ds_notify resource. <code>'custom'</code> routes through <code>bridge/notify_custom.lua</code>.</td></tr>
+              <tr><td><code>Config.Prompt</code></td><td><code>'built-in'</code> / <code>'ds_prompt'</code> / <code>'custom'</code></td><td><code>'built-in'</code> uses a built-in NUI HUD card. <code>'ds_prompt'</code> uses the ds_prompt resource. <code>'custom'</code> routes through <code>bridge/prompt_custom.lua</code>.</td></tr>
+              <tr><td><code>Config.GenerateSyncBat</code></td><td><code>true</code> / <code>false</code></td><td>When <code>true</code>, every "Write to jobs.lua" click regenerates <code>sync_jobs.bat</code> in the resource root with the correct absolute paths for your machine.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="custom-notify">Custom Notification Bridge</h3>
+        <p>If you set <code>Config.Notify = 'custom'</code>, open <code>bridge/notify_custom.lua</code> and fill in the <code>NotifyCustom</code> function for both server-side and client-side contexts. The file is pre-commented with examples.</p>
+
+        <h3 class="entry-title" id="custom-prompt">Custom Prompt Bridge</h3>
+        <p>If you set <code>Config.Prompt = 'custom'</code>, open <code>bridge/prompt_custom.lua</code> and implement <code>PromptCustom.Show(opts)</code> and <code>PromptCustom.Hide()</code>.</p>
+      </div>
+
+      <!-- ── 5. Job Creator Panel ────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="job-creator-panel">5 — Job Creator Panel — /jobcreator</h2>
+        <p>Open the panel in-game with <code>/jobcreator</code>. Your server ID must have the <code>admin</code>, <code>command</code>, or <code>god</code> ace permission. The command also appears as a chat suggestion for admins (cosmetic only — the server enforces the real permission check).</p>
+
+        <h3 class="entry-title" id="panel-jobs">Managing Jobs</h3>
+        <p>The left panel lists all current jobs loaded from <code>jobs.lua</code> (or from <code>QBCore.Shared.Jobs</code> on first run before any save). For each job you can:</p>
+        <ul style="padding-left:20px;line-height:2.2;margin-bottom:12px">
+          <li>Edit the <strong>label</strong>, <strong>type</strong>, <strong>defaultDuty</strong>, and <strong>offDutyPay</strong> fields.</li>
+          <li>Add, rename, reorder, and remove <strong>grade tiers</strong>. Each grade has a name, payment amount, and optional boss flag.</li>
+          <li>Delete the job entirely.</li>
+          <li>Create a brand-new job with a unique key name.</li>
+        </ul>
+
+        <h3 class="entry-title" id="panel-write">Writing Jobs</h3>
+        <p>Clicking <strong>Write to jobs.lua</strong> does three things simultaneously:</p>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:12px">
+          <li>Serializes all jobs to QBCore Lua format and writes <code>ds_jobcreator/jobs.lua</code>.</li>
+          <li>Applies every change <strong>live</strong> to the running server via <code>AddJob</code>, <code>UpdateJob</code>, and <code>RemoveJob</code> exports. No restart needed.</li>
+          <li>Regenerates <code>sync_jobs.bat</code> (if <code>Config.GenerateSyncBat = true</code>) with the correct paths for your machine.</li>
+        </ol>
+        <p>A success notification reports how many jobs were added, updated, and removed.</p>
+
+        <h3 class="entry-title" id="panel-locations">Setting Locations</h3>
+        <p>Each job can have a <strong>Boss Menu</strong> location and a <strong>Stash</strong> location. To set one:</p>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:12px">
+          <li>Select a job in the panel and open its Locations section.</li>
+          <li>Click <strong>Set Boss Menu Location</strong> or <strong>Set Stash Location</strong>.</li>
+          <li>The NUI panel hides and your character can move freely.</li>
+          <li>Walk to the desired in-world spot and press <kbd>E</kbd> to confirm, or <kbd>Backspace</kbd> to cancel.</li>
+          <li>The panel re-opens automatically and shows the saved coordinates.</li>
+        </ol>
+        <p>Coordinates are saved to the <code>ds_jobcreatorlocations</code> database table and broadcast to all online clients immediately so their proximity caches update without a reconnect.</p>
+
+        <h3 class="entry-title" id="panel-type-colors">Job Type Colors</h3>
+        <p>The panel includes a <strong>Type Colors</strong> section where you can assign a display color to each job type string (e.g. <code>leo</code>, <code>ems</code>, <code>mechanic</code>). Colors are saved to <code>settings/jobtype-colors.json</code> in the resource folder and loaded by the NUI on each open.</p>
+      </div>
+
+      <!-- ── 6. Boss Menu ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="boss-menu">6 — Boss Menu</h2>
+        <p>Employees who hold a boss-grade position in their job can access an in-world Boss Menu by walking within <strong>2 metres</strong> of the configured boss-menu location and pressing <kbd>E</kbd>.</p>
+        <div class="callout">Only grades marked with <code>isboss = true</code> in the job definition can open the Boss Menu. The grade is verified server-side on every action.</div>
+
+        <h3 class="entry-title" id="bm-roster">Roster</h3>
+        <p>The Roster tab shows all employees — both online and offline. Online players are sourced live from the running server; offline players are queried from the <code>players</code> table in MySQL. Each row shows the employee's name, grade, boss status, and online indicator.</p>
+
+        <h3 class="entry-title" id="bm-actions">Actions</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Action</th><th>Who can use it</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Hire</strong></td><td>Boss</td><td>Hires a nearby player (within 10 m) into the job at grade 0. Uses the <em>Nearby</em> dropdown which lists players within 10 metres.</td></tr>
+              <tr><td><strong>Fire</strong></td><td>Boss</td><td>Sets the target's job to <code>unemployed</code> grade 0. Cannot fire yourself — use Quit instead.</td></tr>
+              <tr><td><strong>Promote</strong></td><td>Boss</td><td>Sets the target to a higher grade. Cannot promote to boss grade (that would create a second boss).</td></tr>
+              <tr><td><strong>Demote</strong></td><td>Boss</td><td>Sets the target to a lower grade. Cannot demote yourself.</td></tr>
+              <tr><td><strong>Quit</strong></td><td>Boss</td><td>Sets your own job to <code>unemployed</code> grade 0 and closes the menu.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>All online targets receive a notification when hired or fired via the configured <code>Config.Notify</code> system.</p>
+      </div>
+
+      <!-- ── 7. Job Stash ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="job-stash">7 — Job Stash</h2>
+        <p>Any employee (not just bosses) can access the job stash by walking within <strong>2 metres</strong> of the configured stash location and pressing <kbd>E</kbd>. The stash is a <strong>50-slot, 100 kg shared inventory</strong> identified by <code>ds_job_stash_&lt;jobname&gt;</code>.</p>
+
+        <h3 class="entry-title" id="stash-inventory">Inventory System Support</h3>
+        <p>The stash integrates with whichever inventory is running. Detection priority is <strong>ox_inventory → qs-inventory → qb-inventory</strong>.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Inventory</th><th>Open method</th><th>Registration</th></tr></thead>
+            <tbody>
+              <tr><td><code>ox_inventory</code></td><td>Client-side via <code>exports.ox_inventory:openInventory('stash', id)</code></td><td>Registered server-side via <code>RegisterStash</code> on resource start and on each new stash location save.</td></tr>
+              <tr><td><code>qs-inventory</code></td><td>Server-side via <code>exports['qs-inventory']:OpenInventory('stash', id, data, src)</code></td><td>Created implicitly on first open — no pre-registration required.</td></tr>
+              <tr><td><code>qb-inventory</code></td><td>Server-side via <code>exports['qb-inventory']:OpenInventory(src, id, data)</code></td><td>Created server-side via <code>CreateInventory</code> on resource start and on each new stash location save.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 8. sync_jobs.bat ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="sync-bat">8 — sync_jobs.bat</h2>
+        <p>Every time you click <strong>Write to jobs.lua</strong>, the resource writes a self-contained batch file named <code>sync_jobs.bat</code> into the <code>ds_jobcreator</code> folder (when <code>Config.GenerateSyncBat = true</code>). Double-clicking it on your server machine copies <code>ds_jobcreator/jobs.lua</code> into <code>qb-core/shared/jobs.lua</code> so jobs persist across a full server restart.</p>
+
+        <h3 class="entry-title" id="sync-bat-why">Why a bat file instead of writing directly?</h3>
+        <p>FiveM does not permit a resource to write files outside its own resource folder. The batch file is the safe, correct workaround — the resource writes to its own folder (always permitted), and the bat gives you a one-click way to push that file to QBCore. Paths are resolved at runtime using <code>GetResourcePath()</code> so the generated file is always correct regardless of where your <code>resources</code> directory lives.</p>
+
+        <h3 class="entry-title" id="sync-bat-example">Example generated file</h3>
+        <pre><code>@echo off
+echo Copying jobs.lua to qb-core/shared/jobs.lua...
+copy /Y "C:\FiveM Servers\myserver\resources\[admin]\ds_jobcreator\jobs.lua" ^
+        "C:\FiveM Servers\myserver\resources\[qb]\qb-core\shared\jobs.lua" &gt;nul
+echo Done!
+pause
+</code></pre>
+
+        <h3 class="entry-title" id="sync-bat-disable">Disabling bat generation</h3>
+        <p>Set <code>Config.GenerateSyncBat = false</code> in <code>config.lua</code>. You will then need to manually copy <code>ds_jobcreator/jobs.lua</code> over <code>qb-core/shared/jobs.lua</code> after each write to persist jobs across restarts. Live changes still apply immediately either way.</p>
+      </div>
+
+      <!-- ── 9. Permissions ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="permissions">9 — Permissions</h2>
+        <p>Every admin action is verified server-side. A player passes the admin check if they hold <strong>any</strong> of the following FiveM ace permissions:</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Ace</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>admin</code></td><td>Standard QBCore admin ace</td></tr>
+              <tr><td><code>command</code></td><td>FiveM command ace</td></tr>
+              <tr><td><code>god</code></td><td>Full god-mode ace</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Grant the ace in <code>server.cfg</code>:</p>
+        <pre><code><span class="c"># Grant by FiveM identifier</span>
+add_ace identifier.fivem:XXXXXXX admin allow
+
+<span class="c"># Or grant a group</span>
+add_ace group.admin admin allow
+add_principal identifier.fivem:XXXXXXX group.admin
+</code></pre>
+        <div class="callout">The client-side <code>/jobcreator</code> command itself has no ACE restriction — the chat suggestion is cosmetic. The ACE check is enforced server-side when the command triggers the <code>ds_jobcreator:getJobs</code> net event. A player without the right ace receives an "Access denied" notification.</div>
+      </div>
+
+      <!-- ── 10. Server Exports ──────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="server-exports">10 — Server Exports</h2>
+        <p>These exports are available to <strong>any other resource</strong> on your server for reading job location coordinates at runtime.</p>
+
+        <hr class="divider">
+
+        <h3 class="entry-title" id="export-stash"><code>GetJobStashCoords(source, jobname)</code> <span class="ret">vector3 | nil</span></h3>
+        <p>Returns the stash <code>vector3</code> for the given job, or <code>nil</code> if no stash location has been set. The requesting player's job must match <code>jobname</code>.</p>
+        <pre><code><span class="k">local</span> coords = exports[<span class="s">'ds_jobcreator'</span>]:GetJobStashCoords(source, <span class="s">'police'</span>)
+<span class="k">if</span> coords <span class="k">then</span>
+    <span class="c">-- do something with coords.x, coords.y, coords.z</span>
+<span class="k">end</span></code></pre>
+
+        <hr class="divider">
+
+        <h3 class="entry-title" id="export-bossmenu"><code>GetJobBossMenuCoords(source, jobname)</code> <span class="ret">vector3 | nil</span></h3>
+        <p>Returns the boss-menu <code>vector3</code> for the given job, or <code>nil</code> if not set. The requesting player must be in the job <strong>and</strong> on a boss grade.</p>
+        <pre><code><span class="k">local</span> coords = exports[<span class="s">'ds_jobcreator'</span>]:GetJobBossMenuCoords(source, <span class="s">'police'</span>)
+<span class="k">if</span> coords <span class="k">then</span>
+    <span class="c">-- do something with coords.x, coords.y, coords.z</span>
+<span class="k">end</span></code></pre>
+      </div>
+
+      <!-- ── 11. Database ───────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="database">11 — Database</h2>
+        <p>One table is created automatically on resource start:</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Table</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>ds_jobcreatorlocations</code></td><td>Stores the boss-menu and stash world coordinates for each job. One row per <code>(jobname, loc_type)</code> pair, enforced by a <code>UNIQUE KEY</code>. Upserted on every location save.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Schema</h4>
+        <pre><code>CREATE TABLE IF NOT EXISTS `ds_jobcreatorlocations` (
+    `id`       INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `jobname`  VARCHAR(50)  NOT NULL,
+    `loc_type` ENUM(<span class="s">'stash'</span>,<span class="s">'bossmenu'</span>) NOT NULL,
+    `x`        FLOAT        NOT NULL,
+    `y`        FLOAT        NOT NULL,
+    `z`        FLOAT        NOT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_job_loctype` (`jobname`, `loc_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+</code></pre>
+      </div>
+
+      <!-- ── 12. jobs.lua Format ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="jobs-format">12 — jobs.lua Format</h2>
+        <p>The file written by DS Job Creator is valid QBCore Lua that can be dropped directly into <code>qb-core/shared/jobs.lua</code>. Jobs are sorted alphabetically with <code>unemployed</code> always first. Here is an example entry:</p>
+        <pre><code>QBCore.Shared.ForceJobDefaultDutyAtLogin = <span class="n">true</span>
+QBCore.Shared.Jobs = {
+
+    police = {
+        label       = <span class="s">'Missionrow Police Department'</span>,
+        type        = <span class="s">'leo'</span>,
+        defaultDuty = <span class="n">true</span>,
+        offDutyPay  = <span class="n">false</span>,
+        grades = {
+            [<span class="s">'0'</span>] = { name = <span class="s">'Recruit'</span>,   payment = <span class="n">50</span>  },
+            [<span class="s">'1'</span>] = { name = <span class="s">'Officer'</span>,   payment = <span class="n">75</span>  },
+            [<span class="s">'2'</span>] = { name = <span class="s">'Sergeant'</span>,  payment = <span class="n">100</span> },
+            [<span class="s">'3'</span>] = { name = <span class="s">'Lieutenant'</span>,payment = <span class="n">125</span> },
+            [<span class="s">'4'</span>] = { name = <span class="s">'Chief'</span>, isboss = <span class="n">true</span>, payment = <span class="n">150</span> },
+        },
+    },
+
+}</code></pre>
+        <div class="callout">The <code>type</code> field is optional. If you leave it blank in the panel it will be omitted from the output. Every grade has a <code>name</code> and <code>payment</code>. Exactly one grade per job should have <code>isboss = true</code> to enable the Boss Menu for that job.</div>
+      </div>
+
+      <!-- ── 13. File Structure ──────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="file-structure">13 — File Structure</h2>
+        <pre><code>ds_jobcreator/
+├── config.lua                  <span class="c">← Notify, Prompt, GenerateSyncBat (open, editable)</span>
+├── fxmanifest.lua              <span class="c">← Resource manifest (v1.3.0)</span>
+├── jobs.lua                    <span class="c">← Written by the panel; drop into qb-core/shared/ to persist</span>
+├── README.md
+├── sync_jobs.bat               <span class="c">← Auto-generated on each write; double-click to sync to qb-core</span>
+│
+├── bridge/
+│   ├── notify.lua              <span class="c">← Notify() entry-point, routes to chosen system (open)</span>
+│   ├── notify_custom.lua       <span class="c">← Fill in when Config.Notify = 'custom' (open)</span>
+│   ├── prompt.lua              <span class="c">← Prompt.Show / Prompt.Hide entry-point (open)</span>
+│   └── prompt_custom.lua       <span class="c">← Fill in when Config.Prompt = 'custom' (open)</span>
+│
+├── client/
+│   ├── client.lua              <span class="c">← /jobcreator command, NUI callbacks, placement mode</span>
+│   └── bossmenu_client.lua     <span class="c">← Boss menu &amp; stash proximity threads, NUI bridge</span>
+│
+├── server/
+│   ├── server.lua              <span class="c">← Job CRUD, file write, live QBCore update, bat generation</span>
+│   ├── locations.lua           <span class="c">← DB table init, stash registration, location CRUD exports</span>
+│   └── bossmenu_server.lua     <span class="c">← Roster, nearby, hire, fire, promote, demote, quit</span>
+│
+├── settings/
+│   └── jobtype-colors.json     <span class="c">← Saved job-type color assignments for the panel UI</span>
+│
+└── html/
+    ├── index.html              <span class="c">← NUI root (job creator + boss menu)</span>
+    ├── style.css               <span class="c">← Job creator styles</span>
+    ├── app.js                  <span class="c">← Job creator NUI logic</span>
+    ├── bossmenu.css            <span class="c">← Boss menu styles</span>
+    └── bossmenu.js             <span class="c">← Boss menu NUI logic</span></code></pre>
+      </div>
+
+      <!-- ── 14. FAQ ─────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="faq">14 — FAQ</h2>
+
+        <h3 class="entry-title" id="faq-restart">Do my jobs disappear after a server restart?</h3>
+        <p>No — as long as you have either run <code>sync_jobs.bat</code> to copy <code>ds_jobcreator/jobs.lua</code> into <code>qb-core/shared/jobs.lua</code>, or manually copied the file. The live changes applied by the panel survive until a full restart; the bat (or manual copy) makes them permanent.</p>
+
+        <h3 class="entry-title" id="faq-firstrun">The panel is empty on first run</h3>
+        <p>On first run before any save, the panel loads jobs directly from <code>QBCore.Shared.Jobs</code> (the live in-memory table). Once you click <strong>Write to jobs.lua</strong> for the first time, subsequent opens read from <code>ds_jobcreator/jobs.lua</code> which is the authoritative source.</p>
+
+        <h3 class="entry-title" id="faq-noaccess">I get "Access denied" when opening /jobcreator</h3>
+        <p>Your player does not have the <code>admin</code>, <code>command</code>, or <code>god</code> ace permission. Add one of those aces to your identifier in <code>server.cfg</code> and restart (or use the server console to add it live with <code>add_ace</code>).</p>
+
+        <h3 class="entry-title" id="faq-nobossmenu">The Boss Menu prompt never appears</h3>
+        <p>Two things to check: (1) A boss-menu location must be set for the job in the panel — walk to the location point and click <strong>Set Boss Menu Location</strong>. (2) Your current job grade must have <code>isboss = true</code>. Both conditions must be met for the proximity prompt to appear.</p>
+
+        <h3 class="entry-title" id="faq-nostash">The stash prompt never appears</h3>
+        <p>A stash location must be set for the job in the panel. You must also be actively employed in that job (any grade). Check that one of <code>ox_inventory</code>, <code>qs-inventory</code>, or <code>qb-inventory</code> is started — the stash will not open if no inventory resource is detected.</p>
+
+        <h3 class="entry-title" id="faq-batpath">sync_jobs.bat shows the wrong paths</h3>
+        <p>The bat is regenerated on every <strong>Write to jobs.lua</strong> click using <code>GetResourcePath()</code> at runtime — so paths are always resolved from the actual running server. If you moved the resource or renamed folders, click <strong>Write to jobs.lua</strong> once more to refresh the bat.</p>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+
+  <script src="../script.js"></script>
+</body>
+</html>
