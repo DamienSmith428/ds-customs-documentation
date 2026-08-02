@@ -87,22 +87,6 @@ ensure ds_vehiclekeys    <span class="c"># any resource that calls ds_minigames 
 ensure my_robbery_script
 </code></pre>
 
-        <h3 id="sounds" style="margin-top:24px;font-size:1rem;font-weight:600;color:var(--text)">Sound files</h3>
-        <p>Place the following <code>.ogg</code> files in <code>html/sounds/</code>:</p>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Filename</th><th>When it plays</th></tr></thead>
-            <tbody>
-              <tr><td><code>success.ogg</code></td><td>Any game completed successfully.</td></tr>
-              <tr><td><code>fail.ogg</code></td><td>Any game failed or timed out.</td></tr>
-              <tr><td><code>tick.ogg</code></td><td>Correct step / node / zone cracked mid-game.</td></tr>
-              <tr><td><code>beep.ogg</code></td><td>Wrong input or pressure warning.</td></tr>
-              <tr><td><code>alarm.ogg</code></td><td>Critical failure — overheat, short circuit, etc.</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="callout">The sounds from <code>qb-minigames</code> can be used as a quick stand-in: rename <code>correct.ogg → tick.ogg</code>, <code>wrong.ogg → beep.ogg</code>, <code>finish.ogg → success.ogg</code>. Keep <code>fail.ogg</code> as-is and add any short alarm sound for <code>alarm.ogg</code>.</div>
-      </div>
 
       <!-- ── 3. Configuration ──────────────────────────────────────────── -->
       <div class="section">
