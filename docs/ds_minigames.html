@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Minigames — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+    <a class="topbar-link" href="https://discord.gg/ZhYRUQ6K6R" target="_blank" rel="noopener">Discord ↗</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS Minigames</h1>
+        <p class="subtitle">Modular, framework-agnostic minigame library. Six fully playable games, four difficulty tiers each, one clean export per game — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.0.0</span>
+          <span class="badge badge-blue">FiveM</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-green">No SQL</span>
+          <span class="badge badge-green">No Framework</span>
+          <span class="badge badge-red">Escrow</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ───────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p><code>ds_minigames</code> is a standalone minigame library that any other resource on your server can call with a single Lua export. It ships six original minigames, each isolated in its own folder with its own client Lua, server Lua, JavaScript, and CSS. The calling resource never touches the NUI — it just awaits a <code>true</code> or <code>false</code>.</p>
+        <p>Every game supports four named difficulty tiers — <code>easy</code>, <code>medium</code>, <code>hard</code>, and <code>insane</code> — all configured in a single open <code>config.lua</code>. Callers can also pass an inline override table instead of a string to fine-tune parameters for a specific scenario.</p>
+        <div class="callout tip">No framework dependency. No SQL. Works with QBCore, ESX, ox, or any standalone resource. Drop it in, ensure it, done.</div>
+
+        <h3 id="architecture" style="margin-top:28px;font-size:1rem;font-weight:600;color:var(--text)">Architecture at a glance</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Layer</th><th>File(s)</th><th>Responsibility</th></tr></thead>
+            <tbody>
+              <tr><td><code>config.lua</code></td><td>shared_script</td><td>All difficulty values for every game. The only file you need to edit.</td></tr>
+              <tr><td><code>client/client_main.lua</code></td><td>client_script (loads last)</td><td>Registers all six <code>exports()</code>. Resolves difficulty strings and dispatches to game functions.</td></tr>
+              <tr><td><code>server/server_main.lua</code></td><td>server_script</td><td>Result logging, fire-and-forget server → client triggers, callback-style triggers.</td></tr>
+              <tr><td><code>games/&lt;name&gt;/client.lua</code></td><td>client_script (per game)</td><td>Promise lifecycle, NUI callbacks, exposes <code>DS_GameName(cfg)</code> global.</td></tr>
+              <tr><td><code>games/&lt;name&gt;/server.lua</code></td><td>server_script (per game)</td><td>Optional per-game server hooks (anti-cheat, rewards, logging).</td></tr>
+              <tr><td><code>html/js/&lt;name&gt;.js</code></td><td>NUI file</td><td>All game logic, canvas/DOM rendering, keyboard input, and post-back to Lua.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 2. Installation ───────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">2 — Installation</h2>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Place the <code>ds_minigames</code> folder inside your resources directory.</li>
+          <li>Add <code>ensure ds_minigames</code> to <code>server.cfg</code> <strong>before</strong> any resource that calls its exports.</li>
+          <li>Add five <code>.ogg</code> sound files to <code>html/sounds/</code> — see <a href="#sounds">Sounds</a> below.</li>
+          <li>Done — no SQL, no further configuration required unless you want to adjust difficulties.</li>
+        </ol>
+        <pre><code><span class="c"># server.cfg</span>
+ensure ds_minigames
+ensure ds_vehiclekeys    <span class="c"># any resource that calls ds_minigames exports</span>
+ensure my_robbery_script
+</code></pre>
+
+        <h3 id="sounds" style="margin-top:24px;font-size:1rem;font-weight:600;color:var(--text)">Sound files</h3>
+        <p>Place the following <code>.ogg</code> files in <code>html/sounds/</code>:</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Filename</th><th>When it plays</th></tr></thead>
+            <tbody>
+              <tr><td><code>success.ogg</code></td><td>Any game completed successfully.</td></tr>
+              <tr><td><code>fail.ogg</code></td><td>Any game failed or timed out.</td></tr>
+              <tr><td><code>tick.ogg</code></td><td>Correct step / node / zone cracked mid-game.</td></tr>
+              <tr><td><code>beep.ogg</code></td><td>Wrong input or pressure warning.</td></tr>
+              <tr><td><code>alarm.ogg</code></td><td>Critical failure — overheat, short circuit, etc.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">The sounds from <code>qb-minigames</code> can be used as a quick stand-in: rename <code>correct.ogg → tick.ogg</code>, <code>wrong.ogg → beep.ogg</code>, <code>finish.ogg → success.ogg</code>. Keep <code>fail.ogg</code> as-is and add any short alarm sound for <code>alarm.ogg</code>.</div>
+      </div>
+
+      <!-- ── 3. Configuration ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">3 — Configuration — config.lua</h2>
+        <p><code>config.lua</code> is completely open and unencrypted. Every difficulty value for every game lives here. You should never need to touch any other file.</p>
+
+        <h3 id="config-global" style="margin-top:24px;font-size:1rem;font-weight:600;color:var(--text)">Global settings</h3>
+        <pre><code>Config.Sounds = <span class="k">true</span>   <span class="c">-- master sound toggle for all games</span>
+Config.Debug  = <span class="k">false</span>  <span class="c">-- print game name + config to console on each start</span>
+</code></pre>
+
+        <h3 id="config-difficulty" style="margin-top:24px;font-size:1rem;font-weight:600;color:var(--text)">Difficulty tiers</h3>
+        <p>Each game has four named tiers. The table keys match the strings you pass to the export. Example for <strong>Thermal Crack</strong>:</p>
+        <pre><code>Config.ThermalCrack = {
+    easy   = { zones = <span class="n">3</span>, holdTime = <span class="n">1.2</span>, driftSpeed = <span class="n">0.4</span>, timeLimit = <span class="n">40</span>, zoneArc = <span class="n">0.38</span> },
+    medium = { zones = <span class="n">5</span>, holdTime = <span class="n">1.8</span>, driftSpeed = <span class="n">0.8</span>, timeLimit = <span class="n">30</span>, zoneArc = <span class="n">0.28</span> },
+    hard   = { zones = <span class="n">7</span>, holdTime = <span class="n">2.4</span>, driftSpeed = <span class="n">1.4</span>, timeLimit = <span class="n">22</span>, zoneArc = <span class="n">0.20</span> },
+    insane = { zones = <span class="n">9</span>, holdTime = <span class="n">3.0</span>, driftSpeed = <span class="n">2.2</span>, timeLimit = <span class="n">16</span>, zoneArc = <span class="n">0.14</span> },
+}
+</code></pre>
+        <p>Every game follows the same pattern — four tiers, keys match export strings. All six tables are documented individually in the <a href="#games">Games</a> section below.</p>
+      </div>
+
+      <!-- ── 4. Export API ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="exports">4 — Export API</h2>
+        <p>Every export is registered in <code>client/client_main.lua</code> and follows the same contract: pass a difficulty string <em>or</em> an inline config table, receive a blocking <code>boolean</code> result.</p>
+
+        <h3 id="export-pattern" style="margin-top:24px;font-size:1rem;font-weight:600;color:var(--text)">Calling pattern</h3>
+        <pre><code><span class="c">-- Pattern A: named difficulty string</span>
+<span class="k">local</span> success = exports[<span class="s">'ds_minigames'</span>]:<span class="f">CircuitBreaker</span>(<span class="s">'hard'</span>)
+
+<span class="c">-- Pattern B: inline override table (any key from the Config table)</span>
+<span class="k">local</span> success = exports[<span class="s">'ds_minigames'</span>]:<span class="f">ThermalCrack</span>({
+    zones       = <span class="n">4</span>,
+    holdTime    = <span class="n">1.5</span>,
+    driftSpeed  = <span class="n">1.0</span>,
+    timeLimit   = <span class="n">28</span>,
+    zoneArc     = <span class="n">0.24</span>,
+})
+
+<span class="c">-- Result handling — identical for every game</span>
+<span class="k">if</span> success <span class="k">then</span>
+    <span class="c">-- player succeeded: unlock door, give reward, advance job step, etc.</span>
+<span class="k">else</span>
+    <span class="c">-- player failed: trigger alarm, remove item, penalise, etc.</span>
+<span class="k">end</span>
+</code></pre>
+
+        <h3 id="export-table" style="margin-top:28px;font-size:1rem;font-weight:600;color:var(--text)">All exports</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export</th><th>Game</th><th>Returns</th><th>NUI focus</th></tr></thead>
+            <tbody>
+              <tr><td><code>CircuitBreaker(diff)</code></td><td>Circuit Breaker</td><td><code>boolean</code></td><td>Cursor + keyboard</td></tr>
+              <tr><td><code>ThermalCrack(diff)</code></td><td>Thermal Crack</td><td><code>boolean</code></td><td>Keyboard only</td></tr>
+              <tr><td><code>SignalTrace(diff)</code></td><td>Signal Trace</td><td><code>boolean</code></td><td>Cursor + keyboard</td></tr>
+              <tr><td><code>SurgeControl(diff)</code></td><td>Surge Control</td><td><code>boolean</code></td><td>Keyboard only</td></tr>
+              <tr><td><code>CipherDecode(diff)</code></td><td>Cipher Decode</td><td><code>boolean</code></td><td>Cursor + keyboard</td></tr>
+              <tr><td><code>GhostWire(diff)</code></td><td>Ghost Wire</td><td><code>boolean</code></td><td>Cursor + keyboard</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout"><code>diff</code> accepts a string (<code>'easy'</code> / <code>'medium'</code> / <code>'hard'</code> / <code>'insane'</code>) or an inline table. Falls back to <code>'medium'</code> if an unrecognised string is passed.</div>
+
+        <h3 id="export-server" style="margin-top:28px;font-size:1rem;font-weight:600;color:var(--text)">Server-side triggers</h3>
+        <p>A server script can launch a minigame on a specific player without needing that player to call the export directly.</p>
+        <pre><code><span class="c">-- Fire-and-forget: server triggers a game on a player (result logged server-side)</span>
+TriggerClientEvent(<span class="s">'ds_minigames:server:startGame'</span>, source, <span class="s">'ThermalCrack'</span>, <span class="s">'hard'</span>)
+
+<span class="c">-- Callback variant: result comes back via the ds_minigames:gameCompleted server event</span>
+TriggerClientEvent(<span class="s">'ds_minigames:server:startGameCb'</span>, source, <span class="s">'CircuitBreaker'</span>, <span class="s">'insane'</span>, myCallbackId)
+
+<span class="c">-- Listen for the result on the server</span>
+AddEventHandler(<span class="s">'ds_minigames:gameCompleted'</span>, <span class="k">function</span>(src, success, cbId)
+    <span class="k">if</span> success <span class="k">then</span>
+        <span class="c">-- reward the player server-side</span>
+    <span class="k">end</span>
+<span class="k">end</span>)
+</code></pre>
+      </div>
+
+      <!-- ── 5. Games ──────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="games">5 — The Six Games</h2>
+
+        <!-- Circuit Breaker -->
+        <h3 class="entry-title" id="circuit-breaker">CircuitBreaker</h3>
+        <p>A grid of glowing nodes — some are real path nodes, the rest are decoys. The player must click only the correct sequence from the highlighted <strong>SOURCE</strong> node to the <strong>TARGET</strong> node. Clicking a decoy costs a life. On Hard and Insane difficulty the entire board reshuffles at a set interval mid-round.</p>
+        <p><strong>Controls:</strong> Mouse click on nodes. <kbd>Escape</kbd> to cancel.</p>
+        <p><strong>Best for:</strong> Bank hacks, server room access, electric fence bypasses, power plant sabotage.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Tier</th><th>Real nodes</th><th>Decoys</th><th>Time limit</th><th>Lives</th><th>Reshuffle</th></tr></thead>
+            <tbody>
+              <tr><td><span class="badge badge-green">easy</span></td><td>6</td><td>2</td><td>45s</td><td>3</td><td>Never</td></tr>
+              <tr><td><span class="badge badge-orange">medium</span></td><td>9</td><td>4</td><td>30s</td><td>2</td><td>Never</td></tr>
+              <tr><td><span class="badge badge-red">hard</span></td><td>12</td><td>6</td><td>20s</td><td>1</td><td>Every 10s</td></tr>
+              <tr><td><span class="badge badge-purple">insane</span></td><td>16</td><td>9</td><td>14s</td><td>1</td><td>Every 5s</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre><code><span class="k">local</span> success = exports[<span class="s">'ds_minigames'</span>]:<span class="f">CircuitBreaker</span>(<span class="s">'hard'</span>)</code></pre>
+
+        <!-- Thermal Crack -->
+        <h3 class="entry-title" id="thermal-crack">ThermalCrack</h3>
+        <p>A circular ring with a drifting amber heat zone. The drill head is fixed at 12 o'clock. The player must hold <kbd>Space</kbd> while the zone passes under the drill head for a set duration. Holding too long past the zone edge causes an overheat and instant failure. Complete every zone to succeed.</p>
+        <p><strong>Controls:</strong> Hold <kbd>Space</kbd>. <kbd>Escape</kbd> to cancel.</p>
+        <p><strong>Best for:</strong> Safe cracking, vault doors, car lockpicking, hotwiring, drill jobs.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Tier</th><th>Zones</th><th>Hold time</th><th>Drift speed</th><th>Zone arc</th><th>Time limit</th></tr></thead>
+            <tbody>
+              <tr><td><span class="badge badge-green">easy</span></td><td>3</td><td>1.2s</td><td>0.4×</td><td>Wide</td><td>40s</td></tr>
+              <tr><td><span class="badge badge-orange">medium</span></td><td>5</td><td>1.8s</td><td>0.8×</td><td>Medium</td><td>30s</td></tr>
+              <tr><td><span class="badge badge-red">hard</span></td><td>7</td><td>2.4s</td><td>1.4×</td><td>Narrow</td><td>22s</td></tr>
+              <tr><td><span class="badge badge-purple">insane</span></td><td>9</td><td>3.0s</td><td>2.2×</td><td>Very narrow</td><td>16s</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre><code><span class="k">local</span> success = exports[<span class="s">'ds_minigames'</span>]:<span class="f">ThermalCrack</span>(<span class="s">'medium'</span>)</code></pre>
+        <div class="callout tip">This is the recommended game for car lockpicking — the hold-tension mechanic maps directly to the feeling of applying pressure on a lock tumbler. It is already wired into <code>ds_vehiclekeys</code> via the <code>Config.Minigames</code> bridge.</div>
+
+        <!-- Signal Trace -->
+        <h3 class="entry-title" id="signal-trace">SignalTrace</h3>
+        <p>An oscilloscope-style grid filled with noise characters. A correct path winds from the ENTRY cell to the EXIT cell — faintly visible if you look closely. The player navigates using <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>. Moving onto an off-path cell injects static noise that temporarily blinds nearby cells. On higher difficulties the path reseeds and the blind duration increases significantly.</p>
+        <p><strong>Controls:</strong> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to move. <kbd>Escape</kbd> to cancel.</p>
+        <p><strong>Best for:</strong> Phone taps, radio tower intercepts, comms hacking, surveillance bypass.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Tier</th><th>Grid size</th><th>Noise level</th><th>Blind duration</th><th>Time limit</th></tr></thead>
+            <tbody>
+              <tr><td><span class="badge badge-green">easy</span></td><td>5×5</td><td>1</td><td>800ms</td><td>50s</td></tr>
+              <tr><td><span class="badge badge-orange">medium</span></td><td>7×7</td><td>2</td><td>1200ms</td><td>35s</td></tr>
+              <tr><td><span class="badge badge-red">hard</span></td><td>9×9</td><td>4</td><td>1800ms</td><td>25s</td></tr>
+              <tr><td><span class="badge badge-purple">insane</span></td><td>11×11</td><td>6</td><td>2400ms</td><td>16s</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre><code><span class="k">local</span> success = exports[<span class="s">'ds_minigames'</span>]:<span class="f">SignalTrace</span>(<span class="s">'hard'</span>)</code></pre>
+
+        <!-- Surge Control -->
+        <h3 class="entry-title" id="surge-control">SurgeControl</h3>
+        <p>Multiple vertical power meters fill simultaneously at slightly different rates. Each bar has a red spike zone near the top. When a bar's fill reaches the spike zone the player must press the matching number key (<kbd>1</kbd>–<kbd>9</kbd>) to release pressure before the auto-fail timer expires. Miss a bar and lose a life. All bars are visible simultaneously — on Insane all nine fire near-concurrently.</p>
+        <p><strong>Controls:</strong> Number keys <kbd>1</kbd>–<kbd>9</kbd>. <kbd>Escape</kbd> to cancel.</p>
+        <p><strong>Best for:</strong> Generator sabotage, drug lab operations, electrical panel bypass, power grid disruption.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Tier</th><th>Bars</th><th>Spike window</th><th>Spike width</th><th>Lives</th><th>Time limit</th></tr></thead>
+            <tbody>
+              <tr><td><span class="badge badge-green">easy</span></td><td>3</td><td>2000ms</td><td>20%</td><td>3</td><td>60s</td></tr>
+              <tr><td><span class="badge badge-orange">medium</span></td><td>5</td><td>1400ms</td><td>14%</td><td>2</td><td>50s</td></tr>
+              <tr><td><span class="badge badge-red">hard</span></td><td>7</td><td>900ms</td><td>9%</td><td>1</td><td>40s</td></tr>
+              <tr><td><span class="badge badge-purple">insane</span></td><td>9</td><td>600ms</td><td>6%</td><td>1</td><td>30s</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre><code><span class="k">local</span> success = exports[<span class="s">'ds_minigames'</span>]:<span class="f">SurgeControl</span>(<span class="s">'insane'</span>)</code></pre>
+
+        <!-- Cipher Decode -->
+        <h3 class="entry-title" id="cipher-decode">CipherDecode</h3>
+        <p>A Mastermind-style code cracker. A hidden code is generated using the configured alphabet. The player submits guesses from an on-screen keyboard; each guess row returns per-character colour feedback — <strong style="color:#22c55e">green</strong> = correct position, <strong style="color:#f59e0b">yellow</strong> = correct character wrong position, <strong style="color:#484f58">grey</strong> = not in code. Higher difficulties extend code length, restrict alphabet to symbols, and shrink attempt limits to three.</p>
+        <p><strong>Controls:</strong> Mouse click on the on-screen keyboard, or physical keyboard. <kbd>Enter</kbd> to submit. <kbd>Escape</kbd> to cancel.</p>
+        <p><strong>Best for:</strong> Keypad bypasses, ATM skimmers, evidence safes, secure terminal access.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Tier</th><th>Code length</th><th>Alphabet</th><th>Max attempts</th><th>Hints</th><th>Time limit</th></tr></thead>
+            <tbody>
+              <tr><td><span class="badge badge-green">easy</span></td><td>4</td><td>0–9</td><td>8</td><td>3</td><td>30s</td></tr>
+              <tr><td><span class="badge badge-orange">medium</span></td><td>5</td><td>A–Z + 2–9</td><td>6</td><td>2</td><td>22s</td></tr>
+              <tr><td><span class="badge badge-red">hard</span></td><td>6</td><td>A–Z + symbols</td><td>4</td><td>1</td><td>15s</td></tr>
+              <tr><td><span class="badge badge-purple">insane</span></td><td>7</td><td>All characters</td><td>3</td><td>0</td><td>10s</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre><code><span class="k">local</span> success = exports[<span class="s">'ds_minigames'</span>]:<span class="f">CipherDecode</span>(<span class="s">'medium'</span>)</code></pre>
+
+        <!-- Ghost Wire -->
+        <h3 class="entry-title" id="ghost-wire">GhostWire</h3>
+        <p>A circuit-board grid. The player steers a wire from the <strong style="color:#22c55e">START</strong> cell to the <strong style="color:#79c0ff">END</strong> cell using <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>. The wire cannot cross itself or land on obstacle components — either triggers an immediate short-circuit failure. On Hard and Insane the cursor auto-advances in the last input direction at increasing speed, forcing the player to steer reactively.</p>
+        <p><strong>Controls:</strong> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to route. <kbd>Escape</kbd> to cancel.</p>
+        <p><strong>Best for:</strong> Bomb defusal, alarm bypass, CCTV tap, vehicle tampering, hotwiring high-end vehicles.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Tier</th><th>Grid size</th><th>Obstacles</th><th>Auto-advance speed</th><th>Time limit</th></tr></thead>
+            <tbody>
+              <tr><td><span class="badge badge-green">easy</span></td><td>8×8</td><td>2</td><td>Off</td><td>45s</td></tr>
+              <tr><td><span class="badge badge-orange">medium</span></td><td>10×10</td><td>4</td><td>Off</td><td>32s</td></tr>
+              <tr><td><span class="badge badge-red">hard</span></td><td>12×12</td><td>7</td><td>1.5 cells/s</td><td>22s</td></tr>
+              <tr><td><span class="badge badge-purple">insane</span></td><td>14×14</td><td>11</td><td>3.0 cells/s</td><td>14s</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre><code><span class="k">local</span> success = exports[<span class="s">'ds_minigames'</span>]:<span class="f">GhostWire</span>(<span class="s">'hard'</span>)</code></pre>
+      </div>
+
+      <!-- ── 6. Integration Examples ────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="integration">6 — Integration Examples</h2>
+
+        <h3 id="integration-lockpick" style="margin-top:24px;font-size:1rem;font-weight:600;color:var(--text)">Car lockpicking (ds_vehiclekeys)</h3>
+        <p><code>ds_vehiclekeys</code> has a built-in bridge for <code>ds_minigames</code>. Set <code>Config.Minigames.Resource = 'ds'</code> in its config and Thermal Crack will automatically be used when a player uses a lockpick item.</p>
+        <pre><code><span class="c">-- ds_vehiclekeys/config.lua</span>
+Config.Minigames = {
+    Resource       = <span class="s">'ds'</span>,      <span class="c">-- 'qb' = qb-minigames Skillbar | 'ds' = ds_minigames ThermalCrack</span>
+    DSNormalDiff   = <span class="s">'medium'</span>,  <span class="c">-- normal lockpick difficulty</span>
+    DSAdvancedDiff = <span class="s">'easy'</span>,    <span class="c">-- advanced lockpick difficulty</span>
+}
+</code></pre>
+
+        <h3 id="integration-robbery" style="margin-top:28px;font-size:1rem;font-weight:600;color:var(--text)">Dynamic difficulty by vehicle class</h3>
+        <pre><code><span class="k">local</span> veh      = GetVehiclePedIsIn(PlayerPedId(), <span class="k">false</span>)
+<span class="k">local</span> vehClass = GetVehicleClass(veh)
+
+<span class="k">local</span> diff
+<span class="k">if</span>     vehClass == <span class="n">18</span> <span class="k">then</span> diff = <span class="s">'insane'</span>   <span class="c">-- emergency / armoured</span>
+<span class="k">elseif</span> vehClass == <span class="n">8</span>  <span class="k">then</span> diff = <span class="s">'hard'</span>     <span class="c">-- motorcycle</span>
+<span class="k">elseif</span> vehClass == <span class="n">7</span>  <span class="k">then</span> diff = <span class="s">'medium'</span>   <span class="c">-- SUV</span>
+<span class="k">else</span>                        diff = <span class="s">'easy'</span>     <span class="c">-- standard cars</span>
+<span class="k">end</span>
+
+<span class="k">local</span> success = exports[<span class="s">'ds_minigames'</span>]:<span class="f">ThermalCrack</span>(diff)
+<span class="k">if</span> success <span class="k">then</span>
+    TriggerServerEvent(<span class="s">'myresource:server:unlockVehicle'</span>, NetworkGetNetworkIdFromEntity(veh))
+<span class="k">else</span>
+    TriggerServerEvent(<span class="s">'myresource:server:triggerAlarm'</span>)
+<span class="k">end</span>
+</code></pre>
+
+        <h3 id="integration-robbery2" style="margin-top:28px;font-size:1rem;font-weight:600;color:var(--text)">Multi-step bank robbery</h3>
+        <pre><code><span class="c">-- Step 1: hack the server room</span>
+<span class="k">local</span> hackOk = exports[<span class="s">'ds_minigames'</span>]:<span class="f">CircuitBreaker</span>(<span class="s">'hard'</span>)
+<span class="k">if not</span> hackOk <span class="k">then</span> Notify.Client(<span class="s">'Hack failed!'</span>, <span class="s">'error'</span>) <span class="k">return</span> <span class="k">end</span>
+
+<span class="c">-- Step 2: crack the vault door</span>
+<span class="k">local</span> crackOk = exports[<span class="s">'ds_minigames'</span>]:<span class="f">ThermalCrack</span>(<span class="s">'insane'</span>)
+<span class="k">if not</span> crackOk <span class="k">then</span> Notify.Client(<span class="s">'Drill overloaded!'</span>, <span class="s">'error'</span>) <span class="k">return</span> <span class="k">end</span>
+
+<span class="c">-- Both passed — open the vault</span>
+TriggerServerEvent(<span class="s">'mybank:server:openVault'</span>)
+</code></pre>
+
+        <h3 id="integration-server" style="margin-top:28px;font-size:1rem;font-weight:600;color:var(--text)">Server-triggered with result callback</h3>
+        <pre><code><span class="c">-- server.lua — trigger a minigame on a specific player and get the result back</span>
+<span class="k">local</span> cbId = <span class="s">'vault_'</span> .. source
+TriggerClientEvent(<span class="s">'ds_minigames:server:startGameCb'</span>, source, <span class="s">'GhostWire'</span>, <span class="s">'hard'</span>, cbId)
+
+AddEventHandler(<span class="s">'ds_minigames:gameCompleted'</span>, <span class="k">function</span>(src, success, returnedCbId)
+    <span class="k">if</span> returnedCbId ~= cbId <span class="k">then</span> <span class="k">return</span> <span class="k">end</span>
+    <span class="k">if</span> success <span class="k">then</span>
+        TriggerClientEvent(<span class="s">'myresource:openVaultDoor'</span>, src)
+    <span class="k">end</span>
+<span class="k">end</span>)
+</code></pre>
+      </div>
+
+      <!-- ── 7. File Structure ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="structure">7 — File Structure</h2>
+        <pre><code>ds_minigames/
+├── fxmanifest.lua
+├── config.lua                    <span class="c">← shared_script — edit this only</span>
+├── client/
+│   └── client_main.lua           <span class="c">← all exports() + server-event listeners</span>
+├── server/
+│   └── server_main.lua           <span class="c">← logging, server→client triggers, callbacks</span>
+├── games/
+│   ├── circuit_breaker/          client.lua  +  server.lua
+│   ├── thermal_crack/            client.lua  +  server.lua
+│   ├── signal_trace/             client.lua  +  server.lua
+│   ├── surge_control/            client.lua  +  server.lua
+│   ├── cipher_decode/            client.lua  +  server.lua
+│   └── ghost_wire/               client.lua  +  server.lua
+└── html/
+    ├── index.html
+    ├── js/
+    │   ├── utils.js              <span class="c">← shared: dsPost(), dsSound(), dsCountdown(), etc.</span>
+    │   ├── circuit_breaker.js
+    │   ├── thermal_crack.js
+    │   ├── signal_trace.js
+    │   ├── surge_control.js
+    │   ├── cipher_decode.js
+    │   └── ghost_wire.js
+    ├── css/
+    │   ├── shared.css
+    │   ├── circuit_breaker.css
+    │   ├── thermal_crack.css
+    │   ├── signal_trace.css
+    │   ├── surge_control.css
+    │   ├── cipher_decode.css
+    │   └── ghost_wire.css
+    └── sounds/
+        ├── success.ogg
+        ├── fail.ogg
+        ├── tick.ogg
+        ├── beep.ogg
+        └── alarm.ogg
+</code></pre>
+
+        <h3 id="adding-games" style="margin-top:24px;font-size:1rem;font-weight:600;color:var(--text)">Adding a new game</h3>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Create <code>games/my_game/client.lua</code> — declare a promise, register NUI callbacks, expose <code>DS_MyGame(cfg)</code>.</li>
+          <li>Create <code>games/my_game/server.lua</code> — add any server hooks you need (can be an empty file).</li>
+          <li>Create <code>html/js/my_game.js</code> — game logic; post back via <code>dsPost('mg_success')</code> / <code>dsPost('mg_fail')</code>.</li>
+          <li>Create <code>html/css/my_game.css</code> — game-specific styles.</li>
+          <li>Add the container <code>&lt;div id="mg-container"&gt;</code> block to <code>html/index.html</code>.</li>
+          <li>Add the difficulty table to <code>config.lua</code>.</li>
+          <li>Register the export in <code>client/client_main.lua</code> following the existing pattern.</li>
+          <li>Add both lua files to <code>fxmanifest.lua</code> under <code>client_scripts</code> and <code>server_scripts</code>.</li>
+        </ol>
+      </div>
+
+      <!-- ── 8. NUI Shared Utilities ────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="nui-utils">8 — NUI Shared Utilities (utils.js)</h2>
+        <p>All game scripts share a common set of helper functions defined in <code>html/js/utils.js</code>. These are available as globals inside every other game JS file.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Function</th><th>Signature</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>dsPost</code></td><td><code>(endpoint, data?)</code></td><td>Posts a result back to a named Lua NUI callback endpoint.</td></tr>
+              <tr><td><code>dsSound</code></td><td><code>(name, vol?)</code></td><td>Plays a named sound from <code>html/sounds/</code>.</td></tr>
+              <tr><td><code>dsClamp</code></td><td><code>(v, lo, hi)</code></td><td>Clamps a value between lo and hi.</td></tr>
+              <tr><td><code>dsRandInt</code></td><td><code>(min, max)</code></td><td>Returns a random integer in [min, max] inclusive.</td></tr>
+              <tr><td><code>dsShuffle</code></td><td><code>(arr)</code></td><td>Fisher–Yates in-place shuffle. Returns the array.</td></tr>
+              <tr><td><code>dsRenderLives</code></td><td><code>(containerId, current, max)</code></td><td>Renders heart pips into a <code>.ds-lives</code> container.</td></tr>
+              <tr><td><code>dsRenderPips</code></td><td><code>(containerId, total, done, active?)</code></td><td>Renders zone pip indicators into a <code>.ds-pips</code> container.</td></tr>
+              <tr><td><code>dsCountdown</code></td><td><code>(seconds, onTick, onExpire)</code></td><td>Starts a 1-second countdown. Returns a cancel function.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 9. FAQ ─────────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="faq">9 — FAQ</h2>
+
+        <h3 style="margin-top:20px;font-size:0.95rem;font-weight:600;color:var(--text)">Can I use ds_minigames without QBCore?</h3>
+        <p>Yes — <code>ds_minigames</code> has no framework dependency. It works with any FiveM resource that can call Lua exports.</p>
+
+        <h3 style="margin-top:20px;font-size:0.95rem;font-weight:600;color:var(--text)">Will calling an export block the thread?</h3>
+        <p>Yes, intentionally. Each export uses <code>promise.new()</code> + <code>Citizen.Await()</code>, so the calling thread suspends until the minigame resolves. This means you can write linear code — no callbacks needed.</p>
+
+        <h3 style="margin-top:20px;font-size:0.95rem;font-weight:600;color:var(--text)">Can two players run different minigames at the same time?</h3>
+        <p>Yes — each player's NUI is isolated. The Lua promise is per-client, and all game state in JavaScript is scoped inside an IIFE with no shared globals between games.</p>
+
+        <h3 style="margin-top:20px;font-size:0.95rem;font-weight:600;color:var(--text)">What happens if a player disconnects mid-game?</h3>
+        <p>The NUI unloads and the promise is never resolved, but since the player is gone there's no thread to hang. The server-side callback entry will be orphaned — clear it in a <code>playerDropped</code> handler if you use the callback-style trigger.</p>
+
+        <h3 style="margin-top:20px;font-size:0.95rem;font-weight:600;color:var(--text)">Can I change difficulty at runtime without restarting?</h3>
+        <p>Yes — pass an inline table override instead of a string. The config is only read at the moment the export is called, so you can compute any values you want dynamically before the call.</p>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+
+  <script src="../script.js"></script>
+</body>
+</html>

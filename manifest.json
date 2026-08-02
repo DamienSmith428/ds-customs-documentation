@@ -36,6 +36,13 @@
       "tags": ["QBCore", "FiveM", "Escrow"]
     },
     {
+      "name": "DS Minigames",
+      "path": "docs/ds_minigames.html",
+      "status": "release",
+      "description": "Modular minigame library with six original games and four difficulty tiers each. One clean export per game, framework-agnostic, no SQL. Drop-in for lockpicking, hacking, safecracking, and more.",
+      "tags": ["FiveM", "Escrow"]
+    },
+    {
       "name": "DS MDT",
       "path": "docs/ds_mdt.html",
       "status": "coming soon",
