@@ -39,7 +39,7 @@
       <!-- Doc header -->
       <div class="doc-header">
         <h1>DS Vehicle Keys</h1>
-        <p class="subtitle">Database-backed vehicle lock &amp; key ownership system. Keyfob NUI, hotwiring, carjacking, lockpicking, job-shared keys, and a full server &amp; client export API — by DS Customs</p>
+        <p class="subtitle">Database-backed vehicle lock &amp; key ownership system. Keyfob NUI, hotwiring, carjacking, lockpicking, job-shared keys, ds_garages valet delivery, and a full server &amp; client export API — by DS Customs</p>
         <div class="badge-row">
           <span class="badge badge-gray">v1.0.0</span>
           <span class="badge badge-green">QBCore</span>
@@ -74,6 +74,7 @@
               <tr><td><code>ds_notify</code></td><td>Optional</td><td>Set <code>Config.Notify = 'ds_notify'</code>. Falls back to QBCore if absent.</td></tr>
               <tr><td><code>ds_progressbar</code></td><td>Optional</td><td>Set <code>Config.Progressbar = 'ds_progressbar'</code>. Falls back to QBCore if absent.</td></tr>
               <tr><td><code>qs-inventory</code> / <code>ox_inventory</code> / <code>qb-inventory</code></td><td>One required</td><td>Used for lockpick removal. Auto-detected or set via <code>Config.Inventory</code>.</td></tr>
+              <tr><td><code>ds_garages</code></td><td>Optional</td><td>Required only for the keyfob valet button. Set <code>Config.UseDSGarages = true</code> to enable. Degrades silently (button hidden) if absent or disabled.</td></tr>
             </tbody>
           </table>
         </div>
@@ -163,6 +164,7 @@ ensure ds_vehiclekeys
             <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
             <tbody>
               <tr><td><code>Config.UseKeyfob</code></td><td><code>true</code></td><td>Show the keyfob NUI when pressing the lock key outside a vehicle.</td></tr>
+              <tr><td><code>Config.UseDSGarages</code></td><td><code>false</code></td><td>Show a <strong>Valet</strong> button on the keyfob. Requires <code>ds_garages</code>. When clicked the player sees a scrollable list of all their garaged vehicles and can request valet delivery of any one.</td></tr>
               <tr><td><code>Config.LockToggleDist</code></td><td><code>8.0</code></td><td>Max distance (metres) for the key fob to reach a vehicle.</td></tr>
               <tr><td><code>Config.LockNPCDrivingCars</code></td><td><code>true</code></td><td>NPC-driven vehicles appear locked to players.</td></tr>
               <tr><td><code>Config.LockNPCParkedCars</code></td><td><code>true</code></td><td>Parked NPC vehicles are locked to players.</td></tr>
@@ -181,6 +183,17 @@ ensure ds_vehiclekeys
             </tbody>
           </table>
         </div>
+
+        <h3 class="entry-title" id="cfg-dsgarages"><code>Config.UseDSGarages</code></h3>
+        <p>When set to <code>true</code>, a <strong>Valet</strong> button is added to the keyfob NUI alongside the standard Lock / Unlock / Trunk / Engine controls. Pressing it opens a scrollable list of every vehicle the player currently has stored across all <code>ds_garages</code> garages. Selecting any entry dispatches a valet delivery request — the garage system spawns the chosen vehicle and drives it to the player's location.</p>
+        <p>Set this to <code>false</code> (or leave it unset) if <code>ds_garages</code> is not running on your server. The button is hidden entirely; no errors are thrown.</p>
+        <pre><code><span class="c">-- Enable the valet button (requires ds_garages)</span>
+Config.UseDSGarages = <span class="k">true</span>
+
+<span class="c">-- Disable the valet button (standalone / no ds_garages)</span>
+Config.UseDSGarages = <span class="k">false</span>
+</code></pre>
+        <div class="callout tip">The keyfob must also be enabled (<code>Config.UseKeyfob = true</code>) for the Valet button to be visible. If <code>UseKeyfob</code> is <code>false</code> the fob NUI never opens and this setting has no effect.</div>
 
         <h3 class="entry-title" id="cfg-sharekeys"><code>Config.SharedKeys</code></h3>
         <p>Employees of a listed job can lock and unlock any of that job's vehicles without owning the key. Set <code>requireOnduty = true</code> to restrict this to on-duty employees.</p>
@@ -534,6 +547,18 @@ exports[<span class="s">'ds_vehiclekeys'</span>]:ToggleVehicleLocks(vehicleEntit
 
         <h3 class="entry-title" id="faq-npc">NPC vehicles are not locking</h3>
         <p>Confirm that both <code>Config.LockNPCDrivingCars</code> and <code>Config.LockNPCParkedCars</code> are <code>true</code>. The lock is applied client-side when a player attempts to enter the vehicle — it does not affect vehicles they are not near.</p>
+
+        <h3 class="entry-title" id="faq-valet">Valet button does not appear on the keyfob</h3>
+        <p>Check the following in order:</p>
+        <ol style="padding-left:20px;line-height:2.0;margin-bottom:8px">
+          <li>Confirm <code>Config.UseDSGarages = true</code> is set in <code>config.lua</code>.</li>
+          <li>Confirm <code>Config.UseKeyfob = true</code> — the valet button lives inside the keyfob NUI, so the fob must be enabled.</li>
+          <li>Confirm <code>ds_garages</code> is listed in <code>server.cfg</code> and starts without errors before <code>ds_vehiclekeys</code>.</li>
+          <li>If the garage list opens but is empty, the player has no vehicles currently stored in any <code>ds_garages</code> garage.</li>
+        </ol>
+
+        <h3 class="entry-title" id="faq-valet-delivery">Valet delivery request is not arriving</h3>
+        <p>The actual spawning and routing of the valet vehicle is handled entirely by <code>ds_garages</code>. If the delivery does not appear, check the <code>ds_garages</code> resource console for errors. DS Vehicle Keys only opens the selection UI and forwards the player's choice — it does not control the delivery logic.</p>
       </div>
 
       <footer class="site-footer">
