@@ -1,6 +1,13 @@
 {
   "resources": [
     {
+      "name": "DS Television",
+      "path": "docs/ds_television.html",
+      "status": "release",
+      "description": "Server-synced TV system. Stream YouTube, Twitch, or any website onto in-world TV props. Per-TV distance controls, a custom default image, location-spawned props, and a clean in-game control menu.",
+      "tags": ["FiveM", "QBCore", "OneSync", "Escrow"]
+    },
+    {
       "name": "DS Job Creator",
       "path": "docs/ds_jobcreator.html",
       "status": "release",

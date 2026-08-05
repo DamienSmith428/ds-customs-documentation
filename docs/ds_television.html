@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Television — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+    <a class="topbar-link" href="https://discord.gg/ZhYRUQ6K6R" target="_blank" rel="noopener">Discord ↗</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS Television</h1>
+        <p class="subtitle">Server-synced TV system. Stream YouTube, Twitch, or any website onto in-world TV props. Per-TV distance controls, a custom default image, location-spawned props, and a clean in-game control menu — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.0.0</span>
+          <span class="badge badge-green">FiveM</span>
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-blue">OneSync</span>
+          <span class="badge badge-red">Escrow</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS Television renders a live DUI (browser texture) onto any GTA V TV prop in the game world. Players walk up to a TV, type <code>/tv</code>, and get a compact control panel where they can play YouTube videos, Twitch streams, or open any website. Playback state is stored server-side so late-joining players automatically see whatever is already playing.</p>
+
+        <h3 class="entry-title" id="features">Features</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Feature</th><th>Detail</th></tr></thead>
+            <tbody>
+              <tr><td>YouTube &amp; Twitch streaming</td><td>Paste a full YouTube or Twitch URL — the TV loads it immediately via the embedded player.</td></tr>
+              <tr><td>Web browser mode</td><td>Display any publicly accessible URL on the screen as a full web page.</td></tr>
+              <tr><td>Custom default image</td><td>When no content is playing the TV displays a configurable static image (<code>html/tv_image.png</code>) instead of a blank screen.</td></tr>
+              <tr><td>Refresh Screen button</td><td>One-click reset: kills any active video/browser and returns the screen to the default image.</td></tr>
+              <tr><td>Distance-based volume</td><td>Volume fades linearly as the player moves away from the TV. Adjust it per-model or globally.</td></tr>
+              <tr><td>Interact range vs render range</td><td><code>Range</code> controls how close you must be to use <code>/tv</code>. The DUI renders for any TV within 50 units regardless of interact range.</td></tr>
+              <tr><td>Location-spawned props</td><td>Define TVs in <code>Config.Locations</code> and the resource spawns, freezes, and manages the prop automatically. Requires OneSync.</td></tr>
+              <tr><td>Hysteresis spawn bands</td><td>Separate <code>SpawnRange</code> and <code>DespawnRange</code> prevent pop-in when walking near a location prop.</td></tr>
+              <tr><td>Closest-TV selection</td><td>With multiple TVs nearby, <code>/tv</code> always targets the one the player is physically closest to within range.</td></tr>
+              <tr><td>Interact with screen</td><td>Players can enable cursor mode to click on browser content rendered on the TV.</td></tr>
+              <tr><td>Server channels</td><td>Pre-defined broadcast channels (e.g. Twitch) that can be set by server-side events.</td></tr>
+              <tr><td>Banned word filter</td><td>Configurable list of words blocked in any URL submitted through the menu.</td></tr>
+              <tr><td>Server-authoritative events</td><td>All interactions pass through <code>Config.Events.ScreenInteract</code> and <code>Config.Events.Broadcast</code> — override these to add permission checks.</td></tr>
+              <tr><td>Fault-tolerant</td><td>All native calls are wrapped in <code>pcall</code>. Invalid DUI handles, stale entities, and scaleform failures are caught and the screen resets automatically.</td></tr>
+              <tr><td>No SQL</td><td>Zero database dependency. All state lives in server memory.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 2. Requirements ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="requirements">2 — Requirements</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Requirement</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>FiveM server (any framework)</td><td>No specific framework dependency. Works standalone or with QBCore.</td></tr>
+              <tr><td>OneSync enabled</td><td>Required only if you use <code>Config.Locations</code>. Remove all location entries if your server runs without OneSync.</td></tr>
+              <tr><td>Internet access for players</td><td>YouTube and Twitch embeds are loaded from the internet inside FiveM's NUI browser. Players behind strict firewalls may not see the video.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">DS Television has <strong>no SQL dependency</strong>. All TV state is held in server memory and resets when the resource restarts.</div>
+      </div>
+
+      <!-- ── 3. Installation ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">3 — Installation</h2>
+
+        <h3 class="entry-title" id="install-drop">Drop-in</h3>
+        <p>Copy the <code>ds_television</code> folder into your <code>[tv]</code> category folder (or any resource folder). No SQL files to run.</p>
+
+        <h3 class="entry-title" id="install-image">Default screen image</h3>
+        <p>The file <code>html/tv_image.png</code> is displayed on the TV whenever no content is playing. Replace this file with any 1280×720 PNG of your choice — a server logo, a "No Signal" graphic, or anything else. The filename must remain <code>tv_image.png</code>.</p>
+
+        <h3 class="entry-title" id="install-cfg">server.cfg start order</h3>
+        <pre><code>ensure ds_television
+</code></pre>
+        <div class="callout tip">No other resources need to start before <code>ds_television</code>. If you are using location-spawned props, ensure OneSync is enabled in your <code>server.cfg</code> with <code>set onesync on</code> (or <code>infinity</code>).</div>
+      </div>
+
+      <!-- ── 4. Configuration ───────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">4 — Configuration — config.lua</h2>
+        <p>All configuration lives in <code>config.lua</code>, which is fully open and unencrypted.</p>
+
+        <!-- 4.1 Global -->
+        <h3 class="entry-title" id="config-global">4.1 — Global settings</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.InteractRange</code></td><td><code>20.0</code></td><td>How close (in units) a player must be to use <code>/tv</code> on a TV. Acts as the fallback value for every model and location entry that does not define its own <code>Range</code>. Does <strong>not</strong> affect whether the screen renders — that is controlled by the 50-unit <code>RENDER_DISTANCE</code> constant in <code>client/main.lua</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.2 Models -->
+        <h3 class="entry-title" id="config-models">4.2 — Config.Models</h3>
+        <p>Every TV prop model that the resource should handle must have an entry here. The resource ignores any object whose model hash is not listed.</p>
+        <pre><code>Config.Models = {
+    [<span class="s">`prop_tv_flat_01`</span>] = {
+        DefaultVolume = <span class="n">0.5</span>,   <span class="c">-- Starting volume (0.0 – 1.0) when no saved value exists</span>
+        Range         = <span class="k">nil</span>,   <span class="c">-- /tv interact range. nil = Config.InteractRange</span>
+        Target        = <span class="s">"tvscreen"</span>, <span class="c">-- Named render-target. Only set if the prop has one.</span>
+        Scale         = <span class="n">0.085</span>, <span class="c">-- Scaleform scale (only used when Target is nil)</span>
+        Offset        = vector3(<span class="n">-1.02</span>, <span class="n">-0.055</span>, <span class="n">1.04</span>), <span class="c">-- Screen offset from prop origin</span>
+    },
+}</code></pre>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>DefaultVolume</code></td><td>number</td><td>Yes</td><td>Volume applied when the player first approaches the TV and no saved volume exists. Range <code>0.0</code>–<code>1.0</code>.</td></tr>
+              <tr><td><code>Range</code></td><td>number / nil</td><td>No</td><td>Per-model override for <code>/tv</code> interact distance. <code>nil</code> falls back to <code>Config.InteractRange</code>.</td></tr>
+              <tr><td><code>Target</code></td><td>string / nil</td><td>No</td><td>Named render-target registered on the prop (e.g. <code>"tvscreen"</code>). When set, the DUI is projected directly onto the prop's render target for perfect screen alignment. Leave <code>nil</code> for models without a registered render target — the scaleform <code>DrawScaleformMovie_3dSolid</code> path is used instead.</td></tr>
+              <tr><td><code>Scale</code></td><td>number</td><td>Yes (if no Target)</td><td>Scaleform scale multiplier. Only used when <code>Target</code> is <code>nil</code>. Adjust to fit the screen face of the model.</td></tr>
+              <tr><td><code>Offset</code></td><td>vector3</td><td>Yes (if no Target)</td><td>World-space offset from the entity origin to the screen face. Only used when <code>Target</code> is <code>nil</code>. Adjust X/Y/Z until the image is centred on the screen.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">The 17 models listed in the default config cover the most common GTA V TV props. Add any additional model hashes you need — the model must exist in the game files or be streamed by another resource.</div>
+
+        <!-- 4.3 Locations -->
+        <h3 class="entry-title" id="config-locations">4.3 — Config.Locations</h3>
+        <p>Location entries tell the resource to spawn and manage a TV prop at a specific world coordinate. Requires <strong>OneSync</strong>. Remove all entries (leave the table empty) if your server does not use OneSync.</p>
+        <pre><code>Config.Locations = {
+    {
+        Model        = <span class="s">`prop_tv_flat_01`</span>,
+        Position     = vector4(<span class="n">144.3038</span>, <span class="n">-1037.4647</span>, <span class="n">29.4173</span>, <span class="n">70.81</span>),
+        SpawnRange   = <span class="n">50.0</span>,  <span class="c">-- Create prop within this distance. nil = Config.InteractRange</span>
+        DespawnRange = <span class="n">70.0</span>,  <span class="c">-- Delete prop beyond this distance.  nil = SpawnRange + 20.0</span>
+        Range        = <span class="n">10.0</span>,  <span class="c">-- /tv interact range for this TV only. nil = model / global default</span>
+    },
+}</code></pre>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Model</code></td><td>model hash</td><td>Yes</td><td>Prop model to spawn. Must also be listed in <code>Config.Models</code>.</td></tr>
+              <tr><td><code>Position</code></td><td>vector4</td><td>Yes</td><td>World position (X, Y, Z) and heading (W) for the spawned prop.</td></tr>
+              <tr><td><code>SpawnRange</code></td><td>number / nil</td><td>No</td><td>Distance at which the prop is created. <code>nil</code> uses <code>Config.InteractRange</code>.</td></tr>
+              <tr><td><code>DespawnRange</code></td><td>number / nil</td><td>No</td><td>Distance at which the prop is deleted. <code>nil</code> uses <code>SpawnRange + 20.0</code>. Should always be larger than <code>SpawnRange</code> to prevent pop-in.</td></tr>
+              <tr><td><code>Range</code></td><td>number / nil</td><td>No</td><td>Overrides the <code>/tv</code> interact distance for this specific TV. Falls back to the model's <code>Range</code>, then <code>Config.InteractRange</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn"><strong>OneSync required.</strong> If you use <code>Config.Locations</code> without OneSync enabled, the spawned props will not be visible to other players and the resource will produce errors. Set <code>Config.Locations = {}</code> to disable location spawning.</div>
+
+        <!-- 4.4 Channels -->
+        <h3 class="entry-title" id="config-channels">4.4 — Config.Channels</h3>
+        <p>Pre-defined broadcast channels that can be queued by channel index from server-side code. Channels listed here are the defaults — they cannot be overridden by players through the menu.</p>
+        <pre><code>Config.Channels = {
+    { name = <span class="s">"Twitch"</span>, url = <span class="s">"twitch.tv/twitch"</span> },
+}</code></pre>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>name</code></td><td>string</td><td>Display name for the channel. Used in channel-change notifications.</td></tr>
+              <tr><td><code>url</code></td><td>string</td><td>Twitch channel path (e.g. <code>twitch.tv/channelname</code>) or YouTube URL.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.5 Banned Words -->
+        <h3 class="entry-title" id="config-banned">4.5 — Config.BannedWords</h3>
+        <p>A list of strings that are blocked in any URL submitted through the in-game menu. If a submitted URL contains any of the listed strings (case-sensitive substring match), the server rejects the request and nothing plays.</p>
+        <pre><code>Config.BannedWords = {
+    <span class="s">"google"</span>,
+}</code></pre>
+        <div class="callout tip">Add any domains or keywords you want to block, e.g. <code>"pornhub"</code>, <code>"discord"</code>. The check runs server-side inside <code>Config.Events.ScreenInteract</code>, so it cannot be bypassed from the client.</div>
+
+        <!-- 4.6 Events -->
+        <h3 class="entry-title" id="config-events">4.6 — Config.Events</h3>
+        <p>Two server-side gate functions that control whether a screen interaction or broadcast is allowed to proceed. Call <code>cb()</code> to approve; return without calling it to silently block.</p>
+        <pre><code>Config.Events = {
+    <span class="c">-- Fires whenever a player submits a URL or browser link through the menu.</span>
+    <span class="c">-- source = player server id, data = screen data, key = "ds_tv_status",</span>
+    <span class="c">-- value = { type, url/channel/... }, cb = approval callback</span>
+    ScreenInteract = <span class="k">function</span>(source, data, key, value, cb)
+        <span class="c">-- default: run banned-word check, then approve</span>
+        cb()
+    <span class="k">end</span>,
+
+    <span class="c">-- Fires whenever a player sends a server:broadcast event.</span>
+    <span class="c">-- source = player server id, data = channel data, cb = approval callback</span>
+    Broadcast = <span class="k">function</span>(source, data, cb)
+        cb()
+    <span class="k">end</span>,
+}</code></pre>
+        <div class="callout">These callbacks are synchronous. Do not yield inside them (no <code>Wait</code>, no async database calls). If you need to check permissions asynchronously, use <code>Citizen.CreateThread</code> inside and call <code>cb()</code> from within that thread.</div>
+      </div>
+
+      <!-- ── 5. Range System ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="range">5 — Range &amp; Distance System</h2>
+        <p>DS Television separates rendering distance from interaction distance. This means the TV always shows its content when a player is nearby, but the <code>/tv</code> command only works if they are close enough to interact.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Concept</th><th>Value</th><th>What it controls</th></tr></thead>
+            <tbody>
+              <tr><td>Render distance</td><td>50 units (hardcoded)</td><td>How close a player must be for the DUI to be created and the screen content to appear. Not configurable per TV.</td></tr>
+              <tr><td>Interact range</td><td><code>Config.InteractRange</code> (default 20)</td><td>How close a player must be to type <code>/tv</code> and open the control menu. Configurable globally and per-TV.</td></tr>
+              <tr><td>Volume falloff</td><td>Within interact range</td><td>Volume scales linearly from the player's set level down to 0 as they walk from the TV outward to the interact range boundary.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="range-priority">Range priority order</h3>
+        <p>When determining a TV's interact range, the system checks in this order:</p>
+        <ol style="margin: 8px 0 0 22px; display:flex; flex-direction:column; gap:4px;">
+          <li><code>Config.Locations[i].Range</code> — per-location override (highest priority)</li>
+          <li><code>Config.Models[model].Range</code> — per-model override</li>
+          <li><code>Config.InteractRange</code> — global fallback (lowest priority)</li>
+        </ol>
+
+        <h3 class="entry-title" id="range-spawn">Spawn hysteresis for location props</h3>
+        <p>Location-spawned props use two separate distance thresholds to prevent the prop from rapidly appearing and disappearing when a player walks near the boundary:</p>
+        <ul style="margin: 8px 0 0 22px; display:flex; flex-direction:column; gap:4px;">
+          <li>Prop is <strong>created</strong> when the player comes within <code>SpawnRange</code></li>
+          <li>Prop is <strong>deleted</strong> only when the player moves beyond <code>DespawnRange</code></li>
+        </ul>
+        <p style="margin-top:8px">Always set <code>DespawnRange</code> larger than <code>SpawnRange</code>. A gap of 20 units is the recommended minimum.</p>
+      </div>
+
+      <!-- ── 6. In-Game Menu ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="menu">6 — In-Game Control Menu</h2>
+        <p>Open the menu by typing <code>/tv</code> while standing within range of a TV. The menu appears in the top-right corner. It closes when you click <strong>Close</strong> or press <strong>ESC</strong>.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Button</th><th>Section</th><th>Behaviour</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Play Video</strong></td><td>Playback</td><td>Opens a text input. Paste a full YouTube (<code>https://youtube.com/watch?v=…</code> or <code>https://youtu.be/…</code>) or Twitch URL (<code>twitch.tv/channel</code>). Submitting sends the URL to the server for ban-word checking, then broadcasts playback to all players.</td></tr>
+              <tr><td><strong>Web Browser</strong></td><td>Playback</td><td>Opens a text input. Paste any <code>https://</code> URL. The TV screen becomes a live web browser showing that page.</td></tr>
+              <tr><td><strong>Refresh Screen</strong></td><td>Screen</td><td>Immediately stops any playing video/browser and resets the TV to the default static image (<code>tv_image.png</code>). Works even if the screen is already showing the default image.</td></tr>
+              <tr><td><strong>Set Volume</strong></td><td>Settings</td><td>Opens a text input. Enter a number between <code>0</code> and <code>100</code>. This is a local-only volume change — it affects only the player who submits it.</td></tr>
+              <tr><td><strong>Interact With Screen</strong></td><td>Settings</td><td>Enables mouse cursor mode so the player can click on interactive content rendered on the TV (e.g. web pages). Press <strong>ESC</strong> or close the menu to exit interact mode.</td></tr>
+              <tr><td><strong>Close</strong></td><td>—</td><td>Closes the menu and releases cursor focus. Equivalent to pressing <strong>ESC</strong>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="menu-input">Text input behaviour</h3>
+        <p>When a text input overlay is shown (for URL or volume entry):</p>
+        <ul style="margin: 8px 0 0 22px; display:flex; flex-direction:column; gap:4px;">
+          <li>Press <strong>Enter</strong> to confirm</li>
+          <li>Press <strong>ESC</strong> to cancel and return to the menu</li>
+          <li>Click <strong>Cancel</strong> to cancel and return to the menu</li>
+          <li>Empty submissions are ignored — nothing is sent to the server</li>
+        </ul>
+      </div>
+
+      <!-- ── 7. Default Screen Image ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="static-image">7 — Default Screen Image</h2>
+        <p>The file <code>html/tv_image.png</code> is shown on the TV screen whenever no video, stream, or browser is active. This replaces the old "NO SIGNAL" text that was present in earlier versions.</p>
+
+        <h3 class="entry-title" id="static-image-replace">Replacing the image</h3>
+        <ol style="margin: 8px 0 0 22px; display:flex; flex-direction:column; gap:6px;">
+          <li>Create or export your image at <strong>1280 × 720 px</strong>, saved as a PNG.</li>
+          <li>Name the file <strong><code>tv_image.png</code></strong>.</li>
+          <li>Drop it into <code>ds_television/html/</code>, overwriting the existing file.</li>
+          <li>Restart the resource — no other changes are needed.</li>
+        </ol>
+        <div class="callout tip">The image is declared in <code>fxmanifest.lua</code> under the <code>files</code> block as <code>"html/tv_image.png"</code>. FiveM will not serve it to the DUI unless it appears in that block. If you rename the file you must also update <code>fxmanifest.lua</code> and <code>html/index.html</code>.</div>
+
+        <h3 class="entry-title" id="static-image-trigger">When is it shown</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Situation</th><th>Result</th></tr></thead>
+            <tbody>
+              <tr><td>Player first approaches TV with no active content</td><td>Default image shown</td></tr>
+              <tr><td>Submitted URL is invalid or not recognised</td><td>Default image shown</td></tr>
+              <tr><td>Player clicks <strong>Refresh Screen</strong></td><td>Default image shown</td></tr>
+              <tr><td>Channel broadcast ends and no other content is queued</td><td>Default image shown</td></tr>
+              <tr><td>YouTube or Twitch video is playing</td><td>Default image hidden</td></tr>
+              <tr><td>Web browser URL is loaded</td><td>Default image hidden (browser fills screen)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 8. Adding TV Models ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="adding-models">8 — Adding a New TV Model</h2>
+        <p>To support a prop model that is not in the default list, add an entry to <code>Config.Models</code> in <code>config.lua</code>:</p>
+
+        <pre><code>Config.Models[<span class="s">`your_prop_model`</span>] = {
+    DefaultVolume = <span class="n">0.5</span>,
+    Range         = <span class="k">nil</span>,     <span class="c">-- uses Config.InteractRange</span>
+    Target        = <span class="k">nil</span>,     <span class="c">-- set to "tvscreen" only if the model has a named render target</span>
+    Scale         = <span class="n">0.085</span>,  <span class="c">-- adjust until the image fits the screen face</span>
+    Offset        = vector3(<span class="n">0.0</span>, <span class="n">0.0</span>, <span class="n">0.0</span>), <span class="c">-- adjust until image is centred</span>
+}</code></pre>
+
+        <h3 class="entry-title" id="adding-models-target">Does my model have a named render target?</h3>
+        <p>A named render target is a pre-defined texture slot in the model's drawable that the game exposes for DUI injection. Most Rockstar TV props use <code>"tvscreen"</code>. If your prop has one, set <code>Target = "tvscreen"</code> (or whatever name applies) and leave <code>Scale</code> and <code>Offset</code> at defaults — the image will fill the screen perfectly without any adjustment.</p>
+        <p>If your prop does <strong>not</strong> have a render target, set <code>Target = nil</code> and use <code>Scale</code> and <code>Offset</code> to position the scaleform overlay manually on the screen face.</p>
+      </div>
+
+      <!-- ── 9. Adding Location TVs ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="adding-locations">9 — Adding Location-Spawned TVs</h2>
+        <p>Location TVs are props that the resource creates, positions, and manages entirely in code — no map editor or YMAP required.</p>
+
+        <pre><code>Config.Locations[#Config.Locations + <span class="n">1</span>] = {
+    Model        = <span class="s">`prop_tv_flat_01`</span>,
+    Position     = vector4(<span class="n">X</span>, <span class="n">Y</span>, <span class="n">Z</span>, <span class="n">Heading</span>),
+    SpawnRange   = <span class="n">50.0</span>,
+    DespawnRange = <span class="n">70.0</span>,
+    Range        = <span class="k">nil</span>,
+}</code></pre>
+
+        <p>To get the coordinates and heading of the exact position you want, stand at the location in-game and use a coords-printer command (e.g. <code>/coords</code> if your server has one), or use a resource like <code>spawn-anywhere</code> in a dev environment.</p>
+
+        <div class="callout warn">Every model used in <code>Config.Locations</code> must also appear in <code>Config.Models</code>, otherwise the DUI will not know how to render onto it.</div>
+      </div>
+
+      <!-- ── 10. Net Events ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="netevents">10 — Net Events &amp; Internal Architecture</h2>
+        <p>Understanding the event flow is useful if you want to trigger TV actions from other resources or hook into the system server-side.</p>
+
+        <h3 class="entry-title" id="netevents-flow">Event flow — player sets a video</h3>
+        <pre><code><span class="c">-- 1. Player submits URL in the menu:</span>
+Client (NUI) → menuAction { action: "video", value: "https://..." }
+    → RegisterNUICallback('menuAction')
+    → TriggerServerEvent("ds_television:event", screenData, "ds_tv_status", { type="play", url=... })
+
+<span class="c">-- 2. Server validates and stores:</span>
+Server RegisterNetEvent("ds_television:event")
+    → Config.Events.ScreenInteract(source, data, key, value, cb)
+    → SetTelevision(coords, "ds_tv_status", value, true)   <span class="c">-- true = broadcast</span>
+    → TriggerClientEvent("ds_television:event", -1, Televisions, index, key, value)
+
+<span class="c">-- 3. All clients receive and apply:</span>
+Client RegisterNetEvent("ds_television:event")
+    → PlayVideo({ url = value.url }) / PlayBrowser({ url = value.url })
+</code></pre>
+
+        <h3 class="entry-title" id="netevents-all">All registered net events</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Event</th><th>Direction</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><code>ds_television:event</code></td><td>Client → Server → All Clients</td><td>A player submitted a menu action (play, browser, etc.). Server validates via <code>Config.Events.ScreenInteract</code>, stores state, then broadcasts to all clients.</td></tr>
+              <tr><td><code>ds_television:broadcast</code></td><td>Client → Server → All Clients</td><td>A player is starting/stopping a server-side channel broadcast. Server validates via <code>Config.Events.Broadcast</code>.</td></tr>
+              <tr><td><code>ds_television:requestSync</code></td><td>Client → Server → Client</td><td>Sent when a player's DUI finishes loading for a TV. Server replies with the current TV state so late joiners see what is already playing.</td></tr>
+              <tr><td><code>ds_television:requestUpdate</code></td><td>Client → Server → Client</td><td>Sent on resource start. Server replies with the full <code>Televisions</code> and <code>Channels</code> tables.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="netevents-trigger">Triggering a TV from another resource</h3>
+        <p>You can set a TV playing from any server-side resource by calling <code>SetTelevision</code> directly — but since this function lives inside <code>ds_television</code>'s server scope, the cleanest approach is to trigger the net event:</p>
+        <pre><code><span class="c">-- From another server-side resource, play a video on the TV at specific coords:</span>
+TriggerClientEvent(<span class="s">"ds_television:event"</span>, <span class="n">-1</span>, Televisions, index, <span class="s">"ds_tv_status"</span>, {
+    type = <span class="s">"play"</span>,
+    url  = <span class="s">"https://www.youtube.com/watch?v=dQw4w9WgXcQ"</span>
+})
+</code></pre>
+        <div class="callout">You will need <code>index</code> (the key under which the TV is stored in <code>Televisions</code>) to target a specific TV. Use <code>GetTelevision(coords)</code> — defined in <code>shared/main.lua</code> and available on both client and server — to look up an entry by its world coordinates.</div>
+      </div>
+
+      <!-- ── 11. FAQ ─────────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="faq">11 — FAQ</h2>
+
+        <h3 class="entry-title" id="faq-onesync">Do I need OneSync?</h3>
+        <p>Only if you use <code>Config.Locations</code>. Location entries spawn props server-side using <code>CreateObject</code>, which requires OneSync so all players see the same entity. If your server does not run OneSync, remove all entries from <code>Config.Locations</code> (leave it as an empty table). TVs that already exist as part of the map work without OneSync.</p>
+
+        <h3 class="entry-title" id="faq-youtube">Which YouTube URLs are supported?</h3>
+        <p>Full watch URLs (<code>https://www.youtube.com/watch?v=XXXXXXXXXXX</code>) and short URLs (<code>https://youtu.be/XXXXXXXXXXX</code>). Playlists, shorts, and channel pages are not supported — only individual video URLs.</p>
+
+        <h3 class="entry-title" id="faq-twitch">Which Twitch URLs are supported?</h3>
+        <p>Channel paths in the form <code>twitch.tv/channelname</code>. The <code>https://</code> prefix is optional. VOD and clip URLs are not supported.</p>
+
+        <h3 class="entry-title" id="faq-latejoin">Will late-joining players see what is playing?</h3>
+        <p>Yes. When a player's DUI finishes loading, the client fires <code>ds_television:requestSync</code>. The server replies with the stored TV state (<code>Televisions[index].ds_tv_status</code>) including the URL and a timestamp so the video can be seeked to the correct position.</p>
+
+        <h3 class="entry-title" id="faq-volume">Is volume change shared or local?</h3>
+        <p>Volume is <strong>local only</strong>. Each player sets their own volume independently through <strong>Set Volume</strong> in the menu. Setting volume does not affect what other players hear.</p>
+
+        <h3 class="entry-title" id="faq-multiple">There are multiple TVs nearby — which one does /tv target?</h3>
+        <p>The nearest TV that is within its interact range. The resource scans all objects in the game pool every cycle and selects the closest eligible TV. If two TVs are both in range, the one with the shorter distance from the player wins.</p>
+
+        <h3 class="entry-title" id="faq-render">The TV shows the image but content does not play</h3>
+        <p>Check: (1) The URL is a supported format (YouTube watch URL or <code>twitch.tv/channel</code>). (2) The URL does not contain a banned word. (3) The player has internet access — FiveM's NUI browser fetches YouTube/Twitch content live from the internet. (4) <code>Config.Events.ScreenInteract</code> is calling <code>cb()</code> — if you customised this function, make sure it always calls the callback when approved.</p>
+
+        <h3 class="entry-title" id="faq-image">How do I change the default screen image?</h3>
+        <p>Replace <code>html/tv_image.png</code> with your own 1280×720 PNG. Keep the same filename. See <a href="#static-image">Section 7</a> for full instructions.</p>
+
+        <h3 class="entry-title" id="faq-popin">My location TV keeps appearing and disappearing</h3>
+        <p>Set a larger gap between <code>SpawnRange</code> and <code>DespawnRange</code>. A gap of at least 20 units is recommended. For example: <code>SpawnRange = 40.0, DespawnRange = 65.0</code>. This hysteresis band means the prop is not deleted until the player has moved 25 units past the point where it was created, preventing rapid pop-in/out.</p>
+
+        <h3 class="entry-title" id="faq-newmodel">I added a model but the TV screen is blank or misaligned</h3>
+        <p>First, check whether the prop has a named render target. If it does, set <code>Target = "tvscreen"</code> (or the correct target name). If it does not, adjust <code>Scale</code> and <code>Offset</code> in small increments until the image aligns with the physical screen face of the prop.</p>
+
+        <h3 class="entry-title" id="faq-nosql">Does this store anything in the database?</h3>
+        <p>No. DS Television has zero SQL dependency. All TV state (current URL, volume, last update time) lives in server memory and resets when the resource or server restarts.</p>
+      </div>
+
+      <!-- ── 12. File Structure ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="files">12 — File Structure</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>File</th><th>Side</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><code>config.lua</code></td><td>Shared</td><td>All user-facing configuration: models, locations, channels, banned words, and event hooks.</td></tr>
+              <tr><td><code>fxmanifest.lua</code></td><td>—</td><td>Resource manifest. Lists all scripts and HTML assets. <code>tv_image.png</code> must be declared here to be served by the NUI.</td></tr>
+              <tr><td><code>shared/main.lua</code></td><td>Shared</td><td>Global state tables (<code>Televisions</code>, <code>Channels</code>), the <code>GetTelevision</code> lookup function, and the <code>v3()</code> coord helper.</td></tr>
+              <tr><td><code>client/main.lua</code></td><td>Client</td><td>DUI lifecycle (create/destroy), scaleform rendering, proximity loops, location prop spawning, volume thread.</td></tr>
+              <tr><td><code>client/tv.lua</code></td><td>Client</td><td>NUI callback handler, menu open/close, PlayVideo, PlayBrowser, ResetDisplay, and net event listeners for TV state changes.</td></tr>
+              <tr><td><code>client/dui.lua</code></td><td>Client</td><td>Low-level helpers: <code>CreateNamedRenderTargetForModel</code>, <code>LoadModel</code>, <code>RenderScaleformTV</code>.</td></tr>
+              <tr><td><code>client/cursor.lua</code></td><td>Client</td><td>Cursor / interact-screen management.</td></tr>
+              <tr><td><code>server/main.lua</code></td><td>Server</td><td>Authoritative TV state storage (<code>SetTelevision</code>), channel management (<code>SetChannel</code>), net event handlers.</td></tr>
+              <tr><td><code>html/index.html</code></td><td>NUI (TV screen)</td><td>The DUI page rendered onto the TV screen. Contains the YouTube/Twitch embed divs and the default static image.</td></tr>
+              <tr><td><code>html/main.js</code></td><td>NUI (TV screen)</td><td>JavaScript logic for the TV screen DUI: SetVideo, SetVolume, ShowStatic, ShowNotification, message listener.</td></tr>
+              <tr><td><code>html/style.css</code></td><td>NUI (TV screen)</td><td>Styles for the TV screen DUI.</td></tr>
+              <tr><td><code>html/menu.html</code></td><td>NUI (menu)</td><td>The in-game control panel UI shown when the player types <code>/tv</code>. Self-contained HTML/CSS/JS.</td></tr>
+              <tr><td><code>html/tv_image.png</code></td><td>NUI (TV screen)</td><td>Default image shown on the TV when no content is playing. Replace with any 1280×720 PNG.</td></tr>
+              <tr><td><code>html/VCR_OSD_MONO_1.001.ttf</code></td><td>NUI (TV screen)</td><td>VCR-style font used for the channel number overlay.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Back to top -->
+  <button id="back-top" aria-label="Back to top">↑</button>
+
+  <script src="../script.js"></script>
+</body>
+</html>
