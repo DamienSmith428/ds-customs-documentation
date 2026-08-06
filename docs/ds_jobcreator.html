@@ -118,6 +118,10 @@ Config.Prompt = <span class="s">'ds_prompt'</span>   <span class="c">-- 'built-i
 
 <span class="c">-- Garage integration backend</span>
 Config.Garages = <span class="s">'ds_garages'</span> <span class="c">-- 'ds_garages' | 'custom' | false</span>
+
+<span class="c">-- Job stash capacity (applies to every job stash)</span>
+Config.StashSlots  = <span class="n">75</span>      <span class="c">-- number of inventory slots</span>
+Config.StashWeight = <span class="n">750000</span>  <span class="c">-- maximum carry weight in grams</span>
 </code></pre>
 
         <div class="tbl-wrap">
@@ -127,6 +131,8 @@ Config.Garages = <span class="s">'ds_garages'</span> <span class="c">-- 'ds_gara
               <tr><td><code>Config.Notify</code></td><td><code>'built-in'</code> / <code>'ds_notify'</code> / <code>'custom'</code></td><td><code>'built-in'</code> uses QBCore's default <code>QBCore:Notify</code>. <code>'ds_notify'</code> uses the ds_notify resource. <code>'custom'</code> routes through <code>bridge/notify_custom.lua</code>.</td></tr>
               <tr><td><code>Config.Prompt</code></td><td><code>'built-in'</code> / <code>'ds_prompt'</code> / <code>'custom'</code></td><td><code>'built-in'</code> uses a built-in NUI HUD card. <code>'ds_prompt'</code> uses the ds_prompt resource. <code>'custom'</code> routes through <code>bridge/prompt_custom.lua</code>.</td></tr>
               <tr><td><code>Config.Garages</code></td><td><code>'ds_garages'</code> / <code>'custom'</code> / <code>false</code></td><td><code>'ds_garages'</code> pushes garages to ds_garages via its <code>registerJobGarage</code> export. <code>'custom'</code> routes through <code>bridge/garages_custom.lua</code>. <code>false</code> disables live registration entirely — locations are still stored in the database but never pushed to any garage resource.</td></tr>
+              <tr><td><code>Config.StashSlots</code></td><td>number</td><td>Number of inventory slots for every job stash. Default: <code>50</code>.</td></tr>
+              <tr><td><code>Config.StashWeight</code></td><td>number</td><td>Maximum carry weight (in grams) for every job stash. Default: <code>100000</code>.</td></tr>
             </tbody>
           </table>
         </div>
@@ -253,7 +259,7 @@ Config.Garages = <span class="s">'ds_garages'</span> <span class="c">-- 'ds_gara
       <!-- ── 7. Job Stash ────────────────────────────────────────────── -->
       <div class="section">
         <h2 class="section-title" id="job-stash">7 — Job Stash</h2>
-        <p>Any employee can access the job stash by walking within <strong>2 metres</strong> of the configured stash location and pressing <kbd>E</kbd>. The stash is a <strong>50-slot, 100 kg shared inventory</strong> identified by <code>ds_job_stash_&lt;jobname&gt;</code>.</p>
+        <p>Any employee can access the job stash by walking within <strong>2 metres</strong> of the configured stash location and pressing <kbd>E</kbd>. The stash is a <strong>shared inventory</strong> identified by <code>ds_job_stash_&lt;jobname&gt;</code>. Slot count and weight limit are controlled by <code>Config.StashSlots</code> and <code>Config.StashWeight</code> in <code>config.lua</code> (defaults: 50 slots, 100 000 g).</p>
 
         <h3 class="entry-title" id="stash-inventory">Inventory System Support</h3>
         <p>Detection priority is <strong>ox_inventory → qs-inventory → qb-inventory</strong>.</p>
