@@ -1,6 +1,13 @@
 {
   "resources": [
     {
+      "name": "DS Electronics Store",
+      "path": "docs/ds_electronicsstore.html",
+      "status": "release",
+      "description": "Player-run electronics job with a three-stage assembly pipeline (collect → process → assemble), a live MySQL retail store, cart checkout, employee stock management, and a fully modular bridge system for notifications, progress bars, prompts, and banking.",
+      "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory", "oxmysql", "Escrow"]
+    },
+    {
       "name": "DS Television",
       "path": "docs/ds_television.html",
       "status": "release",

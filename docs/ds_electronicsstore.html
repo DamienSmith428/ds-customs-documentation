@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Electronics Store — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+    <a class="topbar-link" href="https://discord.gg/ZhYRUQ6K6R" target="_blank" rel="noopener">Discord ↗</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS Electronics Store</h1>
+        <p class="subtitle">Full-featured player-run electronics job — collect parts, process components, assemble finished products, stock a live retail store, and deposit revenue into a business bank account.</p>
+        <div class="badge-row">
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-blue">FiveM</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-purple">qs-inventory / ox_inventory / qb-inventory</span>
+          <span class="badge badge-gray">oxmysql</span>
+          <span class="badge badge-gray">Escrow</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS Electronics Store is a modular, player-run job built around a three-stage assembly pipeline. Employees collect raw parts in the world, process them into components at a workshop, assemble finished electronics, and then sell them through a fully player-managed retail store.</p>
+
+        <h4>Feature summary</h4>
+        <ul style="padding-left:20px;line-height:2.1">
+          <li>Three-stage assembly pipeline — Parts Pickup → Processing → Assembly — with looping progress bars and per-stage world zones</li>
+          <li>Multiple independent assembly lines supported — add a new <code>.lua</code> file to <code>assembly/</code> to define an entirely new product line</li>
+          <li>Employee-stocked retail phone store with live MySQL inventory and boss-adjustable prices</li>
+          <li>Customer shop UI — browse by category, pay with cash or bank</li>
+          <li>Cart checkout — customers can queue multiple items and pay in one transaction</li>
+          <li>Employee stock management — deposit, withdraw, and set prices from a dedicated NUI</li>
+          <li>Work vehicle system — spawn and return a job van from the garage zone</li>
+          <li>Clock In / Out zone with server-side duty state management</li>
+          <li>Business banking integration — all store revenue is deposited to the job's bank account</li>
+          <li>Fully modular bridge system — swap notification, progress bar, prompt, and banking resources via <code>config.lua</code> with zero code changes</li>
+          <li>Auto-detects <code>qs-inventory</code>, <code>ox_inventory</code>, and QBCore native inventory at startup</li>
+          <li>Map blips shown on-duty for every zone across all assembly lines</li>
+        </ul>
+      </div>
+
+      <!-- ── 2. Dependencies ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="dependencies">2 — Dependencies</h2>
+        <p>Required dependencies depend on which bridges you choose in <code>config.lua</code>. The table below lists all possible dependencies; only include the ones that match your configuration.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Resource</th><th>Required</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>qb-core</code></td><td>Yes</td><td>QBCore framework — always required</td></tr>
+              <tr><td><code>oxmysql</code></td><td>Yes</td><td>Phone store inventory DB — always required</td></tr>
+              <tr><td><code>ds_notify</code></td><td>If <code>Config.Notification = 'ds_notify'</code></td><td>DS Customs toast notifications</td></tr>
+              <tr><td><code>ds_progressbar</code></td><td>If <code>Config.ProgressBar = 'ds_progressbar'</code></td><td>DS Customs progress bar</td></tr>
+              <tr><td><code>progressbar</code></td><td>If <code>Config.ProgressBar = 'qb'</code></td><td>QBCore standalone progressbar resource</td></tr>
+              <tr><td><code>ds_prompt</code></td><td>If <code>Config.Prompt = 'ds_prompt'</code></td><td>DS Customs interaction prompt. Not needed for <code>'builtin'</code></td></tr>
+              <tr><td><code>ds_vehiclekeys</code></td><td>If <code>Config.VehicleKeys = 'ds_vehiclekeys'</code></td><td>DS Customs vehicle key system</td></tr>
+              <tr><td><code>qb-vehiclekeys</code></td><td>If <code>Config.VehicleKeys = 'qb-vehiclekeys'</code></td><td>QBCore vehicle keys</td></tr>
+              <tr><td><code>gs-businessbanking</code></td><td>If <code>Config.Banking = 'gs-businessbanking'</code></td><td>GS Business bank accounts</td></tr>
+              <tr><td><code>qb-banking</code></td><td>If <code>Config.Banking = 'qb-banking'</code></td><td>QBCore banking resource</td></tr>
+              <tr><td><code>qs-inventory</code> / <code>ox_inventory</code></td><td>One or none</td><td>Auto-detected. Falls back to QBCore native inventory</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 3. Installation ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">3 — Installation</h2>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:16px;color:var(--text-dim)">
+          <li>Place the <code>ds_electronicsstore</code> folder inside your <code>resources</code> directory.</li>
+          <li>Add all item entries from <code>items.lua</code> to your QBCore shared items file (see §8).</li>
+          <li>Add the <code>ls_electronics</code> job entry to <code>qb-core/shared/jobs.lua</code> (see §7).</li>
+          <li>Add item images to your inventory's image folder (see §8).</li>
+          <li>Configure <code>config.lua</code> — set your bridge options and zone coordinates (see §5).</li>
+          <li>Add <code>ensure ds_electronicsstore</code> to <code>server.cfg</code> <strong>after</strong> all dependencies.</li>
+          <li>The phone store database table is created automatically on first start — no manual SQL import required.</li>
+        </ol>
+
+        <pre><code><span class="c"># server.cfg — ensure dependencies before the resource</span>
+ensure oxmysql
+ensure ds_notify          <span class="c"># if Config.Notification = 'ds_notify'</span>
+ensure ds_progressbar     <span class="c"># if Config.ProgressBar  = 'ds_progressbar'</span>
+ensure ds_prompt          <span class="c"># if Config.Prompt       = 'ds_prompt'</span>
+ensure ds_vehiclekeys     <span class="c"># if Config.VehicleKeys  = 'ds_vehiclekeys'</span>
+ensure gs-businessbanking <span class="c"># if Config.Banking      = 'gs-businessbanking'</span>
+
+ensure ds_electronicsstore</code></pre>
+      </div>
+
+      <!-- ── 4. Bridge System ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="bridges">4 — Bridge System</h2>
+        <p>Every external dependency is isolated behind a bridge — a small Lua file in <code>bridge/</code> that reads a single config key and wires up a global function. Changing a config value is all that is needed to swap resources; no other files need editing.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Config Key</th><th>Options</th><th>Bridge file</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><code>Config.Notification</code></td>
+                <td><code>'ds_notify'</code> · <code>'qb'</code> · <code>'custom'</code></td>
+                <td><code>bridge/notifications/notify.lua</code></td>
+              </tr>
+              <tr>
+                <td><code>Config.ProgressBar</code></td>
+                <td><code>'ds_progressbar'</code> · <code>'qb'</code> · <code>'custom'</code></td>
+                <td><code>bridge/progressbar/progressbar.lua</code></td>
+              </tr>
+              <tr>
+                <td><code>Config.Prompt</code></td>
+                <td><code>'ds_prompt'</code> · <code>'builtin'</code> · <code>'custom'</code></td>
+                <td><code>bridge/prompt/prompt.lua</code></td>
+              </tr>
+              <tr>
+                <td><code>Config.Banking</code></td>
+                <td><code>'gs-businessbanking'</code> · <code>'qb-banking'</code> · <code>'custom'</code></td>
+                <td><code>bridge/banking/banking.lua</code></td>
+              </tr>
+              <tr>
+                <td><code>Config.VehicleKeys</code></td>
+                <td><code>'ds_vehiclekeys'</code> · <code>'qb-vehiclekeys'</code> · <code>'none'</code></td>
+                <td><code>config.lua</code> (inline check)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Custom bridges</h4>
+        <p>Each bridge type ships with a <code>*_custom.lua</code> counterpart (e.g. <code>bridge/banking/banking_custom.lua</code>). Set the config key to <code>'custom'</code> and implement the required function(s) in that file. All <code>*_custom.lua</code> files are excluded from escrow and are fully editable.</p>
+
+        <div class="callout tip">The <code>'builtin'</code> prompt option requires no extra resource — it renders a <code>[E] label</code> hint using native FiveM <code>DrawText</code> calls. Use it if you do not have <code>ds_prompt</code> installed.</div>
+
+        <h4>Banking — qb-banking auto-account creation</h4>
+        <p>When <code>Config.Banking = 'qb-banking'</code> the bridge automatically calls <code>CreateJobAccount</code> on first deposit if the account does not already exist in <code>qb-banking</code>'s in-memory table. This means you do not need to manually create the business account before the store goes live.</p>
+      </div>
+
+      <!-- ── 5. Configuration ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">5 — Configuration — config.lua</h2>
+        <p><code>config.lua</code> is open (not escrowed) and is the only file you need to edit for a standard setup.</p>
+
+        <h4>General Settings</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.Debug</code></td><td><code>false</code></td><td>Print debug output to F8 / txAdmin console</td></tr>
+              <tr><td><code>Config.DrawDistance</code></td><td><code>100.0</code></td><td>Distance at which markers and prompts start rendering</td></tr>
+              <tr><td><code>Config.MaxInService</code></td><td><code>-1</code></td><td>Max employees on duty simultaneously. <code>-1</code> = unlimited</td></tr>
+              <tr><td><code>Config.EnablePlayerManagement</code></td><td><code>true</code></td><td>Allow boss/senior grades to access the stock management menu</td></tr>
+              <tr><td><code>Config.JobName</code></td><td><code>'ls_electronics'</code></td><td>Job name as registered in <code>QBCore.Shared.Jobs</code></td></tr>
+              <tr><td><code>Config.Locale</code></td><td><code>'en'</code></td><td>Locale file to load from <code>locales/</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Bridge Settings</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Options</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.Notification</code></td><td><code>'ds_notify'</code></td><td><code>'ds_notify'</code> · <code>'qb'</code> · <code>'custom'</code></td></tr>
+              <tr><td><code>Config.ProgressBar</code></td><td><code>'ds_progressbar'</code></td><td><code>'ds_progressbar'</code> · <code>'qb'</code> · <code>'custom'</code></td></tr>
+              <tr><td><code>Config.Prompt</code></td><td><code>'ds_prompt'</code></td><td><code>'ds_prompt'</code> · <code>'builtin'</code> · <code>'custom'</code></td></tr>
+              <tr><td><code>Config.Banking</code></td><td><code>'gs-businessbanking'</code></td><td><code>'gs-businessbanking'</code> · <code>'qb-banking'</code> · <code>'custom'</code></td></tr>
+              <tr><td><code>Config.VehicleKeys</code></td><td><code>'ds_vehiclekeys'</code></td><td><code>'ds_vehiclekeys'</code> · <code>'qb-vehiclekeys'</code> · <code>'none'</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Sales Settings</h4>
+        <pre><code>Config.EnableSales = <span class="k">true</span>   <span class="c">-- set false to disable all selling at the Sales zone</span>
+
+Config.SellableItems = {
+    <span class="c">--  item          min    max  (random payout per item)</span>
+    { item = <span class="s">'phone'</span>,  min = <span class="n">200</span>, max = <span class="n">400</span>  },
+    { item = <span class="s">'laptop'</span>, min = <span class="n">800</span>, max = <span class="n">1200</span> },
+    { item = <span class="s">'tablet'</span>, min = <span class="n">500</span>, max = <span class="n">800</span>  },
+}</code></pre>
+
+        <h4>Zone Definitions</h4>
+        <p>All fixed job zones (Clock In, Vehicle Spawner, Sales, Phone Store, Employee Stock) are defined in <code>Config.Zones</code>. Assembly line zones are defined separately in <code>assembly/</code> files (see §6). Each zone entry accepts:</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Pos</code></td><td><code>vector3</code></td><td>World coordinates</td></tr>
+              <tr><td><code>Size</code></td><td><code>{x, y, z}</code></td><td>Marker half-extents and proximity radius</td></tr>
+              <tr><td><code>Color</code></td><td><code>{r, g, b}</code></td><td>Marker colour (0–255 per channel)</td></tr>
+              <tr><td><code>Type</code></td><td><code>number</code></td><td>GTA marker type. Use <code>-1</code> for an invisible point</td></tr>
+              <tr><td><code>Range</code></td><td><code>number</code></td><td>Draw distance (overrides <code>Config.DrawDistance</code>)</td></tr>
+              <tr><td><code>ZOffset</code></td><td><code>number</code></td><td>Fine-tune marker vertical position. Positive = raise, negative = lower</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Phone Store Settings</h4>
+        <pre><code>Config.PhoneStoreName  = <span class="s">'LS Electronics'</span>  <span class="c">-- Display name in store UI and blip</span>
+Config.PhoneStoreTable = <span class="s">'ds_phonestore'</span>   <span class="c">-- MySQL table name (auto-created)</span>
+
+<span class="c">-- Inventory detection: 'auto' | 'qs' | 'ox' | 'qb'</span>
+Config.PhoneStoreInventory = <span class="s">'auto'</span>
+
+<span class="c">-- Item image base URLs for each inventory type</span>
+Config.PhoneStoreImageBase = {
+    qs  = <span class="s">'nui://qs-inventory/web/dist/images/'</span>,
+    ox  = <span class="s">'nui://ox_inventory/web/images/'</span>,
+    qb  = <span class="s">'nui://qb-inventory/html/images/'</span>,
+}
+
+<span class="c">-- Store catalogue — item_name must match your QBCore items DB</span>
+Config.PhoneStoreItems = {
+    [<span class="s">'phone'</span>]  = { label = <span class="s">'Assembled Phone'</span>, price = <span class="n">500</span>,  quantity = <span class="n">20</span>, category = <span class="s">'Phones'</span>    },
+    [<span class="s">'laptop'</span>] = { label = <span class="s">'Laptop'</span>,          price = <span class="n">1200</span>, quantity = <span class="n">5</span>,  category = <span class="s">'Computers'</span> },
+    [<span class="s">'tablet'</span>] = { label = <span class="s">'Tablet'</span>,          price = <span class="n">800</span>,  quantity = <span class="n">8</span>,  category = <span class="s">'Computers'</span> },
+}</code></pre>
+        <p>The <code>price</code> and <code>quantity</code> values are inserted into the database on first run using <code>INSERT IGNORE</code> — changing them in config after first run will have no effect. Use the in-game Employee Stock menu to adjust prices, or update the DB directly.</p>
+      </div>
+
+      <!-- ── 6. Assembly Lines ──────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="assembly">6 — Assembly Lines</h2>
+        <p>Each assembly line is defined as a separate Lua file inside the <code>assembly/</code> folder. The resource loads all files matching <code>assembly/*.lua</code> automatically — add a new file for each new product line.</p>
+
+        <h4>AssemblyLine schema</h4>
+        <pre><code>AssemblyLine({
+    id    = <span class="s">'phones'</span>,          <span class="c">-- unique internal key</span>
+    label = <span class="s">'Phone Assembly'</span>,   <span class="c">-- shown in blip names and prompts</span>
+
+    <span class="c">-- Items</span>
+    rawItem       = <span class="s">'phone_parts'</span>,     <span class="c">-- collected at Parts Pickup</span>
+    rawMaxStack   = <span class="n">50</span>,               <span class="c">-- max raw items before pickup stops</span>
+    processedItem = <span class="s">'processed_parts'</span>, <span class="c">-- produced at Processing (1 raw → 1 processed)</span>
+    finishedItem  = <span class="s">'phone'</span>,           <span class="c">-- produced at Assembly  (1 processed → 1 finished)</span>
+
+    <span class="c">-- Progress bars (label shown during bar, duration in ms)</span>
+    pickupBar   = { label = <span class="s">'Collecting parts…'</span>, duration = <span class="n">1800</span> },
+    processBar  = { label = <span class="s">'Processing parts…'</span>, duration = <span class="n">1800</span> },
+    assembleBar = { label = <span class="s">'Assembling phone…'</span>, duration = <span class="n">1800</span> },
+
+    <span class="c">-- Zone lists — add as many positions as you like per stage</span>
+    partsPickup   = { { Pos = vector3(<span class="n">...</span>), Size = {x=<span class="n">6.5</span>, y=<span class="n">6.5</span>, z=<span class="n">6.5</span>}, Color = {r=<span class="n">0</span>,g=<span class="n">200</span>,b=<span class="n">255</span>}, Type = <span class="n">22</span> } },
+    processing    = { { Pos = vector3(<span class="n">...</span>), Size = {x=<span class="n">15.5</span>,y=<span class="n">15.5</span>,z=<span class="n">1.0</span>}, Color = {r=<span class="n">136</span>,g=<span class="n">243</span>,b=<span class="n">216</span>}, Type = <span class="n">22</span> } },
+    phoneAssembly = { { Pos = vector3(<span class="n">...</span>), Size = {x=<span class="n">15.5</span>,y=<span class="n">15.5</span>,z=<span class="n">1.0</span>}, Color = {r=<span class="n">136</span>,g=<span class="n">243</span>,b=<span class="n">216</span>}, Type = <span class="n">22</span> } },
+
+    <span class="c">-- Map blip (one blip per zone location while on duty)</span>
+    blip = { sprite = <span class="n">162</span>, colour = <span class="n">25</span> },
+})</code></pre>
+
+        <h4>Pipeline stages</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Stage</th><th>Zone key</th><th>Action</th><th>Input → Output</th></tr></thead>
+            <tbody>
+              <tr><td>Parts Pickup</td><td><code>partsPickup</code></td><td>Looping harvest — one item per bar completion</td><td>Nothing → <code>rawItem</code></td></tr>
+              <tr><td>Processing</td><td><code>processing</code></td><td>Single progress bar per run — loops automatically</td><td><code>rawItem</code> → <code>processedItem</code></td></tr>
+              <tr><td>Assembly</td><td><code>phoneAssembly</code></td><td>Single progress bar per run — loops automatically</td><td><code>processedItem</code> → <code>finishedItem</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout tip">All three stages guard against inventory manipulation server-side. Processing and Assembly refund the input item if the output add fails (e.g. inventory full), ensuring no items are lost.</div>
+      </div>
+
+      <!-- ── 7. Job Grades ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="job-grades">7 — Job Grades</h2>
+        <p>Add the following entry to <code>qb-core/shared/jobs.lua</code>. Adjust grades, labels, and pay to match your server's economy.</p>
+        <pre><code>[<span class="s">'ls_electronics'</span>] = {
+    label = <span class="s">'LS Electronics'</span>,
+    defaultDuty = <span class="k">false</span>,
+    offDutyPay  = <span class="k">false</span>,
+    grades = {
+        [<span class="s">'0'</span>] = { name = <span class="s">'Trainee'</span>,        payment = <span class="n">50</span>  },
+        [<span class="s">'1'</span>] = { name = <span class="s">'Technician'</span>,     payment = <span class="n">100</span> },
+        [<span class="s">'2'</span>] = { name = <span class="s">'Senior Tech'</span>,    payment = <span class="n">150</span> },
+        [<span class="s">'3'</span>] = { name = <span class="s">'Manager'</span>,        payment = <span class="n">250</span>, isboss = <span class="k">true</span> },
+    },
+}</code></pre>
+        <p>The <code>isboss = true</code> flag on a grade unlocks price-setting in the Employee Stock menu. Any grade can deposit and withdraw stock; only boss grades can change item prices.</p>
+      </div>
+
+      <!-- ── 8. Items Reference ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="items">8 — Items Reference</h2>
+        <p>Add the entries below to your QBCore shared items file (<code>qb-core/shared/items.lua</code>). Place the corresponding image files (<code>matos.png</code>, <code>coque.png</code>, <code>phone.png</code>) in your inventory's image directory.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Item Name</th><th>Label</th><th>Weight</th><th>Unique</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><code>phone_parts</code></td><td>Phone Parts</td><td>500</td><td>No</td><td>Raw material — collected at Parts Pickup zones</td></tr>
+              <tr><td><code>processed_parts</code></td><td>Processed Parts</td><td>300</td><td>No</td><td>Intermediate — produced at Processing zones</td></tr>
+              <tr><td><code>phone</code></td><td>Smartphone</td><td>200</td><td>No</td><td>Finished product — assembled and sold in the store</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <pre><code>phone_parts     = { name = <span class="s">'phone_parts'</span>,     label = <span class="s">'Phone Parts'</span>,     weight = <span class="n">500</span>,  type = <span class="s">'item'</span>, image = <span class="s">'matos.png'</span>,  unique = <span class="k">false</span>, useable = <span class="k">false</span>, shouldClose = <span class="k">false</span>, description = <span class="s">'Raw electronic parts harvested from scrap.'</span> },
+processed_parts = { name = <span class="s">'processed_parts'</span>, label = <span class="s">'Processed Parts'</span>, weight = <span class="n">300</span>,  type = <span class="s">'item'</span>, image = <span class="s">'coque.png'</span>,  unique = <span class="k">false</span>, useable = <span class="k">false</span>, shouldClose = <span class="k">false</span>, description = <span class="s">'A processed phone casing ready for assembly.'</span> },
+phone           = { name = <span class="s">'phone'</span>,           label = <span class="s">'Smartphone'</span>,      weight = <span class="n">200</span>,  type = <span class="s">'item'</span>, image = <span class="s">'phone.png'</span>,  unique = <span class="k">false</span>, useable = <span class="k">false</span>, shouldClose = <span class="k">true</span>,  description = <span class="s">'A brand-new smartphone, ready to sell.'</span> },</code></pre>
+
+        <div class="callout">If your server already has a <code>phone</code> item defined, check that it is not set to <code>unique = true</code> — the store requires the item to be stackable. Rename the <code>finishedItem</code> in your assembly line if needed.</div>
+      </div>
+
+      <!-- ── 9. Gameplay Loop ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="gameplay">9 — Gameplay Loop</h2>
+
+        <h3 class="entry-title" id="duty">Clock In / Out</h3>
+        <p>Walk to the <code>ClockIn</code> zone and press <kbd>E</kbd>. The server calls <code>QBCore:ToggleDuty</code>. Blips, markers, and interaction zones for all assembly stages only appear while on duty.</p>
+
+        <h3 class="entry-title" id="pickup">Parts Pickup</h3>
+        <p>Walk to a <code>partsPickup</code> zone and press <kbd>E</kbd>. A looping progress bar starts — each completed bar awards one <code>rawItem</code> directly to your inventory. The loop runs until you leave the zone, go off duty, or hit <code>rawMaxStack</code>. The server validates every tick server-side.</p>
+
+        <h3 class="entry-title" id="processing">Processing</h3>
+        <p>Walk to a <code>processing</code> zone and press <kbd>E</kbd>. The server checks for at least one <code>rawItem</code>, runs the progress bar, then removes one input and adds one <code>processedItem</code>. The loop continues automatically until you run out of raw material or leave the zone.</p>
+
+        <h3 class="entry-title" id="assembly-stage">Assembly</h3>
+        <p>Walk to a <code>phoneAssembly</code> zone and press <kbd>E</kbd>. Same loop as Processing — one <code>processedItem</code> is consumed and one <code>finishedItem</code> is produced per bar. If the output add fails (inventory full), the input item is automatically refunded.</p>
+
+        <h3 class="entry-title" id="sales">Sales Zone</h3>
+        <p>Walk to the <code>Sales</code> zone and press <kbd>E</kbd>. The server searches your inventory for any item in <code>Config.SellableItems</code>, removes the entire stack, and pays a random amount between <code>min</code> and <code>max</code> per item as cash. The loop repeats automatically every ~1.1 seconds until you leave the zone.</p>
+
+        <h3 class="entry-title" id="store">Phone Store — Customers</h3>
+        <p>Any player can walk to the <code>CustomerShop</code> zone to open the store UI. Browse items by category, adjust quantities, and choose to pay with cash or bank. Customers can either buy individual items immediately or build a cart and checkout in one transaction. All purchases are validated server-side using DB prices — client-sent prices are never trusted.</p>
+
+        <h3 class="entry-title" id="employee-stock">Phone Store — Employees</h3>
+        <p>Employees with the <code>ls_electronics</code> job can access the Employee Stock zone. The stock menu shows every catalogue item, the current store quantity, and your inventory count. Use <strong>Deposit</strong> to add items from your inventory, <strong>Withdraw</strong> to retrieve stock. Boss-grade employees additionally see a <strong>Set Price</strong> option per item.</p>
+
+        <h3 class="entry-title" id="vehicle">Work Vehicle</h3>
+        <p>Walk to the <code>VehicleSpawner</code> zone and press <kbd>E</kbd> to spawn a work van. Drive it to the <code>VehicleDeleter</code> zone and press <kbd>E</kbd> to return it. Only one work vehicle per player is tracked — spawning a second one automatically removes the first.</p>
+      </div>
+
+      <!-- ── 10. Escrow & Open Files ────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="escrow">10 — Escrow &amp; Open Files</h2>
+        <div class="escrow-row">
+          <div class="escrow-card open-card">
+            <h4>Open (editable)</h4>
+            <ul>
+              <li><code>config.lua</code> — all configuration</li>
+              <li><code>assembly/*.lua</code> — assembly line definitions</li>
+              <li><code>bridge/notifications/notify_custom.lua</code></li>
+              <li><code>bridge/progressbar/progressbar_custom.lua</code></li>
+              <li><code>bridge/prompt/prompt_custom.lua</code></li>
+              <li><code>bridge/banking/banking_custom.lua</code></li>
+            </ul>
+          </div>
+          <div class="escrow-card closed-card">
+            <h4>Escrowed</h4>
+            <ul>
+              <li><code>client/main.lua</code></li>
+              <li><code>client/shop_client.lua</code></li>
+              <li><code>server/main.lua</code></li>
+              <li><code>server/shop_server.lua</code></li>
+              <li><code>shared/assembly_loader.lua</code></li>
+              <li><code>shared/inventory.lua</code></li>
+              <li><code>bridge/notifications/notify.lua</code></li>
+              <li><code>bridge/progressbar/progressbar.lua</code></li>
+              <li><code>bridge/prompt/prompt.lua</code></li>
+              <li><code>bridge/banking/banking.lua</code></li>
+              <li><code>html/</code> (NUI)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 11. File Structure ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="file-structure">11 — File Structure</h2>
+        <pre><code>ds_electronicsstore/
+├── fxmanifest.lua               <span class="c">← Resource manifest</span>
+├── config.lua                   <span class="c">← All settings — open and editable</span>
+├── items.lua                    <span class="c">← Item reference (not loaded as a script)</span>
+├── assembly/
+│   └── phones.lua               <span class="c">← Phone assembly pipeline — open and editable</span>
+├── bridge/
+│   ├── notifications/
+│   │   ├── notify.lua           <span class="c">← Notification bridge (escrowed)</span>
+│   │   └── notify_custom.lua    <span class="c">← Custom notification hook — open</span>
+│   ├── progressbar/
+│   │   ├── progressbar.lua      <span class="c">← Progress bar bridge (escrowed)</span>
+│   │   └── progressbar_custom.lua <span class="c">← Custom progress bar hook — open</span>
+│   ├── prompt/
+│   │   ├── prompt.lua           <span class="c">← Prompt bridge (escrowed)</span>
+│   │   └── prompt_custom.lua    <span class="c">← Custom prompt hook — open</span>
+│   └── banking/
+│       ├── banking.lua          <span class="c">← Banking bridge (escrowed)</span>
+│       └── banking_custom.lua   <span class="c">← Custom banking hook — open</span>
+├── client/
+│   ├── main.lua                 <span class="c">← Job zones, assembly loop, vehicle, clock-in</span>
+│   └── shop_client.lua          <span class="c">← Phone store NUI client</span>
+├── server/
+│   ├── main.lua                 <span class="c">← Harvest, transform, sell, vehicle callbacks</span>
+│   └── shop_server.lua          <span class="c">← Store DB setup, buy, checkout, employee actions</span>
+├── shared/
+│   ├── assembly_loader.lua      <span class="c">← Registers AssemblyLine() and builds zone map</span>
+│   └── inventory.lua            <span class="c">← Auto-detecting inventory bridge</span>
+├── locales/
+│   └── en.lua                   <span class="c">← English strings</span>
+└── html/
+    ├── index.html               <span class="c">← NUI root</span>
+    ├── style.css                <span class="c">← NUI styles</span>
+    └── script.js                <span class="c">← NUI logic (shop, employee stock)</span></code></pre>
+      </div>
+
+      <!-- ── 12. Notes & FAQ ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="notes">12 — Notes &amp; FAQ</h2>
+        <ul style="padding-left:20px;line-height:2.2;color:var(--text-dim)">
+          <li>The phone store database table (<code>ds_phonestore</code> by default) is created automatically on first resource start using <code>CREATE TABLE IF NOT EXISTS</code>. Default prices and quantities from <code>Config.PhoneStoreItems</code> are seeded using <code>INSERT IGNORE</code> — existing rows are never overwritten.</li>
+          <li>Changing <code>price</code> or <code>quantity</code> in <code>Config.PhoneStoreItems</code> after the table has been created has no effect. Adjust values directly in the database or via the in-game boss menu.</li>
+          <li>All three assembly stages stop cleanly when a player leaves the zone or goes off duty — the progress bar is cancelled and any server-side loop state is cleared.</li>
+          <li>The Parts Pickup loop is timed entirely client-side (using <code>Wait()</code>) to avoid bar-callback race conditions. The server only grants one item per <code>harvestTick</code> event it receives.</li>
+          <li>If <code>Config.Prompt = 'builtin'</code> the <code>ds_prompt</code> dependency can be removed from <code>fxmanifest.lua</code>'s <code>dependencies</code> block entirely.</li>
+          <li>Adding a new assembly line requires no code changes — create a new <code>.lua</code> file in <code>assembly/</code>, call <code>AssemblyLine({...})</code>, and restart the resource.</li>
+          <li>The <code>Config.MaxInService</code> key is declared in config but the enforcement logic should be wired in <code>server/main.lua</code> if strict on-duty limiting is required. Set to <code>-1</code> to disable.</li>
+        </ul>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+
+  <script src="../script.js"></script>
+</body>
+</html>
