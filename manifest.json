@@ -1,6 +1,13 @@
 {
   "resources": [
     {
+      "name": "DS Food Delivery",
+      "path": "docs/ds_fooddelivery.html",
+      "status": "release",
+      "description": "Lore-friendly food delivery app built on lb-phone. Customers order from real Los Santos restaurants, kitchen staff manage the queue, and drivers earn pay and tips on every completed run — all inside a polished in-phone UI with live GPS tracking.",
+      "tags": ["QBCore", "FiveM", "lb-phone", "oxmysql", "Escrow"]
+    },
+    {
       "name": "DS Electronics Store",
       "path": "docs/ds_electronicsstore.html",
       "status": "release",

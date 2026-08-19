@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Food Delivery — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+    <a class="topbar-link" href="https://discord.gg/WRfVqsrAVC" target="_blank" rel="noopener">Discord ↗</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS Food Delivery</h1>
+        <p class="subtitle">Lore-friendly food delivery app built on <strong>lb-phone</strong>. Customers order from real Los Santos restaurants, kitchen staff manage the queue, and delivery drivers earn pay and tips on every completed run — all through a polished in-phone UI.</p>
+        <div class="badge-row">
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-blue">FiveM</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-purple">lb-phone</span>
+          <span class="badge badge-gray">oxmysql</span>
+          <span class="badge badge-gray">Escrow</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS Food Delivery integrates directly with <strong>lb-phone</strong> as a custom app called <em>City Eats</em>. Every part of the delivery pipeline — from a customer browsing the menu to a driver marking the order delivered — happens inside the phone, using native lb-phone callbacks, notifications, and the live-tray lock-screen widget.</p>
+
+        <h4>Feature summary</h4>
+        <ul style="padding-left:20px;line-height:2.1">
+          <li>Full lb-phone custom app — registered programmatically with icon, name, and description</li>
+          <li>Four pre-built lore-friendly restaurants: <strong>Burger Shot</strong>, <strong>Pizza This…</strong>, <strong>Bean Machine</strong>, and <strong>Los Santos Taco</strong></li>
+          <li>Customers browse menus, build a cart, add a tip, and pay via <code>bank</code> or <code>cash</code></li>
+          <li>Restaurant staff tab — accept / decline / advance orders, see the full live queue</li>
+          <li>Driver portal tab — claim available deliveries, follow GPS waypoints, mark as picked up &amp; delivered</li>
+          <li>Live tray (lock-screen widget) tracks order progress from confirmation through delivery</li>
+          <li>In-app map with live driver dot — customer can see the driver moving in real time</li>
+          <li>Driver GPS broadcast every 5 seconds — customer can also tap <em>Send to Messages</em> to get a location pin in lb-phone Messages</li>
+          <li>Two-phase waypoint system: driver gets a restaurant blip first, then the customer blip once they confirm pickup</li>
+          <li>Persistent GPS waypoint — auto-recreated every 2 seconds to prevent GTA from clearing it on arrival</li>
+          <li>Restaurant boss screen — set delivery fee, service fee, driver payout, deposit/withdraw business bank, send payroll</li>
+          <li>Boss-adjustable per-item menu prices stored in the database — changes take effect immediately without a restart</li>
+          <li>Separate app account system for customers and drivers (username + password, profile picture)</li>
+          <li>Order auto-progression state machine — configurable timers advance orders through each status automatically</li>
+          <li>Fully modular restaurant files — add a new restaurant by adding a single <code>.lua</code> file to <code>restaurants/</code></li>
+        </ul>
+      </div>
+
+      <!-- ── 2. Dependencies ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="dependencies">2 — Dependencies</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Resource</th><th>Required</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>lb-phone</code></td><td>Yes</td><td>The phone framework — app is registered as a custom lb-phone app</td></tr>
+              <tr><td><code>qb-core</code></td><td>Yes</td><td>Player data, job checks, money operations</td></tr>
+              <tr><td><code>oxmysql</code></td><td>Yes</td><td>All database operations (orders, accounts, fees, prices)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout tip">No additional bridge resources are needed. DS Food Delivery communicates entirely through the standard lb-phone callback and notification APIs — no external UI or notification resource is required.</div>
+      </div>
+
+      <!-- ── 3. Installation ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">3 — Installation</h2>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:16px;color:var(--text-dim)">
+          <li>Place the <code>ds-fooddelivery</code> folder inside your <code>resources</code> directory.</li>
+          <li>Add the <code>deliverydriver</code> job to <code>qb-core/shared/jobs.lua</code> (see §6).</li>
+          <li>Assign a QBCore job name to each restaurant you want to enable in the relevant <code>restaurants/*.lua</code> file.</li>
+          <li>Set <code>Config.DeliveryDriverJob</code> in <code>config.lua</code> if you use a different job name.</li>
+          <li>Add <code>ensure ds-fooddelivery</code> to <code>server.cfg</code> <strong>after</strong> <code>lb-phone</code>, <code>qb-core</code>, and <code>oxmysql</code>.</li>
+          <li>Restart the server — all database tables are created automatically on first start.</li>
+        </ol>
+
+        <pre><code><span class="c"># server.cfg — ensure dependencies before the resource</span>
+ensure oxmysql
+ensure qb-core
+ensure lb-phone
+
+ensure ds-fooddelivery</code></pre>
+
+        <div class="callout">Database tables are created with <code>CREATE TABLE IF NOT EXISTS</code> and restaurant rows are seeded with <code>INSERT IGNORE</code>. Existing fee/price data is never overwritten by a restart.</div>
+      </div>
+
+      <!-- ── 4. Configuration ───────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">4 — Configuration — config.lua</h2>
+        <p><code>config.lua</code> is open (not escrowed) and is the only file that needs editing for a standard setup.</p>
+
+        <h4>Global Settings</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.AppIdentifier</code></td><td><code>"ds-fooddelivery"</code></td><td>Unique app ID registered with lb-phone. Must not clash with any other custom app on the server.</td></tr>
+              <tr><td><code>Config.PaymentAccount</code></td><td><code>"bank"</code></td><td>Which player account is charged for orders. Accepts <code>"bank"</code> or <code>"cash"</code>.</td></tr>
+              <tr><td><code>Config.DeliveryDriverJob</code></td><td><code>"deliverydriver"</code></td><td>The QBCore job name assigned to delivery drivers. Players with this job see the Deliveries tab.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Order Auto-Progression Timings</h4>
+        <p>After a restaurant employee accepts an order, a server-side timer automatically advances the order through each status stage. Set any value to <code>0</code> to require a manual action for that stage.</p>
+        <pre><code>Config.OrderTimings = {
+    confirmed      = <span class="n">2</span>  * <span class="n">60</span> * <span class="n">1000</span>,   <span class="c">-- 2 min  → Preparing</span>
+    preparing      = <span class="n">5</span>  * <span class="n">60</span> * <span class="n">1000</span>,   <span class="c">-- 5 min  → Awaiting Driver</span>
+    awaitingDriver = <span class="n">0</span>,               <span class="c">-- 0 = stays until a driver claims manually</span>
+    outForDelivery = <span class="n">10</span> * <span class="n">60</span> * <span class="n">1000</span>,   <span class="c">-- 10 min → Arriving Soon</span>
+    arrivingSoon   = <span class="n">2</span>  * <span class="n">60</span> * <span class="n">1000</span>,   <span class="c">-- 2 min  → Delivered</span>
+}</code></pre>
+
+        <h4>Categories</h4>
+        <p>Categories populate the filter row at the top of the Home tab. Each restaurant's <code>categories</code> array must reference IDs defined here.</p>
+        <pre><code>Config.Categories = {
+    { id = <span class="s">"all"</span>,     icon = <span class="s">"🍽️"</span>, label = <span class="s">"All"</span>     },
+    { id = <span class="s">"burgers"</span>, icon = <span class="s">"🍔"</span>, label = <span class="s">"Burgers"</span>  },
+    { id = <span class="s">"pizza"</span>,   icon = <span class="s">"🍕"</span>, label = <span class="s">"Pizza"</span>    },
+    { id = <span class="s">"drinks"</span>,  icon = <span class="s">"🥤"</span>, label = <span class="s">"Drinks"</span>   },
+    { id = <span class="s">"mexican"</span>, icon = <span class="s">"🌮"</span>, label = <span class="s">"Mexican"</span>  },
+    { id = <span class="s">"coffee"</span>,  icon = <span class="s">"☕"</span>, label = <span class="s">"Coffee"</span>   },
+}</code></pre>
+      </div>
+
+      <!-- ── 5. Restaurants ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="restaurants">5 — Restaurants</h2>
+        <p>Each restaurant is a separate Lua file in the <code>restaurants/</code> folder. The resource loads all files matching <code>restaurants/*.lua</code> automatically — add a new <code>.lua</code> file to add a new restaurant with no code changes.</p>
+
+        <h4>Pre-built restaurants</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Restaurant</th><th>File</th><th>Default Job</th><th>Categories</th></tr></thead>
+            <tbody>
+              <tr><td>Burger Shot</td><td><code>burger_shot.lua</code></td><td><code>hotdog</code></td><td>burgers, drinks</td></tr>
+              <tr><td>Pizza This…</td><td><code>pizza_this.lua</code></td><td><code>vineyard</code></td><td>pizza, drinks</td></tr>
+              <tr><td>Bean Machine</td><td><code>bean_machine.lua</code></td><td><em>(configure)</em></td><td>coffee, drinks</td></tr>
+              <tr><td>Los Santos Taco</td><td><code>los_santos_taco.lua</code></td><td><em>(configure)</em></td><td>mexican, drinks</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Restaurant schema</h4>
+        <pre><code>Config.Restaurants[<span class="s">"my_restaurant"</span>] = {
+    id          = <span class="s">"my_restaurant"</span>,
+    name        = <span class="s">"My Restaurant"</span>,
+    description = <span class="s">"$ · Burgers · 20–30 min"</span>,
+    categories  = { <span class="s">"burgers"</span>, <span class="s">"drinks"</span> },
+    rating      = <span class="n">4.5</span>,
+    reviewCount = <span class="n">100</span>,
+    eta         = <span class="s">"20–30 min"</span>,
+    priceRange  = <span class="s">"$"</span>,
+
+    image = <span class="s">"images/my_restaurant/main/hero.png"</span>,
+    logo  = <span class="s">"images/my_restaurant/main/logo.png"</span>,
+
+    <span class="c">-- The QBCore job name for kitchen staff</span>
+    job = <span class="s">"myjob"</span>,
+
+    <span class="c">-- World coords where the driver picks up the order (x, y, z, heading)</span>
+    pickup_location = vector4(<span class="n">0.0</span>, <span class="n">0.0</span>, <span class="n">0.0</span>, <span class="n">0.0</span>),
+
+    <span class="c">-- Minimum job grade required for each permission (0 = any grade)</span>
+    permissions = {
+        CanAcceptOrders  = <span class="n">0</span>,
+        CanDeclineOrders = <span class="n">0</span>,
+        CanCancelOrders  = <span class="n">0</span>,
+        CanViewAllOrders = <span class="n">0</span>,
+        IsBoss           = <span class="n">3</span>,   <span class="c">-- only grade 3+ can access the boss bank screen</span>
+    },
+
+    menu = {
+        {
+            id            = <span class="s">"mr_burger"</span>,   <span class="c">-- unique item key for this restaurant</span>
+            item_name     = <span class="s">"sandwich"</span>,    <span class="c">-- QBCore item name given to the player</span>
+            label         = <span class="s">"House Burger"</span>,
+            description   = <span class="s">"Classic double stack"</span>,
+            default_price = <span class="n">14</span>,
+            category      = <span class="s">"burgers"</span>,
+            image         = <span class="s">"images/my_restaurant/items/burger.png"</span>,
+        },
+    },
+}</code></pre>
+
+        <h4>Schema field reference</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>id</code></td><td>string</td><td>Unique internal key — must match the table key. Used as the database <code>restaurant_id</code>.</td></tr>
+              <tr><td><code>job</code></td><td>string</td><td>QBCore job name. Players with this job see the Staff tab in the app.</td></tr>
+              <tr><td><code>pickup_location</code></td><td>vector4</td><td>World position (x, y, z, heading) where drivers collect the order from the kitchen.</td></tr>
+              <tr><td><code>permissions.IsBoss</code></td><td>number</td><td>Minimum job grade level to access the boss bank/payroll screen.</td></tr>
+              <tr><td><code>menu[].id</code></td><td>string</td><td>Unique order item key. Used as the database price key — must be unique across the whole menu of this restaurant.</td></tr>
+              <tr><td><code>menu[].item_name</code></td><td>string</td><td>The QBCore item name added to the customer's inventory on delivery. Must exist in <code>QBCore.Shared.Items</code>.</td></tr>
+              <tr><td><code>menu[].default_price</code></td><td>number</td><td>Starting price. After first run bosses can override this via the Restaurant Bank screen; the config value is then ignored.</td></tr>
+              <tr><td><code>image</code> / <code>logo</code></td><td>string</td><td>Resource-relative paths to the hero banner and logo. Place files inside <code>images/&lt;restaurant_id&gt;/</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 6. Job Setup ───────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="job-setup">6 — Job Setup</h2>
+        <p>Add the <code>deliverydriver</code> job to <code>qb-core/shared/jobs.lua</code>. Adjust the label and pay to match your server's economy. The <code>isboss = true</code> flag on any grade is not used by this resource — driver permissions are determined solely by the job name matching <code>Config.DeliveryDriverJob</code>.</p>
+
+        <pre><code>[<span class="s">'deliverydriver'</span>] = {
+    label       = <span class="s">'Food Delivery Driver'</span>,
+    type        = <span class="s">'civilian'</span>,
+    defaultDuty = <span class="k">true</span>,
+    offDutyPay  = <span class="k">false</span>,
+    grades = {
+        [<span class="s">'0'</span>] = { name = <span class="s">'Driver'</span>, isboss = <span class="k">true</span>, payment = <span class="n">50</span> },
+    },
+},</code></pre>
+
+        <div class="callout tip">You can use <em>any</em> existing QBCore job as the driver job — just update <code>Config.DeliveryDriverJob</code> to match. Creating a dedicated job is not required.</div>
+
+        <p>Restaurant jobs (e.g. <code>hotdog</code> for Burger Shot, <code>vineyard</code> for Pizza This) are existing QBCore civilian jobs and require no changes — they only need to exist in <code>QBCore.Shared.Jobs</code> for the permission system to work.</p>
+      </div>
+
+      <!-- ── 7. Database Tables ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="database">7 — Database Tables</h2>
+        <p>All tables are created automatically by <code>DB.Init()</code> on the first resource start. No manual SQL import is required.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Table</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><code>ds_fd_restaurants</code></td><td>One row per restaurant. Stores live delivery fee, service fee, driver payout, and the restaurant bank balance (<code>bank_funds</code>). Seeded from <code>Config.Restaurants</code> using <code>INSERT IGNORE</code> — boss changes survive restarts.</td></tr>
+              <tr><td><code>ds_fd_prices</code></td><td>Boss-set per-item menu prices. When a boss changes a price in-app it is written here. Orders always use DB prices, not config defaults, once this row exists.</td></tr>
+              <tr><td><code>ds_fd_orders</code></td><td>Every order ever placed. Tracks status, items (JSON), all fee breakdowns, driver assignment, and both restaurant pickup and customer delivery coordinates.</td></tr>
+              <tr><td><code>ds_fd_accounts</code></td><td>Customer app accounts. Stores username, hashed password, profile picture (URL from lb-phone gallery). A citizen can have multiple accounts — all are tied to username, not citizen ID.</td></tr>
+              <tr><td><code>ds_fd_driver_accounts</code></td><td>Driver portal accounts. Separate from customer accounts. Stores driver username, password, profile picture, and lifetime earnings stats (base pay + tips).</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">Migration queries using <code>ADD COLUMN IF NOT EXISTS</code> run on every resource start. These are safe to run on an existing database — columns that already exist are silently skipped.</div>
+      </div>
+
+      <!-- ── 8. Order Flow ──────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="order-flow">8 — Order Flow</h2>
+
+        <h3 class="entry-title" id="flow-customer">Customer Places an Order</h3>
+        <ol style="padding-left:20px;line-height:2.2;color:var(--text-dim)">
+          <li>Player opens <em>City Eats</em> in lb-phone and logs in (or creates an account).</li>
+          <li>Browses restaurants, selects items, optionally adds a tip, and taps <strong>Place Order</strong>.</li>
+          <li>The server validates all items and prices server-side, deducts the full total from the player's account, and writes the order to the DB.</li>
+          <li>The customer's current world coordinates are captured at order time — this becomes the delivery drop-off location.</li>
+          <li>All online kitchen staff at the restaurant receive a phone notification and the order appears in their Staff tab.</li>
+          <li>The customer's order tracker screen shows the order as <strong>Pending</strong>.</li>
+        </ol>
+
+        <h3 class="entry-title" id="flow-staff">Kitchen Staff Manages the Queue</h3>
+        <ol style="padding-left:20px;line-height:2.2;color:var(--text-dim)">
+          <li>Staff open <em>City Eats</em> → Staff tab → tap the incoming order.</li>
+          <li><strong>Accept</strong> — moves order to <code>confirmed</code>. The auto-progression timer starts immediately. The customer receives a push notification and live-tray update.</li>
+          <li><strong>Decline</strong> — moves order to <code>declined</code> and issues a full refund to the customer's account automatically.</li>
+          <li>Staff can also manually <strong>Advance</strong> an order from <code>confirmed</code> → <code>preparing</code>, or <code>preparing</code> → <code>awaiting_driver</code>, overriding the auto timer.</li>
+          <li>Once the order reaches <code>awaiting_driver</code>, all online delivery drivers receive a push notification and the order appears on their Deliveries board.</li>
+        </ol>
+
+        <h3 class="entry-title" id="flow-driver">Delivery Driver Completes the Run</h3>
+        <ol style="padding-left:20px;line-height:2.2;color:var(--text-dim)">
+          <li>Driver opens <em>City Eats</em> → Deliveries tab and taps an available delivery to claim it.</li>
+          <li>Claiming is atomic — only one driver can claim each order. Other drivers see the order disappear from their board instantly.</li>
+          <li>A blue restaurant blip and persistent GPS waypoint appear on the driver's map pointing to the kitchen pickup location.</li>
+          <li>Driver drives to the restaurant, taps <strong>I've Picked Up</strong> in the app.</li>
+          <li>The restaurant blip is removed and replaced with a customer blip at the delivery address. The waypoint switches to the customer's location.</li>
+          <li>Driver drives to the customer and taps <strong>Mark as Delivered</strong>.</li>
+          <li>The driver receives their payout (base payout from the restaurant bank + customer tip) directly to their QBCore account.</li>
+          <li>The customer receives a <em>Your food has arrived</em> notification. The order tracker updates to <strong>Delivered</strong>.</li>
+        </ol>
+
+        <h3 class="entry-title" id="flow-status">Order Status Reference</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Status</th><th>Triggered by</th><th>Auto-timer</th></tr></thead>
+            <tbody>
+              <tr class="state-0"><td><code>pending</code></td><td>Customer places order</td><td>—</td></tr>
+              <tr class="state-1"><td><code>confirmed</code></td><td>Staff accepts</td><td>→ <code>preparing</code> after <code>Config.OrderTimings.confirmed</code></td></tr>
+              <tr class="state-1"><td><code>preparing</code></td><td>Auto-timer or staff advance</td><td>→ <code>awaiting_driver</code> after <code>Config.OrderTimings.preparing</code></td></tr>
+              <tr class="state-0"><td><code>awaiting_driver</code></td><td>Auto-timer or staff advance</td><td>None — driver must claim manually</td></tr>
+              <tr class="state-1"><td><code>out_for_delivery</code></td><td>Driver claims order</td><td>→ <code>arriving_soon</code> after <code>Config.OrderTimings.outForDelivery</code></td></tr>
+              <tr class="state-1"><td><code>arriving_soon</code></td><td>Auto-timer</td><td>→ <code>delivered</code> after <code>Config.OrderTimings.arrivingSoon</code></td></tr>
+              <tr class="state-1"><td><code>delivered</code></td><td>Driver or auto-timer</td><td>Terminal — no further transitions</td></tr>
+              <tr class="state-2"><td><code>declined</code></td><td>Staff declines</td><td>Terminal — full refund issued</td></tr>
+              <tr class="state-2"><td><code>cancelled</code></td><td>Reserved for future use</td><td>Terminal</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 9. Fees & Payments ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="fees">9 — Fees &amp; Payments</h2>
+        <p>Every order involves three fees in addition to the item subtotal. All default values are seeded into <code>ds_fd_restaurants</code> on first start. Bosses can change them live in-app via the <strong>Restaurant Bank</strong> screen.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Fee</th><th>Default</th><th>Who pays / who earns</th></tr></thead>
+            <tbody>
+              <tr><td><code>delivery_fee</code></td><td>$4.00</td><td>Paid by the customer. Goes into the restaurant bank balance.</td></tr>
+              <tr><td><code>service_fee</code></td><td>$2.00</td><td>Paid by the customer. Goes into the restaurant bank balance.</td></tr>
+              <tr><td><code>driver_payout</code></td><td>$5.00</td><td>Deducted from the restaurant bank when the driver marks the order delivered. Paid directly to the driver.</td></tr>
+              <tr><td><code>tip</code></td><td>$0.00 (customer-set)</td><td>Optional. Paid by the customer, added on top of the total. Paid directly to the driver on delivery — not held in the restaurant bank.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout tip">The total charged to the customer is: <strong>subtotal + delivery_fee + service_fee + tip</strong>. The restaurant bank accumulates the full order total (including fees) on each order, then pays out <code>driver_payout</code> per completed delivery.</div>
+      </div>
+
+      <!-- ── 10. Live Features ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="live-features">10 — Live Features</h2>
+
+        <h3 class="entry-title" id="live-tray">Live Tray (Lock Screen Widget)</h3>
+        <p>When a customer places an order a live tray entry is created on the lb-phone lock screen. It shows the current status string and a progress bar that advances as the order moves through each stage. Tapping the tray opens the City Eats app directly. The tray is removed automatically when the order is delivered, declined, or cancelled.</p>
+
+        <h3 class="entry-title" id="live-map">In-App Driver Map</h3>
+        <p>While an order is <code>out_for_delivery</code>, the customer's order detail screen shows a minimap with a live driver dot. The driver's position is broadcast to the server every <strong>5 seconds</strong> and relayed to the customer. The dot stops updating when the order is delivered or the driver drops it.</p>
+
+        <h3 class="entry-title" id="send-to-messages">Send Location to Messages</h3>
+        <p>The customer can tap <strong>Send to Messages</strong> on the order map. This triggers an lb-phone <code>SendCoords</code> call — the driver's last known position is sent as a tappable location pin in the customer's lb-phone Messages conversation with the driver. No SMS or third-party API is required.</p>
+
+        <h3 class="entry-title" id="driver-call">Call the Driver</h3>
+        <p>The customer's order detail screen shows the driver's phone number with a <strong>Call</strong> button. Tapping it uses lb-phone's native <code>CreateCall</code> export to initiate a call directly through the in-game phone — no additional call resource is needed.</p>
+      </div>
+
+      <!-- ── 11. Escrow & Open Files ────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="escrow">11 — Escrow &amp; Open Files</h2>
+        <div class="escrow-row">
+          <div class="escrow-card open-card">
+            <h4>Open (editable)</h4>
+            <ul>
+              <li><code>config.lua</code> — all global settings</li>
+              <li><code>restaurants/*.lua</code> — all restaurant definitions</li>
+              <li><code>fxmanifest.lua</code></li>
+            </ul>
+          </div>
+          <div class="escrow-card closed-card">
+            <h4>Escrowed</h4>
+            <ul>
+              <li><code>client.lua</code> — app registration, blips, NUI bridge</li>
+              <li><code>server/main.lua</code> — all callbacks &amp; state machine</li>
+              <li><code>server/database.lua</code> — all SQL helpers</li>
+              <li><code>ui/dist/</code> — compiled React NUI</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 12. File Structure ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="file-structure">12 — File Structure</h2>
+        <pre><code>ds-fooddelivery/
+├── fxmanifest.lua                  <span class="c">← Resource manifest</span>
+├── config.lua                      <span class="c">← Global settings — open and editable</span>
+├── restaurants/
+│   ├── burger_shot.lua             <span class="c">← Burger Shot definition — open and editable</span>
+│   ├── pizza_this.lua              <span class="c">← Pizza This… definition — open and editable</span>
+│   ├── bean_machine.lua            <span class="c">← Bean Machine definition — open and editable</span>
+│   └── los_santos_taco.lua         <span class="c">← Los Santos Taco definition — open and editable</span>
+├── client.lua                      <span class="c">← lb-phone registration, GPS blips, NUI events</span>
+├── server/
+│   ├── main.lua                    <span class="c">← Callbacks, order state machine, driver dispatch</span>
+│   └── database.lua                <span class="c">← All SQL (orders, accounts, fees, prices)</span>
+├── images/
+│   ├── burger_shot/
+│   │   ├── main/                   <span class="c">← hero.png, logo.png</span>
+│   │   └── items/                  <span class="c">← per-item images</span>
+│   ├── pizza_this/  …
+│   ├── bean_machine/  …
+│   └── los_santos_taco/  …
+└── ui/
+    ├── dist/                       <span class="c">← Compiled React app (served as lb-phone NUI)</span>
+    └── src/                        <span class="c">← React source (not loaded by FiveM)</span></code></pre>
+      </div>
+
+      <!-- ── 13. Notes & FAQ ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="notes">13 — Notes &amp; FAQ</h2>
+        <ul style="padding-left:20px;line-height:2.2;color:var(--text-dim)">
+          <li><strong>Can I add my own restaurant?</strong> Yes — create a new <code>.lua</code> file in <code>restaurants/</code> following the schema in §5. The resource loads all files in that folder automatically. No other files need editing.</li>
+          <li><strong>Can I disable a restaurant?</strong> Remove or rename its file in <code>restaurants/</code> and restart the resource. Existing orders for that restaurant remain in the database but the restaurant will no longer appear in the app.</li>
+          <li><strong>The boss changed fees but the old values still show.</strong> Fee changes take effect immediately on the next order — the cart screen always fetches live fees from the server before displaying the checkout total. A refresh of the app is all that is needed.</li>
+          <li><strong>Order prices changed in config but the menu still shows old prices.</strong> Once a boss sets a price via the Restaurant Bank screen, that DB value overrides the config default. Reset the row in <code>ds_fd_prices</code> to revert to the config default.</li>
+          <li><strong>Driver GPS stops updating.</strong> The broadcast loop is tied to the order being <code>out_for_delivery</code>. If the order was auto-advanced to <code>arriving_soon</code> the loop stops — this is by design. The customer will still see the last known position.</li>
+          <li><strong>The persistent waypoint keeps reappearing after I arrive.</strong> This is intentional — the waypoint is kept alive until the driver taps <em>I've Picked Up</em> or <em>Mark as Delivered</em>. It prevents GTA's auto-clear from removing the navigation before the driver is done.</li>
+          <li><strong>Can I use a different payment type per restaurant?</strong> Not currently — <code>Config.PaymentAccount</code> is a global setting. All orders use the same account type.</li>
+          <li><strong>Do items get added to the customer's inventory automatically?</strong> Items defined in <code>menu[].item_name</code> are given to the customer when the driver marks the order as delivered. The <code>item_name</code> must exist in <code>QBCore.Shared.Items</code>.</li>
+          <li><strong>The app doesn't appear in lb-phone.</strong> Make sure <code>lb-phone</code> is started <em>before</em> <code>ds-fooddelivery</code> in <code>server.cfg</code>. The resource waits for lb-phone to reach <code>started</code> state before registering the app, and re-registers automatically if lb-phone restarts.</li>
+        </ul>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+
+  <script src="../script.js"></script>
+</body>
+</html>
