@@ -39,14 +39,14 @@
       <!-- Doc header -->
       <div class="doc-header">
         <h1>DS Food Delivery</h1>
-        <p class="subtitle">Lore-friendly food delivery app built on <strong>lb-phone</strong>. Customers order from real Los Santos restaurants, kitchen staff manage the queue, and delivery drivers earn pay and tips on every completed run — all through a polished in-phone UI.</p>
+        <p class="subtitle">Lore-friendly food delivery app built on <strong>lb-phone</strong>. Customers order from real Los Santos restaurants, kitchen staff manage the queue, and delivery drivers earn pay and tips on every completed run — all through a polished in-phone UI. Includes an autonomous NPC order system so drivers always have work even when the server is quiet.</p>
         <div class="badge-row">
           <span class="badge badge-green">QBCore</span>
           <span class="badge badge-blue">FiveM</span>
           <span class="badge badge-orange">Lua 5.4</span>
           <span class="badge badge-purple">lb-phone</span>
           <span class="badge badge-gray">oxmysql</span>
-          <span class="badge badge-gray">Escrow</span>
+          <span class="badge badge-gray">v1.0.1</span>
         </div>
       </div>
 
@@ -58,20 +58,24 @@
         <h4>Feature summary</h4>
         <ul style="padding-left:20px;line-height:2.1">
           <li>Full lb-phone custom app — registered programmatically with icon, name, and description</li>
-          <li>Four pre-built lore-friendly restaurants: <strong>Burger Shot</strong>, <strong>Pizza This…</strong>, <strong>Bean Machine</strong>, and <strong>Los Santos Taco</strong></li>
+          <li>Four pre-built player-operated lore-friendly restaurants: <strong>Burger Shot</strong>, <strong>Pizza This…</strong>, <strong>Bean Machine</strong>, and <strong>Los Santos Taco</strong></li>
+          <li>Five pre-built NPC-operated restaurants: <strong>Cluckin' Bell</strong>, <strong>Taco Bomb</strong>, <strong>Wigwam Burger</strong>, <strong>Bean Machine (NPC)</strong>, and <strong>Sub Urban Sub</strong></li>
           <li>Customers browse menus, build a cart, add a tip, and pay via <code>bank</code> or <code>cash</code></li>
           <li>Restaurant staff tab — accept / decline / advance orders, see the full live queue</li>
           <li>Driver portal tab — claim available deliveries, follow GPS waypoints, mark as picked up &amp; delivered</li>
+          <li>NPC order system — server auto-generates deliveries every few minutes so drivers always have work, even with no active players ordering</li>
+          <li>NPC deliveries go to a randomly spawned NPC ped at a random drop-off zone across Los Santos; driver completes pickup/handoff animations</li>
           <li>Live tray (lock-screen widget) tracks order progress from confirmation through delivery</li>
           <li>In-app map with live driver dot — customer can see the driver moving in real time</li>
-          <li>Driver GPS broadcast every 5 seconds — customer can also tap <em>Send to Messages</em> to get a location pin in lb-phone Messages</li>
+          <li>Driver GPS broadcast every 5 seconds — customer can also tap <em>Call</em> to reach the driver directly through lb-phone</li>
           <li>Two-phase waypoint system: driver gets a restaurant blip first, then the customer blip once they confirm pickup</li>
           <li>Persistent GPS waypoint — auto-recreated every 2 seconds to prevent GTA from clearing it on arrival</li>
+          <li>Delivery bag prop (<code>cityeats_prop</code>) — custom 3D bag attached to the driver's left hand while on a delivery, despawns in vehicles and respawns on exit</li>
           <li>Restaurant boss screen — set delivery fee, service fee, driver payout, deposit/withdraw business bank, send payroll</li>
           <li>Boss-adjustable per-item menu prices stored in the database — changes take effect immediately without a restart</li>
           <li>Separate app account system for customers and drivers (username + password, profile picture)</li>
           <li>Order auto-progression state machine — configurable timers advance orders through each status automatically</li>
-          <li>Fully modular restaurant files — add a new restaurant by adding a single <code>.lua</code> file to <code>restaurants/</code></li>
+          <li>Fully modular restaurant files — add a new restaurant by adding a single <code>.lua</code> file to <code>restaurants/</code> or <code>npc-restaurants/</code></li>
         </ul>
       </div>
 
@@ -96,9 +100,7 @@
         <h2 class="section-title" id="installation">3 — Installation</h2>
         <ol style="padding-left:20px;line-height:2.2;margin-bottom:16px;color:var(--text-dim)">
           <li>Place the <code>ds-fooddelivery</code> folder inside your <code>resources</code> directory.</li>
-          <li>Add the <code>deliverydriver</code> job to <code>qb-core/shared/jobs.lua</code> (see §6).</li>
           <li>Assign a QBCore job name to each restaurant you want to enable in the relevant <code>restaurants/*.lua</code> file.</li>
-          <li>Set <code>Config.DeliveryDriverJob</code> in <code>config.lua</code> if you use a different job name.</li>
           <li>Add <code>ensure ds-fooddelivery</code> to <code>server.cfg</code> <strong>after</strong> <code>lb-phone</code>, <code>qb-core</code>, and <code>oxmysql</code>.</li>
           <li>Restart the server — all database tables are created automatically on first start.</li>
         </ol>
@@ -115,17 +117,18 @@ ensure ds-fooddelivery</code></pre>
 
       <!-- ── 4. Configuration ───────────────────────────────────────────── -->
       <div class="section">
-        <h2 class="section-title" id="configuration">4 — Configuration — config.lua</h2>
-        <p><code>config.lua</code> is open (not escrowed) and is the only file that needs editing for a standard setup.</p>
+        <h2 class="section-title" id="configuration">4 — Configuration</h2>
+        <p>Two open configuration files control all behaviour: <code>config.lua</code> for global settings and <code>npc_config.lua</code> for the autonomous NPC order system.</p>
 
+        <h3 class="entry-title" id="config-global">4.1 — config.lua</h3>
         <h4>Global Settings</h4>
         <div class="tbl-wrap">
           <table>
             <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
             <tbody>
               <tr><td><code>Config.AppIdentifier</code></td><td><code>"ds-fooddelivery"</code></td><td>Unique app ID registered with lb-phone. Must not clash with any other custom app on the server.</td></tr>
+              <tr><td><code>Config.UseDeliveryBagProp</code></td><td><code>true</code></td><td>When <code>true</code>, spawns the custom <code>cityeats_prop</code> delivery bag on the driver's left hand for the duration of the delivery. Set to <code>false</code> to disable the prop.</td></tr>
               <tr><td><code>Config.PaymentAccount</code></td><td><code>"bank"</code></td><td>Which player account is charged for orders. Accepts <code>"bank"</code> or <code>"cash"</code>.</td></tr>
-              <tr><td><code>Config.DeliveryDriverJob</code></td><td><code>"deliverydriver"</code></td><td>The QBCore job name assigned to delivery drivers. Players with this job see the Deliveries tab.</td></tr>
             </tbody>
           </table>
         </div>
@@ -150,12 +153,51 @@ ensure ds-fooddelivery</code></pre>
     { id = <span class="s">"mexican"</span>, icon = <span class="s">"🌮"</span>, label = <span class="s">"Mexican"</span>  },
     { id = <span class="s">"coffee"</span>,  icon = <span class="s">"☕"</span>, label = <span class="s">"Coffee"</span>   },
 }</code></pre>
+
+        <h3 class="entry-title" id="config-npc">4.2 — npc_config.lua</h3>
+        <p>Controls the autonomous NPC order system. All keys live in the <code>NpcConfig</code> table.</p>
+
+        <h4>Feature Toggle &amp; Timing</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>NpcConfig.Enabled</code></td><td><code>true</code></td><td>Master toggle. Set to <code>false</code> to disable all NPC order generation.</td></tr>
+              <tr><td><code>NpcConfig.SpawnInterval</code></td><td><code>4 min</code></td><td>How often the server attempts to generate a new NPC order.</td></tr>
+              <tr><td><code>NpcConfig.SpawnChance</code></td><td><code>0.65</code></td><td>Probability (0.0–1.0) that an order is created on each interval tick.</td></tr>
+              <tr><td><code>NpcConfig.MaxActiveOrders</code></td><td><code>6</code></td><td>Maximum number of unclaimed NPC orders that can exist at any one time.</td></tr>
+              <tr><td><code>NpcConfig.ClaimTimeout</code></td><td><code>8 min</code></td><td>Time before an unclaimed NPC order is automatically cancelled and removed.</td></tr>
+              <tr><td><code>NpcConfig.DeliveryTimeout</code></td><td><code>20 min</code></td><td>Time a driver has to complete an NPC delivery after claiming it.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>NPC Driver Pay</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>NpcConfig.BasePayMin</code></td><td><code>8</code></td><td>Minimum base payout ($) for an NPC delivery.</td></tr>
+              <tr><td><code>NpcConfig.BasePayMax</code></td><td><code>18</code></td><td>Maximum base payout ($) — a random value between min and max is picked each time.</td></tr>
+              <tr><td><code>NpcConfig.PayPerKm</code></td><td><code>3</code></td><td>Extra dollars added to payout per kilometre of distance between pickup and drop-off.</td></tr>
+              <tr><td><code>NpcConfig.PayRoundTo</code></td><td><code>1</code></td><td>Round payout to the nearest n dollars (1 = nearest dollar).</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Drop-Off Zones</h4>
+        <p>NPC orders use a fixed pool of 18 drop-off zones spread across the map. Each zone has a <code>coords</code> (vector4 with heading) and a <code>label</code> shown on the driver's delivery board. Add or remove zones in <code>NpcConfig.DropOffZones</code> to control where NPC orders can be delivered.</p>
+
+        <h4>Customer Peds</h4>
+        <p><code>NpcConfig.CustomerPeds</code> holds 25+ GTA ped model names. When an NPC delivery is activated, a ped is randomly selected from this list and spawned at the drop-off zone for the driver to hand off to.</p>
       </div>
 
       <!-- ── 5. Restaurants ─────────────────────────────────────────────── -->
       <div class="section">
         <h2 class="section-title" id="restaurants">5 — Restaurants</h2>
-        <p>Each restaurant is a separate Lua file in the <code>restaurants/</code> folder. The resource loads all files matching <code>restaurants/*.lua</code> automatically — add a new <code>.lua</code> file to add a new restaurant with no code changes.</p>
+
+        <h3 class="entry-title" id="restaurants-player">5.1 — Player-Operated Restaurants</h3>
+        <p>Each player-operated restaurant is a separate Lua file in the <code>restaurants/</code> folder. The resource loads all files matching <code>restaurants/*.lua</code> automatically — add a new <code>.lua</code> file to add a new restaurant with no other code changes.</p>
 
         <h4>Pre-built restaurants</h4>
         <div class="tbl-wrap">
@@ -196,13 +238,14 @@ ensure ds-fooddelivery</code></pre>
         CanDeclineOrders = <span class="n">0</span>,
         CanCancelOrders  = <span class="n">0</span>,
         CanViewAllOrders = <span class="n">0</span>,
-        IsBoss           = <span class="n">3</span>,   <span class="c">-- only grade 3+ can access the boss bank screen</span>
+        CanDisableOrders = <span class="n">0</span>,
+        IsBoss           = <span class="n">0</span>,   <span class="c">-- grade 0 = boss (adjust to match your job grades)</span>
     },
 
     menu = {
         {
             id            = <span class="s">"mr_burger"</span>,   <span class="c">-- unique item key for this restaurant</span>
-            item_name     = <span class="s">"sandwich"</span>,    
+            item_name     = <span class="s">"sandwich"</span>,    <span class="c">-- real QBCore item name (given to customer on delivery)</span>
             label         = <span class="s">"House Burger"</span>,
             description   = <span class="s">"Classic double stack"</span>,
             default_price = <span class="n">14</span>,
@@ -220,34 +263,91 @@ ensure ds-fooddelivery</code></pre>
               <tr><td><code>id</code></td><td>string</td><td>Unique internal key — must match the table key. Used as the database <code>restaurant_id</code>.</td></tr>
               <tr><td><code>job</code></td><td>string</td><td>QBCore job name. Players with this job see the Staff tab in the app.</td></tr>
               <tr><td><code>pickup_location</code></td><td>vector4</td><td>World position (x, y, z, heading) where drivers collect the order from the kitchen.</td></tr>
-              <tr><td><code>permissions.IsBoss</code></td><td>number</td><td>Minimum job grade level to access the boss bank/payroll screen.</td></tr>
-              <tr><td><code>menu[].id</code></td><td>string</td><td>Unique order item key. Used as the database price key — must be unique across the whole menu of this restaurant.</td></tr>
-              <tr><td><code>menu[].item_name</code></td></tr>
-              <tr><td><code>menu[].default_price</code></td><td>number</td><td>Starting price. After first run bosses can override this via the Restaurant Bank screen; the config value is then ignored.</td></tr>
+              <tr><td><code>permissions.IsBoss</code></td><td>number</td><td>Minimum job grade level to access the boss bank/payroll/menu-price screen. Set to <code>0</code> if grade 0 is your boss rank.</td></tr>
+              <tr><td><code>permissions.CanDisableOrders</code></td><td>number</td><td>Minimum grade to toggle the restaurant's <code>accepts_orders</code> flag on/off, pausing new orders.</td></tr>
+              <tr><td><code>menu[].id</code></td><td>string</td><td>Unique order item key. Used as the database price key — must be unique within this restaurant's menu.</td></tr>
+              <tr><td><code>menu[].item_name</code></td><td>string</td><td>The real QBCore item name. This item is given to the customer when the order is delivered.</td></tr>
+              <tr><td><code>menu[].default_price</code></td><td>number</td><td>Starting price. After first run bosses can override this via the Menu Manage screen; the DB value then takes precedence.</td></tr>
               <tr><td><code>image</code> / <code>logo</code></td><td>string</td><td>Resource-relative paths to the hero banner and logo. Place files inside <code>images/&lt;restaurant_id&gt;/</code>.</td></tr>
             </tbody>
           </table>
         </div>
+
+        <h3 class="entry-title" id="restaurants-npc">5.2 — NPC-Operated Restaurants</h3>
+        <p>NPC restaurants live in <code>npc-restaurants/</code>. They have no kitchen staff — they exist purely as pickup points for the autonomous NPC order system. No QBCore job is required.</p>
+
+        <h4>Pre-built NPC restaurants</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Restaurant</th><th>File</th><th>Weight</th></tr></thead>
+            <tbody>
+              <tr><td>Cluckin' Bell</td><td><code>cluckin_bell.lua</code></td><td>3</td></tr>
+              <tr><td>Taco Bomb</td><td><code>taco_bomb.lua</code></td><td>1</td></tr>
+              <tr><td>Wigwam Burger</td><td><code>wigwam_burger.lua</code></td><td>1</td></tr>
+              <tr><td>Bean Machine (NPC)</td><td><code>bean_machine_npc.lua</code></td><td>1</td></tr>
+              <tr><td>Sub Urban Sub</td><td><code>sub_urban_sub.lua</code></td><td>1</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>NPC restaurant schema</h4>
+        <pre><code>NpcRestaurants[<span class="s">"my_npc_restaurant"</span>] = {
+    id              = <span class="s">"my_npc_restaurant"</span>,
+    name            = <span class="s">"My NPC Restaurant"</span>,
+    description     = <span class="s">"Short flavour text"</span>,
+    enabled         = <span class="k">true</span>,
+
+    <span class="c">-- Relative likelihood this restaurant is picked for an NPC order.</span>
+    <span class="c">-- A weight of 3 means 3x more likely than a restaurant with weight 1.</span>
+    weight          = <span class="n">1</span>,
+
+    <span class="c">-- Flat bonus added on top of the distance-calculated payout (default 0)</span>
+    base_pay_bonus  = <span class="n">0</span>,
+
+    pickup_location = vector4(<span class="n">0.0</span>, <span class="n">0.0</span>, <span class="n">0.0</span>, <span class="n">0.0</span>),
+
+    icon  = <span class="s">"🍗"</span>,       <span class="c">-- emoji shown on the driver board card</span>
+    color = <span class="s">"#e83b3b"</span>,  <span class="c">-- accent colour for the board card border (hex)</span>
+}</code></pre>
       </div>
 
-      <!-- ── 6. Job Setup ───────────────────────────────────────────────── -->
+      <!-- ── 6. NPC Order System ─────────────────────────────────────────── -->
       <div class="section">
-        <h2 class="section-title" id="job-setup">6 — Job Setup</h2>
-        <p>Add the <code>deliverydriver</code> job to <code>qb-core/shared/jobs.lua</code>. Adjust the label and pay to match your server's economy. The <code>isboss = true</code> flag on any grade is not used by this resource — driver permissions are determined solely by the job name matching <code>Config.DeliveryDriverJob</code>.</p>
+        <h2 class="section-title" id="npc-orders">6 — NPC Order System</h2>
+        <p>The NPC order system generates autonomous deliveries on the server so drivers always have work available, regardless of how many real players are ordering. NPC orders appear on the same driver board as player orders and are visually marked with a robot icon (<strong>🤖 NPC Order</strong>) and a yellow blip.</p>
 
-        <pre><code>[<span class="s">'deliverydriver'</span>] = {
-    label       = <span class="s">'Food Delivery Driver'</span>,
-    type        = <span class="s">'civilian'</span>,
-    defaultDuty = <span class="k">true</span>,
-    offDutyPay  = <span class="k">false</span>,
-    grades = {
-        [<span class="s">'0'</span>] = { name = <span class="s">'Driver'</span>, isboss = <span class="k">true</span>, payment = <span class="n">50</span> },
-    },
-},</code></pre>
+        <h3 class="entry-title" id="npc-lifecycle">Order Lifecycle</h3>
+        <ol style="padding-left:20px;line-height:2.2;color:var(--text-dim)">
+          <li>Every <code>NpcConfig.SpawnInterval</code> (default 4 min) the server checks whether to create a new order. There is a <code>NpcConfig.SpawnChance</code> (65%) chance a new order is generated, up to <code>NpcConfig.MaxActiveOrders</code> concurrent unclaimed orders.</li>
+          <li>An NPC restaurant is selected at random (weighted by each restaurant's <code>weight</code> value). A random drop-off zone and a random customer ped model are also chosen.</li>
+          <li>Payout is calculated: <code>random(BasePayMin, BasePayMax) + distanceKm × PayPerKm + base_pay_bonus</code>.</li>
+          <li>The order appears on the driver board. If no driver claims it within <code>NpcConfig.ClaimTimeout</code> (8 min), it is automatically deleted.</li>
+          <li>Driver claims the order — a yellow blip and GPS waypoint appear for the restaurant pickup location.</li>
+          <li>Driver arrives at the restaurant counter and presses <strong>E</strong> to confirm pickup (plays a 3-second animation).</li>
+          <li>Waypoint switches to the NPC drop-off zone.</li>
+          <li>At the drop-off, a random NPC ped spawns. The driver approaches and presses <strong>E</strong> to hand off (plays a 3-second animation).</li>
+          <li>The NPC ped despawns. The driver receives their payout directly to <code>cash</code>. Lifetime stats are updated in <code>ds_fd_driver_accounts</code>.</li>
+          <li>If the driver doesn't complete delivery within <code>NpcConfig.DeliveryTimeout</code> (20 min), the order is auto-cancelled.</li>
+        </ol>
 
-        <div class="callout tip">You can use <em>any</em> existing QBCore job as the driver job — just update <code>Config.DeliveryDriverJob</code> to match. Creating a dedicated job is not required.</div>
+        <h3 class="entry-title" id="npc-vs-player">NPC Orders vs. Player Orders</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th></th><th>Player Order</th><th>NPC Order</th></tr></thead>
+            <tbody>
+              <tr><td>Source</td><td>Real player placing an order</td><td>Auto-generated by server</td></tr>
+              <tr><td>Kitchen staff required</td><td>Yes</td><td>No</td></tr>
+              <tr><td>Pickup confirmation</td><td>Tap in app</td><td>Press E at counter with marker/animation</td></tr>
+              <tr><td>Delivery target</td><td>Customer's real map position</td><td>Random zone, spawned NPC ped</td></tr>
+              <tr><td>Driver payout</td><td>Restaurant bank → driver</td><td>Direct cash to driver</td></tr>
+              <tr><td>Live map / tracking</td><td>Yes</td><td>No (no real customer)</td></tr>
+              <tr><td>Database table</td><td><code>ds_fd_orders</code></td><td><code>ds_fd_npc_orders</code></td></tr>
+              <tr><td>Board label</td><td>Restaurant name</td><td>🤖 NPC Order</td></tr>
+            </tbody>
+          </table>
+        </div>
 
-        <p>Restaurant jobs (e.g. <code>hotdog</code> for Burger Shot, <code>vineyard</code> for Pizza This) are existing QBCore civilian jobs and require no changes — they only need to exist in <code>QBCore.Shared.Jobs</code> for the permission system to work.</p>
+        <div class="callout tip">NPC orders pay purely from server-generated funds — they do not touch restaurant bank balances. This makes them safe to leave enabled at all times without affecting the player economy at restaurants.</div>
       </div>
 
       <!-- ── 7. Database Tables ─────────────────────────────────────────── -->
@@ -259,11 +359,12 @@ ensure ds-fooddelivery</code></pre>
           <table>
             <thead><tr><th>Table</th><th>Purpose</th></tr></thead>
             <tbody>
-              <tr><td><code>ds_fd_restaurants</code></td><td>One row per restaurant. Stores live delivery fee, service fee, driver payout, and the restaurant bank balance (<code>bank_funds</code>). Seeded from <code>Config.Restaurants</code> using <code>INSERT IGNORE</code> — boss changes survive restarts.</td></tr>
-              <tr><td><code>ds_fd_prices</code></td><td>Boss-set per-item menu prices. When a boss changes a price in-app it is written here. Orders always use DB prices, not config defaults, once this row exists.</td></tr>
-              <tr><td><code>ds_fd_orders</code></td><td>Every order ever placed. Tracks status, items (JSON), all fee breakdowns, driver assignment, and both restaurant pickup and customer delivery coordinates.</td></tr>
-              <tr><td><code>ds_fd_accounts</code></td><td>Customer app accounts. Stores username, hashed password, profile picture (URL from lb-phone gallery). A citizen can have multiple accounts — all are tied to username, not citizen ID.</td></tr>
-              <tr><td><code>ds_fd_driver_accounts</code></td><td>Driver portal accounts. Separate from customer accounts. Stores driver username, password, profile picture, and lifetime earnings stats (base pay + tips).</td></tr>
+              <tr><td><code>ds_fd_restaurants</code></td><td>One row per restaurant. Stores live delivery fee, service fee, driver payout, whether the restaurant accepts orders (<code>accepts_orders</code>), and the restaurant bank balance (<code>bank_funds</code>). Seeded from <code>Config.Restaurants</code> using <code>INSERT IGNORE</code> — boss changes survive restarts.</td></tr>
+              <tr><td><code>ds_fd_prices</code></td><td>Boss-set per-item menu prices. When a boss changes a price via the Menu Manage screen it is written here. Orders always use DB prices, not config defaults, once this row exists.</td></tr>
+              <tr><td><code>ds_fd_orders</code></td><td>Every player-placed order. Tracks status, items (JSON), all fee breakdowns, driver assignment, pickup phase flag, and both restaurant pickup and customer delivery coordinates.</td></tr>
+              <tr><td><code>ds_fd_accounts</code></td><td>Customer app accounts. Stores username, hashed password, preferred payment method, and profile picture. A citizen can have multiple accounts — all tied to username, not citizen ID.</td></tr>
+              <tr><td><code>ds_fd_driver_accounts</code></td><td>Driver portal accounts. Separate from customer accounts. Stores driver username, password, profile picture, and lifetime earnings stats (<code>lifetime_tips</code>, <code>lifetime_base</code>, <code>lifetime_total</code>).</td></tr>
+              <tr><td><code>ds_fd_npc_orders</code></td><td>Auto-generated NPC deliveries. No customer_id or items JSON — stores restaurant name, pickup/delivery coords, driver payout, distance, assigned driver, claim/delivery deadlines, and whether the driver confirmed pickup (<code>pickup_confirmed</code>).</td></tr>
             </tbody>
           </table>
         </div>
@@ -298,11 +399,11 @@ ensure ds-fooddelivery</code></pre>
         <ol style="padding-left:20px;line-height:2.2;color:var(--text-dim)">
           <li>Driver opens <em>City Eats</em> → Deliveries tab and taps an available delivery to claim it.</li>
           <li>Claiming is atomic — only one driver can claim each order. Other drivers see the order disappear from their board instantly.</li>
-          <li>A blue restaurant blip and persistent GPS waypoint appear on the driver's map pointing to the kitchen pickup location.</li>
+          <li>A blue restaurant blip and persistent GPS waypoint appear on the driver's map pointing to the kitchen pickup location. If <code>Config.UseDeliveryBagProp</code> is <code>true</code>, the delivery bag prop attaches to the driver's left hand.</li>
           <li>Driver drives to the restaurant, taps <strong>I've Picked Up</strong> in the app.</li>
           <li>The restaurant blip is removed and replaced with a customer blip at the delivery address. The waypoint switches to the customer's location.</li>
           <li>Driver drives to the customer and taps <strong>Mark as Delivered</strong>.</li>
-          <li>The driver receives their payout (base payout from the restaurant bank + customer tip) directly to their QBCore account.</li>
+          <li>The driver receives their payout (base payout from the restaurant bank + customer tip) directly to their QBCore account. The delivery bag prop is removed.</li>
           <li>The customer receives a <em>Your food has arrived</em> notification. The order tracker updates to <strong>Delivered</strong>.</li>
         </ol>
 
@@ -319,7 +420,7 @@ ensure ds-fooddelivery</code></pre>
               <tr class="state-1"><td><code>arriving_soon</code></td><td>Auto-timer</td><td>→ <code>delivered</code> after <code>Config.OrderTimings.arrivingSoon</code></td></tr>
               <tr class="state-1"><td><code>delivered</code></td><td>Driver or auto-timer</td><td>Terminal — no further transitions</td></tr>
               <tr class="state-2"><td><code>declined</code></td><td>Staff declines</td><td>Terminal — full refund issued</td></tr>
-              <tr class="state-2"><td><code>cancelled</code></td><td>Reserved for future use</td><td>Terminal</td></tr>
+              <tr class="state-2"><td><code>cancelled</code></td><td>Timeout or reserved</td><td>Terminal</td></tr>
             </tbody>
           </table>
         </div>
@@ -328,7 +429,7 @@ ensure ds-fooddelivery</code></pre>
       <!-- ── 9. Fees & Payments ─────────────────────────────────────────── -->
       <div class="section">
         <h2 class="section-title" id="fees">9 — Fees &amp; Payments</h2>
-        <p>Every order involves three fees in addition to the item subtotal. All default values are seeded into <code>ds_fd_restaurants</code> on first start. Bosses can change them live in-app via the <strong>Restaurant Bank</strong> screen.</p>
+        <p>Every player order involves three fees in addition to the item subtotal. All default values are seeded into <code>ds_fd_restaurants</code> on first start. Bosses can change them live in-app via the <strong>Restaurant Bank</strong> screen.</p>
 
         <div class="tbl-wrap">
           <table>
@@ -343,6 +444,8 @@ ensure ds-fooddelivery</code></pre>
         </div>
 
         <div class="callout tip">The total charged to the customer is: <strong>subtotal + delivery_fee + service_fee + tip</strong>. The restaurant bank accumulates the full order total (including fees) on each order, then pays out <code>driver_payout</code> per completed delivery.</div>
+
+        <p>For NPC orders, the payout goes directly to the driver as <code>cash</code> — no restaurant bank is involved.</p>
       </div>
 
       <!-- ── 10. Live Features ──────────────────────────────────────────── -->
@@ -355,11 +458,11 @@ ensure ds-fooddelivery</code></pre>
         <h3 class="entry-title" id="live-map">In-App Driver Map</h3>
         <p>While an order is <code>out_for_delivery</code>, the customer's order detail screen shows a minimap with a live driver dot. The driver's position is broadcast to the server every <strong>5 seconds</strong> and relayed to the customer. The dot stops updating when the order is delivered or the driver drops it.</p>
 
-        <h3 class="entry-title" id="send-to-messages">Send Location to Messages</h3>
-        <p>The customer can tap <strong>Send to Messages</strong> on the order map. This triggers an lb-phone <code>SendCoords</code> call — the driver's last known position is sent as a tappable location pin in the customer's lb-phone Messages conversation with the driver. No SMS or third-party API is required.</p>
-
         <h3 class="entry-title" id="driver-call">Call the Driver</h3>
         <p>The customer's order detail screen shows the driver's phone number with a <strong>Call</strong> button. Tapping it uses lb-phone's native <code>CreateCall</code> export to initiate a call directly through the in-game phone — no additional call resource is needed.</p>
+
+        <h3 class="entry-title" id="delivery-bag">Delivery Bag Prop</h3>
+        <p>When a driver claims any delivery (player or NPC), a custom <code>cityeats_prop</code> bag is spawned as a networked object and attached to the driver's left hand bone. The prop automatically despawns when the driver enters a vehicle and re-attaches when they exit. It is fully cleaned up when the delivery is completed or dropped. This behaviour is controlled by <code>Config.UseDeliveryBagProp</code>.</p>
       </div>
 
       <!-- ── 11. Escrow & Open Files ────────────────────────────────────── -->
@@ -370,16 +473,20 @@ ensure ds-fooddelivery</code></pre>
             <h4>Open (editable)</h4>
             <ul>
               <li><code>config.lua</code> — all global settings</li>
-              <li><code>restaurants/*.lua</code> — all restaurant definitions</li>
+              <li><code>npc_config.lua</code> — NPC order system settings</li>
+              <li><code>restaurants/*.lua</code> — all player restaurant definitions</li>
+              <li><code>npc-restaurants/*.lua</code> — all NPC restaurant definitions</li>
               <li><code>fxmanifest.lua</code></li>
             </ul>
           </div>
           <div class="escrow-card closed-card">
             <h4>Escrowed</h4>
             <ul>
-              <li><code>client.lua</code> — app registration, blips, NUI bridge</li>
-              <li><code>server/main.lua</code> — all callbacks &amp; state machine</li>
+              <li><code>client.lua</code> — app registration, blips, bag prop, NUI bridge</li>
+              <li><code>client/npc_delivery.lua</code> — NPC pickup/delivery client logic</li>
+              <li><code>server/main.lua</code> — all callbacks &amp; order state machine</li>
               <li><code>server/database.lua</code> — all SQL helpers</li>
+              <li><code>server/npc_orders.lua</code> — NPC order generation &amp; lifecycle</li>
               <li><code>ui/dist/</code> — compiled React NUI</li>
             </ul>
           </div>
@@ -392,15 +499,28 @@ ensure ds-fooddelivery</code></pre>
         <pre><code>ds-fooddelivery/
 ├── fxmanifest.lua                  <span class="c">← Resource manifest</span>
 ├── config.lua                      <span class="c">← Global settings — open and editable</span>
+├── npc_config.lua                  <span class="c">← NPC order system settings — open and editable</span>
 ├── restaurants/
-│   ├── burger_shot.lua             <span class="c">← Burger Shot definition — open and editable</span>
-│   ├── pizza_this.lua              <span class="c">← Pizza This… definition — open and editable</span>
-│   ├── bean_machine.lua            <span class="c">← Bean Machine definition — open and editable</span>
-│   └── los_santos_taco.lua         <span class="c">← Los Santos Taco definition — open and editable</span>
-├── client.lua                      <span class="c">← lb-phone registration, GPS blips, NUI events</span>
+│   ├── burger_shot.lua             <span class="c">← Burger Shot — open and editable</span>
+│   ├── pizza_this.lua              <span class="c">← Pizza This… — open and editable</span>
+│   ├── bean_machine.lua            <span class="c">← Bean Machine — open and editable</span>
+│   └── los_santos_taco.lua         <span class="c">← Los Santos Taco — open and editable</span>
+├── npc-restaurants/
+│   ├── cluckin_bell.lua            <span class="c">← Cluckin' Bell NPC restaurant — open and editable</span>
+│   ├── taco_bomb.lua
+│   ├── wigwam_burger.lua
+│   ├── bean_machine_npc.lua
+│   └── sub_urban_sub.lua
+├── client.lua                      <span class="c">← lb-phone registration, GPS blips, bag prop, NUI bridge</span>
+├── client/
+│   └── npc_delivery.lua            <span class="c">← NPC pickup/handoff markers, prompts, animations</span>
 ├── server/
 │   ├── main.lua                    <span class="c">← Callbacks, order state machine, driver dispatch</span>
-│   └── database.lua                <span class="c">← All SQL (orders, accounts, fees, prices)</span>
+│   ├── database.lua                <span class="c">← All SQL (orders, accounts, fees, prices)</span>
+│   └── npc_orders.lua              <span class="c">← NPC order generation, timeouts, cleanup</span>
+├── stream/
+│   ├── cityeats_prop.ydr           <span class="c">← Delivery bag 3D model</span>
+│   └── cityeats_prop.ytyp          <span class="c">← Model type definition</span>
 ├── images/
 │   ├── burger_shot/
 │   │   ├── main/                   <span class="c">← hero.png, logo.png</span>
@@ -417,15 +537,19 @@ ensure ds-fooddelivery</code></pre>
       <div class="section">
         <h2 class="section-title" id="notes">13 — Notes &amp; FAQ</h2>
         <ul style="padding-left:20px;line-height:2.2;color:var(--text-dim)">
-          <li><strong>Can I add my own restaurant?</strong> Yes — create a new <code>.lua</code> file in <code>restaurants/</code> following the schema in §5. The resource loads all files in that folder automatically. No other files need editing.</li>
+          <li><strong>Can I add my own restaurant?</strong> Yes — create a new <code>.lua</code> file in <code>restaurants/</code> following the schema in §5.1. The resource loads all files in that folder automatically. No other files need editing.</li>
+          <li><strong>Can I add my own NPC restaurant?</strong> Yes — create a new <code>.lua</code> file in <code>npc-restaurants/</code> following the NPC restaurant schema in §5.2. Set <code>enabled = true</code> and a <code>pickup_location</code>. The resource loads all files in that folder automatically.</li>
           <li><strong>Can I disable a restaurant?</strong> Remove or rename its file in <code>restaurants/</code> and restart the resource. Existing orders for that restaurant remain in the database but the restaurant will no longer appear in the app.</li>
-          <li><strong>The boss changed fees but the old values still show.</strong> Fee changes take effect immediately on the next order — the cart screen always fetches live fees from the server before displaying the checkout total. A refresh of the app is all that is needed.</li>
-          <li><strong>Order prices changed in config but the menu still shows old prices.</strong> Once a boss sets a price via the Restaurant Bank screen, that DB value overrides the config default. Reset the row in <code>ds_fd_prices</code> to revert to the config default.</li>
+          <li><strong>Can I disable NPC orders entirely?</strong> Set <code>NpcConfig.Enabled = false</code> in <code>npc_config.lua</code> and restart the resource.</li>
+          <li><strong>The boss changed fees but the old values still show.</strong> Fee changes take effect immediately on the next order — the cart screen always fetches live fees from the server before displaying the checkout total.</li>
+          <li><strong>Order prices changed in config but the menu still shows old prices.</strong> Once a boss sets a price via the Menu Manage screen, the DB value overrides the config default. Reset the row in <code>ds_fd_prices</code> to revert to the config default.</li>
           <li><strong>Driver GPS stops updating.</strong> The broadcast loop is tied to the order being <code>out_for_delivery</code>. If the order was auto-advanced to <code>arriving_soon</code> the loop stops — this is by design. The customer will still see the last known position.</li>
-          <li><strong>The persistent waypoint keeps reappearing after I arrive.</strong> This is intentional — the waypoint is kept alive until the driver taps <em>I've Picked Up</em> or <em>Mark as Delivered</em>. It prevents GTA's auto-clear from removing the navigation before the driver is done.</li>
+          <li><strong>The persistent waypoint keeps reappearing after I arrive.</strong> This is intentional — the waypoint is kept alive until the driver taps <em>I've Picked Up</em> or <em>Mark as Delivered</em>. It prevents GTA's auto-clear from removing navigation before the driver is done.</li>
+          <li><strong>The delivery bag disappears when I get in my car.</strong> This is by design — the prop despawns on vehicle entry and re-attaches when you exit. Disable this behaviour by setting <code>Config.UseDeliveryBagProp = false</code>.</li>
           <li><strong>Can I use a different payment type per restaurant?</strong> Not currently — <code>Config.PaymentAccount</code> is a global setting. All orders use the same account type.</li>
           <li><strong>Do items get added to the customer's inventory automatically?</strong> Items defined in <code>menu[].item_name</code> are given to the customer when the driver marks the order as delivered. The <code>item_name</code> must exist in <code>QBCore.Shared.Items</code>.</li>
           <li><strong>The app doesn't appear in lb-phone.</strong> Make sure <code>lb-phone</code> is started <em>before</em> <code>ds-fooddelivery</code> in <code>server.cfg</code>. The resource waits for lb-phone to reach <code>started</code> state before registering the app, and re-registers automatically if lb-phone restarts.</li>
+          <li><strong>NPC orders appear on the driver board but nobody claims them.</strong> NPC orders expire after <code>NpcConfig.ClaimTimeout</code> (default 8 min) and are automatically removed. Lower <code>NpcConfig.MaxActiveOrders</code> or increase <code>NpcConfig.SpawnInterval</code> to reduce board clutter if needed.</li>
         </ul>
       </div>
 
