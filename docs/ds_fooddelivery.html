@@ -222,7 +222,7 @@ ensure ds-fooddelivery</code></pre>
               <tr><td><code>pickup_location</code></td><td>vector4</td><td>World position (x, y, z, heading) where drivers collect the order from the kitchen.</td></tr>
               <tr><td><code>permissions.IsBoss</code></td><td>number</td><td>Minimum job grade level to access the boss bank/payroll screen.</td></tr>
               <tr><td><code>menu[].id</code></td><td>string</td><td>Unique order item key. Used as the database price key — must be unique across the whole menu of this restaurant.</td></tr>
-              <tr><td><code>menu[].item_name</code></td><td>string</td><td>The QBCore item name added to the customer's inventory on delivery. Must exist in <code>QBCore.Shared.Items</code>.</td></tr>
+              <tr><td><code>menu[].item_name</code></td></tr>
               <tr><td><code>menu[].default_price</code></td><td>number</td><td>Starting price. After first run bosses can override this via the Restaurant Bank screen; the config value is then ignored.</td></tr>
               <tr><td><code>image</code> / <code>logo</code></td><td>string</td><td>Resource-relative paths to the hero banner and logo. Place files inside <code>images/&lt;restaurant_id&gt;/</code>.</td></tr>
             </tbody>
