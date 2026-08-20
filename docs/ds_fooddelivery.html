@@ -245,7 +245,7 @@ ensure ds-fooddelivery</code></pre>
     menu = {
         {
             id            = <span class="s">"mr_burger"</span>,   <span class="c">-- unique item key for this restaurant</span>
-            item_name     = <span class="s">"sandwich"</span>,    <span class="c">-- real QBCore item name (given to customer on delivery)</span>
+            item_name     = <span class="s">"sandwich"</span>,    <span class="c">-- display reference label for this menu item</span>
             label         = <span class="s">"House Burger"</span>,
             description   = <span class="s">"Classic double stack"</span>,
             default_price = <span class="n">14</span>,
@@ -266,7 +266,7 @@ ensure ds-fooddelivery</code></pre>
               <tr><td><code>permissions.IsBoss</code></td><td>number</td><td>Minimum job grade level to access the boss bank/payroll/menu-price screen. Set to <code>0</code> if grade 0 is your boss rank.</td></tr>
               <tr><td><code>permissions.CanDisableOrders</code></td><td>number</td><td>Minimum grade to toggle the restaurant's <code>accepts_orders</code> flag on/off, pausing new orders.</td></tr>
               <tr><td><code>menu[].id</code></td><td>string</td><td>Unique order item key. Used as the database price key — must be unique within this restaurant's menu.</td></tr>
-              <tr><td><code>menu[].item_name</code></td><td>string</td><td>The real QBCore item name. This item is given to the customer when the order is delivered.</td></tr>
+              <tr><td><code>menu[].item_name</code></td><td>string</td><td>A label key identifying this menu item. Used as the database price key — must be unique within this restaurant's menu.</td></tr>
               <tr><td><code>menu[].default_price</code></td><td>number</td><td>Starting price. After first run bosses can override this via the Menu Manage screen; the DB value then takes precedence.</td></tr>
               <tr><td><code>image</code> / <code>logo</code></td><td>string</td><td>Resource-relative paths to the hero banner and logo. Place files inside <code>images/&lt;restaurant_id&gt;/</code>.</td></tr>
             </tbody>
@@ -547,7 +547,7 @@ ensure ds-fooddelivery</code></pre>
           <li><strong>The persistent waypoint keeps reappearing after I arrive.</strong> This is intentional — the waypoint is kept alive until the driver taps <em>I've Picked Up</em> or <em>Mark as Delivered</em>. It prevents GTA's auto-clear from removing navigation before the driver is done.</li>
           <li><strong>The delivery bag disappears when I get in my car.</strong> This is by design — the prop despawns on vehicle entry and re-attaches when you exit. Disable this behaviour by setting <code>Config.UseDeliveryBagProp = false</code>.</li>
           <li><strong>Can I use a different payment type per restaurant?</strong> Not currently — <code>Config.PaymentAccount</code> is a global setting. All orders use the same account type.</li>
-          <li><strong>Do items get added to the customer's inventory automatically?</strong> Items defined in <code>menu[].item_name</code> are given to the customer when the driver marks the order as delivered. The <code>item_name</code> must exist in <code>QBCore.Shared.Items</code>.</li>
+          <li><strong>Does the app manage player inventories or give items automatically?</strong> No — DS Food Delivery does not touch inventories at any point. Item trading is handled entirely in-game through roleplay: customers trade with restaurant staff to receive their order, and drivers hand items over to customers directly. The app manages the order queue, payments, and driver dispatch only.</li>
           <li><strong>The app doesn't appear in lb-phone.</strong> Make sure <code>lb-phone</code> is started <em>before</em> <code>ds-fooddelivery</code> in <code>server.cfg</code>. The resource waits for lb-phone to reach <code>started</code> state before registering the app, and re-registers automatically if lb-phone restarts.</li>
           <li><strong>NPC orders appear on the driver board but nobody claims them.</strong> NPC orders expire after <code>NpcConfig.ClaimTimeout</code> (default 8 min) and are automatically removed. Lower <code>NpcConfig.MaxActiveOrders</code> or increase <code>NpcConfig.SpawnInterval</code> to reduce board clutter if needed.</li>
         </ul>
