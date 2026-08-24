@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS ATM Robbery — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+    <a class="topbar-link" href="https://discord.gg/WRfVqsrAVC" target="_blank" rel="noopener">Discord ↗</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS ATM Robbery</h1>
+        <p class="subtitle">Fully configurable ATM robbery with a custom NUI wire-cutting minigame, multi-inventory bridge, per-ATM cooldowns, police alerts, and a forensic fingerprint system — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.0.0</span>
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-purple">ds_progressbar</span>
+          <span class="badge badge-purple">ds_notify</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-red">Escrow</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS ATM Robbery turns every standard GTA V ATM prop into a robbable target. Players approach an ATM, use a configurable tool item to crack the casing via a <strong>ds_progressbar</strong> animation, then complete a custom NUI wire-cutting / decryption minigame to extract cash, marked bills, and bonus loot — all while risking a police alert at every stage.</p>
+        <p>The resource ships fully open in <code>config.lua</code> and is escrow-protected everywhere else. Inventory and notification systems are handled through a runtime bridge — no code changes are needed when switching between <code>ox_inventory</code>, <code>qs-inventory</code>, or <code>qb-inventory</code>.</p>
+
+        <h3 class="entry-title" id="features">Features</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Feature</th><th>Detail</th></tr></thead>
+            <tbody>
+              <tr><td>Any ATM prop</td><td>Configure any list of GTA prop model names in <code>Config.ATMProps</code>. Works with all three default ATM props out of the box.</td></tr>
+              <tr><td>Two-stage robbery flow</td><td>Progress bar (crack casing) → NUI wire-cut minigame (extract cash). Cancelling the bar refunds the tool item.</td></tr>
+              <tr><td>Custom NUI minigame</td><td>Four difficulty presets (<code>easy</code>, <code>medium</code>, <code>hard</code>, <code>insane</code>) with individually tunable wire count, time limit, mistake tolerance, and sequence length.</td></tr>
+              <tr><td>Multi-inventory bridge</td><td>Auto-detects <code>ox_inventory</code> → <code>qs-inventory</code> → <code>qb-inventory</code> at runtime, or pin a specific system in config.</td></tr>
+              <tr><td>Flexible payouts</td><td>Mix cash, bank deposits, and item rewards. Each entry has an independent chance roll. Special marked-bills handling with worth + serial metadata.</td></tr>
+              <tr><td>Per-ATM cooldowns</td><td>Coord-key-based cooldown ensures each ATM cools down independently. Cooldown survives player reconnects.</td></tr>
+              <tr><td>Police alerts</td><td>Configurable chance-based alerts on start, success, and failure. Random messages drawn from per-stage tables. Supports <code>qb-policejob</code> coords and source methods.</td></tr>
+              <tr><td>Minimum police check</td><td>Optional minimum on-duty officer count before any robbery can begin.</td></tr>
+              <tr><td>Forensic fingerprints</td><td>Configurable chance for the robber to leave a fingerprint on the ATM. LEOs aim a flashlight and press <kbd>G</kbd> to lift it into an evidence bag with metadata.</td></tr>
+              <tr><td>Server-authoritative</td><td>All pre-flight checks (item, cooldown, police) run on the server. The item is only consumed once the progress bar fully completes — cancelling gives it back.</td></tr>
+              <tr><td>Server exports</td><td><code>ResetATMCooldown</code>, <code>ResetAllATMCooldowns</code>, and <code>GetATMCooldown</code> for external resource integration.</td></tr>
+              <tr><td>No SQL</td><td>Zero database tables. All state lives in server memory.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 2. Requirements ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="requirements">2 — Requirements</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Resource</th><th>Required?</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>qb-core</code></td><td>Yes</td><td>Required framework. Must start before ds_atmrobbery.</td></tr>
+              <tr><td><code>ds_progressbar</code></td><td>Yes</td><td>Displays the ATM casing crack animation. Declared as a manifest dependency.</td></tr>
+              <tr><td><code>ds_notify</code></td><td>Yes (default)</td><td>Handles all player notifications. Switch to <code>Config.Notify = 'qb'</code> to use QBCore's built-in system instead.</td></tr>
+              <tr><td><code>qb-policejob</code></td><td>No</td><td>Only required when <code>Config.AlertOnStartChance</code>, <code>AlertOnSuccessChance</code>, or <code>AlertOnFailChance</code> are above 0. Alerts are silently skipped if the resource is not running.</td></tr>
+              <tr><td><code>ox_inventory</code> / <code>qs-inventory</code> / <code>qb-inventory</code></td><td>One required</td><td>Auto-detected at runtime. At least one must be running.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">DS ATM Robbery has <strong>no SQL dependency</strong>. Cooldown state, pending crack state, and fingerprint data all live in server memory and reset on resource restart.</div>
+      </div>
+
+      <!-- ── 3. Installation ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">3 — Installation</h2>
+
+        <h3 class="entry-title" id="install-drop">Drop-in</h3>
+        <p>Copy the <code>ds_atmrobbery</code> folder into your resources directory. No SQL files to run.</p>
+
+        <h3 class="entry-title" id="install-cfg">server.cfg Start Order</h3>
+        <pre><code>ensure qb-core
+ensure ds_progressbar
+ensure ds_notify
+ensure qb-policejob      <span class="c"># only needed if police alerts are enabled</span>
+ensure ds_atmrobbery
+</code></pre>
+        <div class="callout tip">Inventory resources (<code>ox_inventory</code>, <code>qs-inventory</code>, <code>qb-inventory</code>) must be started before <code>ds_atmrobbery</code> when using <code>Config.Inventory = 'auto'</code> so the auto-detection query finds them already running.</div>
+      </div>
+
+      <!-- ── 4. Configuration ───────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">4 — Configuration — config.lua</h2>
+        <p>All settings live in <code>config.lua</code>, which is the only file excluded from escrow and fully open to edit.</p>
+
+        <!-- 4.1 Bridge -->
+        <h3 class="entry-title" id="config-bridge">Bridge Settings</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.Inventory</code></td><td><code>'auto'</code></td><td>Inventory system to use. <code>'auto'</code> detects ox → qs → qb at runtime. Other options: <code>'ox'</code>, <code>'qs'</code>, <code>'qb'</code>, <code>'custom'</code>.</td></tr>
+              <tr><td><code>Config.Notify</code></td><td><code>'ds'</code></td><td>Notification system. <code>'ds'</code> uses ds_notify (recommended), <code>'qb'</code> uses QBCore built-in, <code>'custom'</code> loads <code>bridge/custom_notify.lua</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.2 ATM props -->
+        <h3 class="entry-title" id="config-props">ATM Props</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.ATMProps</code></td><td><code>{ 'prop_atm_01', 'prop_atm_02', 'prop_atm_03' }</code></td><td>List of GTA V prop model names that can be robbed. Add any custom ATM model name to this table.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.3 Interaction -->
+        <h3 class="entry-title" id="config-interaction">Interaction</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.InteractDistance</code></td><td><code>1.5</code></td><td>Metres within which a player can see the <kbd>E</kbd> prompt and initiate a robbery.</td></tr>
+              <tr><td><code>Config.RequiredItem</code></td><td><code>'thermite'</code></td><td>Item the player must carry to start a robbery. Set to <code>nil</code> or <code>''</code> to require no item.</td></tr>
+              <tr><td><code>Config.ConsumeItemOnUse</code></td><td><code>true</code></td><td>If <code>true</code>, the item is removed once the progress bar completes (not when it starts — cancelling refunds it).</td></tr>
+              <tr><td><code>Config.RobCooldown</code></td><td><code>300</code></td><td>Seconds before the same ATM can be robbed again.</td></tr>
+              <tr><td><code>Config.RobTimeout</code></td><td><code>60</code></td><td>Seconds before an unstarted robbery attempt expires.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.4 Progress bar -->
+        <h3 class="entry-title" id="config-progressbar">Progress Bar (Cracking)</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.CrackDuration</code></td><td><code>8000</code></td><td>Duration in milliseconds for the ds_progressbar casing-crack animation.</td></tr>
+              <tr><td><code>Config.CrackProgressBar.label</code></td><td><code>'Cracking ATM...'</code></td><td>Label text shown on the progress bar.</td></tr>
+              <tr><td><code>Config.CrackProgressBar.percent</code></td><td><code>true</code></td><td>Whether to show a live percentage counter on the bar.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.5 Minigame -->
+        <h3 class="entry-title" id="config-minigame">Minigame</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.MinigameDifficulty</code></td><td><code>'medium'</code></td><td>Difficulty preset to use. Options: <code>'easy'</code>, <code>'medium'</code>, <code>'hard'</code>, <code>'insane'</code>.</td></tr>
+              <tr><td><code>Config.MinigameOverrides.timeLimit</code></td><td><code>nil</code></td><td>Override the preset time limit (seconds). <code>nil</code> uses the preset value.</td></tr>
+              <tr><td><code>Config.MinigameOverrides.wireCount</code></td><td><code>nil</code></td><td>Override the total number of wires to cut. <code>nil</code> uses the preset value.</td></tr>
+              <tr><td><code>Config.MinigameOverrides.maxMistakes</code></td><td><code>nil</code></td><td>Override the mistake tolerance before fail. <code>nil</code> uses the preset value.</td></tr>
+              <tr><td><code>Config.MinigameOverrides.sequenceLen</code></td><td><code>nil</code></td><td>Override the decryption sequence length. <code>nil</code> uses the preset value.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="config-minigame-presets">Difficulty Preset Reference</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Preset</th><th>Time Limit</th><th>Wires</th><th>Max Mistakes</th><th>Sequence Length</th></tr></thead>
+            <tbody>
+              <tr><td><code>easy</code></td><td>60 s</td><td>4</td><td>3</td><td>3</td></tr>
+              <tr><td><code>medium</code></td><td>45 s</td><td>6</td><td>2</td><td>4</td></tr>
+              <tr><td><code>hard</code></td><td>30 s</td><td>8</td><td>1</td><td>5</td></tr>
+              <tr><td><code>insane</code></td><td>20 s</td><td>10</td><td>0</td><td>6</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout tip">Use <code>Config.MinigameOverrides</code> for surgical adjustments without creating a new preset. For example, set <code>timeLimit = 35</code> with <code>'hard'</code> to keep everything else while extending the clock slightly.</div>
+
+        <!-- 4.6 Police alerts -->
+        <h3 class="entry-title" id="config-alerts">Police Alerts</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.AlertOnStartChance</code></td><td><code>25</code></td><td>Percentage chance (0–100) of a silent alarm when the robbery begins.</td></tr>
+              <tr><td><code>Config.AlertOnSuccessChance</code></td><td><code>75</code></td><td>Percentage chance of an alert when the minigame is won.</td></tr>
+              <tr><td><code>Config.AlertOnFailChance</code></td><td><code>90</code></td><td>Percentage chance of an alert when the minigame is lost.</td></tr>
+              <tr><td><code>Config.AlertMethod</code></td><td><code>'coords'</code></td><td><code>'coords'</code> calls <code>PoliceAlertCoords(coords, text)</code>; <code>'source'</code> calls <code>PoliceAlert(src, text)</code>.</td></tr>
+              <tr><td><code>Config.AlertMessages.start</code></td><td>3 messages</td><td>Table of strings — one is randomly selected for start-stage alerts.</td></tr>
+              <tr><td><code>Config.AlertMessages.success</code></td><td>3 messages</td><td>Table of strings — one is randomly selected for success-stage alerts.</td></tr>
+              <tr><td><code>Config.AlertMessages.fail</code></td><td>3 messages</td><td>Table of strings — one is randomly selected for fail-stage alerts.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">Set all three chance values to <code>0</code> to disable police alerts entirely. Alerts are also silently skipped if <code>qb-policejob</code> is not running.</div>
+
+        <!-- 4.7 Payouts -->
+        <h3 class="entry-title" id="config-payouts">Payouts</h3>
+        <p>Each entry in <code>Config.Payouts</code> is evaluated independently on every successful robbery. A dice roll against the entry's <code>chance</code> field determines whether it fires. All passing entries are awarded — there is no mutual exclusion between entries.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.MarkedMoneyItem</code></td><td><code>'markedbills'</code></td><td>Item name for marked/dirty money. When a payout entry uses this name, the resource gives 1 item with <code>worth</code> and <code>serial</code> metadata instead of stacking items.</td></tr>
+              <tr><td><code>Config.PayoutMultiplier</code></td><td><code>1.0</code></td><td>Global multiplier applied to all payout amounts. Use <code>0.5</code> for half, <code>2.0</code> for double.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="config-payout-schema">Payout Entry Schema</h3>
+        <pre><code>{
+    <span class="p">type</span>    = <span class="s">'cash'</span>,        <span class="c">-- 'cash' | 'bank' | 'item'</span>
+    <span class="p">chance</span>  = <span class="n">100</span>,           <span class="c">-- % chance this entry fires (1–100)</span>
+    <span class="p">amount</span>  = { <span class="p">min</span> = <span class="n">1500</span>, <span class="p">max</span> = <span class="n">4500</span> },  <span class="c">-- random range, OR a fixed number</span>
+}</code></pre>
+        <p>For <code>type = 'item'</code> entries, two additional fields control which items are given:</p>
+        <pre><code>{
+    <span class="p">type</span>    = <span class="s">'item'</span>,
+    <span class="p">chance</span>  = <span class="n">35</span>,
+    <span class="p">pickOne</span> = <span class="n">true</span>,        <span class="c">-- true = pick ONE random entry from items[]; false = give all</span>
+    <span class="p">items</span>   = {
+        { <span class="p">name</span> = <span class="s">'goldbar'</span>,  <span class="p">amount</span> = <span class="n">1</span> },
+        { <span class="p">name</span> = <span class="s">'diamond'</span>,  <span class="p">amount</span> = { <span class="p">min</span> = <span class="n">1</span>, <span class="p">max</span> = <span class="n">2</span> } },
+    },
+}</code></pre>
+
+        <h3 class="entry-title" id="config-payout-defaults">Default Payout Table</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Entry</th><th>Type</th><th>Chance</th><th>Reward</th></tr></thead>
+            <tbody>
+              <tr><td>Cash</td><td><code>cash</code></td><td>100%</td><td>$1,500–$4,500</td></tr>
+              <tr><td>Marked Bills</td><td><code>item</code> (<code>markedbills</code>)</td><td>80%</td><td>$500–$2,000 worth metadata + serial number</td></tr>
+              <tr><td>Luxury Jackpot</td><td><code>item</code> (pickOne)</td><td>8%</td><td>One of: goldbar, diamond ×1–2, rolex, diamond_ring, goldchain ×1–2</td></tr>
+              <tr><td>Crypto Stick</td><td><code>item</code></td><td>4%</td><td>cryptostick ×1</td></tr>
+              <tr><td>Casino Chips</td><td><code>item</code></td><td>20%</td><td>casinochips ×5–20</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout tip">To add a bank deposit reward, uncomment the <code>bank</code> entry at the bottom of <code>Config.Payouts</code> in <code>config.lua</code>.</div>
+
+        <!-- 4.8 Police requirement -->
+        <h3 class="entry-title" id="config-police-req">Police Requirement</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.MinPoliceRequired</code></td><td><code>0</code></td><td>Minimum number of on-duty police officers required before any robbery can start. Set to <code>0</code> to disable the check entirely.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.9 Animations & FX -->
+        <h3 class="entry-title" id="config-anim">Animations &amp; Effects</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.RobAnim.dict</code></td><td><code>'amb@world_human_drinking@coffee@male@idle_a'</code></td><td>Animation dictionary played while the minigame is open.</td></tr>
+              <tr><td><code>Config.RobAnim.anim</code></td><td><code>'idle_a'</code></td><td>Animation clip name.</td></tr>
+              <tr><td><code>Config.RobAnim.flag</code></td><td><code>49</code></td><td>TaskPlayAnim flag.</td></tr>
+              <tr><td><code>Config.SuccessParticle.dict</code></td><td><code>'core'</code></td><td>Particle effect asset dictionary played on successful robbery.</td></tr>
+              <tr><td><code>Config.SuccessParticle.name</code></td><td><code>'ent_amb_sparks_stand_alone'</code></td><td>Particle effect name.</td></tr>
+              <tr><td><code>Config.ScreenShakeOnStart</code></td><td><code>true</code></td><td>Whether to apply a small gameplay camera shake when the robbery begins.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.10 Forensics -->
+        <h3 class="entry-title" id="config-forensics">Forensics — Fingerprints</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.FingerprintChance</code></td><td><code>100</code></td><td>Percentage chance (0–100) that the robber leaves a fingerprint. Applies on both successful and failed attempts.</td></tr>
+              <tr><td><code>Config.FingerprintTTL</code></td><td><code>600</code></td><td>Seconds before a fingerprint degrades and can no longer be lifted. Default is 10 minutes.</td></tr>
+              <tr><td><code>Config.FingerprintLeoTypes</code></td><td><code>{ 'leo' }</code></td><td>QBCore job <code>type</code> values that are allowed to lift fingerprints.</td></tr>
+              <tr><td><code>Config.FingerprintToolItem</code></td><td><code>nil</code></td><td>Optional item a LEO must have to lift a print. <code>nil</code> = no tool required.</td></tr>
+              <tr><td><code>Config.FingerprintToolConsume</code></td><td><code>false</code></td><td>Whether to remove one of the tool item per lift attempt.</td></tr>
+              <tr><td><code>Config.EvidenceBagEmpty</code></td><td><code>'empty_evidence_bag'</code></td><td>Item a LEO must carry — consumed on successful lift.</td></tr>
+              <tr><td><code>Config.EvidenceBagFilled</code></td><td><code>'filled_evidence_bag'</code></td><td>Unique item given back with print metadata. Must be unique=true in your inventory.</td></tr>
+              <tr><td><code>Config.FingerprintLiftDistance</code></td><td><code>3.0</code></td><td>Metres from the ATM within which a LEO can attempt a lift.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.11 Misc -->
+        <h3 class="entry-title" id="config-misc">Misc</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.Debug</code></td><td><code>false</code></td><td>Print verbose debug messages to the server console. Disable in production.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 5. Robbery Flow ──────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="robbery-flow">5 — Robbery Flow</h2>
+        <p>The robbery runs in four discrete server-verified steps. The item is never consumed until the progress bar fully completes — cancelling mid-bar gives it back.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Step</th><th>Where</th><th>What happens</th></tr></thead>
+            <tbody>
+              <tr><td>1 — Pre-flight</td><td>Server</td><td>Player presses <kbd>E</kbd> near an ATM. Server checks: minimum police, item presence, and per-ATM cooldown. If any check fails, the player is notified and nothing proceeds. On success, the server green-lights the client.</td></tr>
+              <tr><td>2 — Casing crack</td><td>Client</td><td>The <strong>ds_progressbar</strong> plays with a two-handed ATM animation. The player is frozen in place. Pressing <kbd>X</kbd> cancels — the item is refunded and the pending crack is voided on the server.</td></tr>
+              <tr><td>3 — Minigame</td><td>Client (NUI)</td><td>Once the bar completes the server consumes the tool item, sets the ATM cooldown, optionally fires a start-phase police alert, and sends minigame settings to the client. The NUI wire-cutting game opens.</td></tr>
+              <tr><td>4 — Result</td><td>Server</td><td>The NUI reports pass/fail. Server distributes payouts on success or sends a failure message. Police alerts fire at the configured chance. A fingerprint is stored on the ATM for both outcomes.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">ATM props are non-networked static world objects. The resource identifies them by a stable coord-key (<code>atm_X_Y_Z</code>) derived from the object's rounded world position — both client and server agree on this key without network entity IDs.</div>
+      </div>
+
+      <!-- ── 6. Minigame ─────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="minigame">6 — The Minigame</h2>
+        <p>The minigame runs entirely in the NUI layer (<code>html/</code>). It presents a wire-cutting panel and a decryption sequence. The player must cut the correct wires and input the right sequence within the time limit and mistake tolerance set by the active difficulty.</p>
+
+        <h3 class="entry-title" id="minigame-outcomes">Outcomes</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Result</th><th>Trigger</th><th>What happens</th></tr></thead>
+            <tbody>
+              <tr><td>Pass</td><td>Player completes all objectives within time and mistake limits</td><td>Success particle, success notification, server distributes payouts, success-phase police alert chance fires.</td></tr>
+              <tr><td>Fail</td><td>Time expired or mistake limit exceeded</td><td>Failure notification, no reward, fail-phase police alert chance fires.</td></tr>
+              <tr><td>Abort</td><td>Player closes the UI with ESC</td><td>No reward, no police alert from this event. ATM cooldown still applies (the crack was completed).</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout tip">To swap the NUI minigame for a Lua-based one (e.g. ps-ui, memorygame), replace the logic in <code>client/minigame.lua</code> and update the <code>RegisterNUICallback</code> handlers in <code>client/main.lua</code>. The server-side flow is untouched.</div>
+      </div>
+
+      <!-- ── 7. Forensics System ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="forensics">7 — Forensics System</h2>
+        <p>Every robbery attempt (success or fail) can leave a fingerprint on the ATM. Online LEOs are notified in real-time when a fresh print is stored. Off-duty LEOs who come on duty automatically receive a sync of all currently active prints.</p>
+
+        <h3 class="entry-title" id="forensics-robber">What gets stored</h3>
+        <p>The server reads the player's biometric fingerprint from their QBCore metadata (<code>metadata.fingerprint</code>) — the same hash used by qb-multicharacter and other framework resources. This raw hash, along with the ATM coordinates and a timestamp, is stored in server memory.</p>
+
+        <h3 class="entry-title" id="forensics-leo">How a LEO lifts a print</h3>
+        <ol style="margin: 8px 0 0 20px; display:flex; flex-direction:column; gap:6px;">
+          <li>LEO walks within <code>Config.FingerprintLiftDistance</code> (default 3 m) of an ATM that has a live print.</li>
+          <li>The prompt <em>"Aim flashlight to scan for prints"</em> appears above the ATM.</li>
+          <li>LEO enters free-aim (<strong>RMB</strong>) — the prompt updates to <em>"[G] Lift Fingerprint"</em>.</li>
+          <li>LEO presses <kbd>G</kbd>. The server validates job, TTL, prior-lift, tool item, and evidence bag.</li>
+          <li>On success: the empty evidence bag is consumed and replaced with a filled bag containing <code>fingerprint</code>, <code>crimeDate</code>, and a formatted <code>label</code> in its metadata.</li>
+        </ol>
+
+        <h3 class="entry-title" id="forensics-bag-meta">Filled evidence bag metadata</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Example value</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>fingerprint</code></td><td><code>'Uv088g29BKp9973'</code></td><td>Raw biometric hash from the suspect's QBCore metadata. Identity is unknown until cross-referenced with a lab/MDT system.</td></tr>
+              <tr><td><code>crimeDate</code></td><td><code>'06/15/2025 22:45'</code></td><td>Date and time the robbery took place.</td></tr>
+              <tr><td><code>label</code></td><td><code>'Evidence Bag [ATM Print - 06/15/2025 22:45]'</code></td><td>Human-readable display name shown in the inventory UI.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="forensics-rules">Rules &amp; Edge Cases</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Rule</th><th>Detail</th></tr></thead>
+            <tbody>
+              <tr><td>One collection per officer</td><td>Each citizenid can lift a print from a given ATM only once. A second attempt is rejected without consuming the bag.</td></tr>
+              <tr><td>TTL expiry</td><td>Prints degrade after <code>Config.FingerprintTTL</code> seconds. Expired prints are rejected and purged. A server-side thread runs every 60 seconds to clean up stale entries.</td></tr>
+              <tr><td>Print survives robbery failure</td><td>A print is stored whether the robbery succeeded or failed — the suspect touched the ATM either way.</td></tr>
+              <tr><td>Print is overwritten</td><td>If the same ATM is robbed again before its print degrades, the old print is replaced with the new robber's data.</td></tr>
+              <tr><td>No name in the bag</td><td>The filled evidence bag intentionally stores only the raw fingerprint hash. Identity resolution requires a separate MDT/lab lookup.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 8. Inventory Bridge ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="inventory-bridge">8 — Inventory Bridge</h2>
+        <p>The bridge runs entirely server-side (<code>bridge/inventory.lua</code>). It exposes three functions used throughout the server: <code>Inventory.HasItem</code>, <code>Inventory.AddItem</code>, and <code>Inventory.RemoveItem</code>.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Mode</th><th>How it resolves</th></tr></thead>
+            <tbody>
+              <tr><td><code>'auto'</code></td><td>Checks if <code>ox_inventory</code> is started → falls back to <code>qs-inventory</code> → falls back to <code>qb-inventory</code>.</td></tr>
+              <tr><td><code>'ox'</code></td><td>Always uses ox_inventory exports. Warns in console if the resource is not running.</td></tr>
+              <tr><td><code>'qs'</code></td><td>Always uses qs-inventory exports.</td></tr>
+              <tr><td><code>'qb'</code></td><td>Always uses qb-inventory exports.</td></tr>
+              <tr><td><code>'custom'</code></td><td>Loads <code>bridge/custom_inventory.lua</code> which must define <code>Inventory.HasItem</code>, <code>Inventory.AddItem</code>, and <code>Inventory.RemoveItem</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">The resolved inventory type is printed to the server console on startup: <code>[ds_atmrobbery] Inventory bridge resolved: qs</code>. Check this line if items are not being added or removed correctly.</div>
+      </div>
+
+      <!-- ── 9. Notification Bridge ──────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="notify-bridge">9 — Notification Bridge</h2>
+        <p>The notify bridge runs on both client and server. It normalises notification type strings (<code>success</code>, <code>error</code>, <code>info</code>, <code>warning</code>) before forwarding to the chosen system.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Mode</th><th>What it calls</th></tr></thead>
+            <tbody>
+              <tr><td><code>'ds'</code></td><td>Server: <code>exports['ds_notify']:NotifyClient(src, msg, type, duration)</code>. Client: <code>exports['ds_notify']:Notify(msg, type, duration)</code>.</td></tr>
+              <tr><td><code>'qb'</code></td><td>Server: <code>TriggerClientEvent('QBCore:Notify', src, msg, type)</code>. Client: <code>QBCore.Functions.Notify(msg, type, duration)</code>.</td></tr>
+              <tr><td><code>'custom'</code></td><td>Loads <code>bridge/custom_notify.lua</code>. Must define <code>Notify.Send(src, message, ntype, duration)</code> (server) and <code>Notify.Send(message, ntype, duration)</code> (client).</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 10. Server Exports ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="exports">10 — Server Exports</h2>
+        <p>Three exports are available for use by other resources on the server.</p>
+
+        <h3 class="entry-title" id="export-reset">ResetATMCooldown</h3>
+        <pre><code><span class="c">-- Reset the cooldown for a specific ATM by its coord key</span>
+exports[<span class="s">'ds_atmrobbery'</span>]:ResetATMCooldown(<span class="s">'atm_441_-982_30'</span>)</code></pre>
+        <p>Clears the cooldown for one ATM so it can be robbed immediately. The coord key format is <code>atm_X_Y_Z</code> where X, Y, Z are the world coordinates rounded to the nearest integer.</p>
+
+        <h3 class="entry-title" id="export-reset-all">ResetAllATMCooldowns</h3>
+        <pre><code><span class="c">-- Reset cooldowns for all ATMs at once</span>
+exports[<span class="s">'ds_atmrobbery'</span>]:ResetAllATMCooldowns()</code></pre>
+
+        <h3 class="entry-title" id="export-get">GetATMCooldown</h3>
+        <pre><code><span class="c">-- Get remaining cooldown seconds for an ATM (0 if not cooling down)</span>
+<span class="k">local</span> remaining = exports[<span class="s">'ds_atmrobbery'</span>]:GetATMCooldown(<span class="s">'atm_441_-982_30'</span>)
+<span class="k">if</span> remaining > <span class="n">0</span> <span class="k">then</span>
+    print(<span class="s">'ATM is on cooldown for '</span> .. remaining .. <span class="s">'s'</span>)
+<span class="k">end</span></code></pre>
+        <div class="callout tip">Use <code>GetATMCooldown</code> to build a server-side admin command that shows which ATMs are currently cooling down.</div>
+      </div>
+
+      <!-- ── 11. Marked Bills ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="marked-bills">11 — Marked Bills &amp; Serials</h2>
+        <p>When a payout entry's item name matches <code>Config.MarkedMoneyItem</code> (default <code>'markedbills'</code>), the resource gives exactly <strong>1 item</strong> with two metadata fields instead of stacking multiple items:</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Metadata field</th><th>Example</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>worth</code></td><td><code>1450</code></td><td>Dollar value of the bills, after the payout multiplier is applied.</td></tr>
+              <tr><td><code>serial</code></td><td><code>'0615-384920571836'</code></td><td>Tracing number — zero-padded month + day, dash, then 12 random digits. Formatted <code>MMDD-############</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>This approach is compatible with <strong>qb-bankrobbery</strong> and other resources that read the <code>worth</code> field from marked bills metadata. Set <code>Config.MarkedMoneyItem = nil</code> to disable this handling and treat marked bills like any other item.</p>
+      </div>
+
+      <!-- ── 12. FAQ ─────────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="faq">12 — FAQ</h2>
+
+        <h3 class="entry-title" id="faq-item-consumed">My item is being consumed even when I cancel the progress bar.</h3>
+        <p>This should not happen with the default configuration. The item is only consumed in the <code>CrackComplete</code> server event, which only fires after the progress bar finishes. Cancelling the bar triggers <code>CrackAborted</code> instead — which voids the pending crack without touching the item. Confirm that <code>ds_progressbar</code> is correctly firing its cancel callback when the player presses <kbd>X</kbd>.</p>
+
+        <h3 class="entry-title" id="faq-no-alert">Police alerts aren't firing.</h3>
+        <p>Check that <code>qb-policejob</code> is started and running before <code>ds_atmrobbery</code>. Alerts are silently skipped if the resource is not in a <code>started</code> state. Also verify that the relevant chance value (<code>AlertOnStartChance</code>, etc.) is greater than 0. Enable <code>Config.Debug = true</code> to see alert logs in the server console.</p>
+
+        <h3 class="entry-title" id="faq-no-print">LEOs can't see the fingerprint prompt.</h3>
+        <p>Verify that the LEO's QBCore job has its <code>type</code> field set to <code>'leo'</code> (or whatever value you have in <code>Config.FingerprintLeoTypes</code>). The forensics client thread only activates for players whose job type matches. Also check that <code>Config.FingerprintChance</code> is above 0 — if it's <code>0</code>, no prints are ever stored.</p>
+
+        <h3 class="entry-title" id="faq-cooldown">How do I find an ATM's coord key to reset its cooldown?</h3>
+        <p>Enable <code>Config.Debug = true</code>. The server will print the coord key when a robbery attempt is made: <code>[ds_atmrobbery] Player X pre-flight approved for ATM atm_441_-982_30</code>. Use that string with the <code>ResetATMCooldown</code> export.</p>
+
+        <h3 class="entry-title" id="faq-custom-minigame">Can I replace the NUI minigame with a Lua-based one?</h3>
+        <p>Yes. The <code>client/minigame.lua</code> file is a thin placeholder — all minigame logic is in <code>html/script.js</code>. To swap it out, implement your replacement in <code>client/minigame.lua</code> and update the two <code>RegisterNUICallback</code> calls in <code>client/main.lua</code> (<code>minigameResult</code> and <code>minigameAbort</code>) to match your library's callbacks. The server-side flow is entirely unaffected.</p>
+
+        <h3 class="entry-title" id="faq-custom-atm">Can I add custom ATM props?</h3>
+        <p>Yes. Add the prop model name string to <code>Config.ATMProps</code>. The client builds a hash set from this list at startup using <code>GetHashKey</code>, so any valid GTA V model name (or any custom streamed prop) works as long as the model is loaded in the world.</p>
+
+        <h3 class="entry-title" id="faq-no-sql">Does this resource use a database?</h3>
+        <p>No. There is no SQL. Cooldowns, pending crack state, and fingerprint records all live in server memory and reset when the resource or server restarts.</p>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Back to top -->
+  <button id="back-top" aria-label="Back to top">↑</button>
+
+  <script src="../script.js"></script>
+</body>
+</html>

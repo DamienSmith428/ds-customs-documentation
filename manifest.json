@@ -1,6 +1,13 @@
 {
   "resources": [
     {
+      "name": "DS ATM Robbery",
+      "path": "docs/ds_atmrobbery.html",
+      "status": "release",
+      "description": "Fully configurable ATM robbery with a custom NUI wire-cutting minigame, multi-inventory bridge, per-ATM cooldowns, police alerts, and a forensic fingerprint system.",
+      "tags": ["QBCore", "FiveM", "ds_progressbar", "ds_notify", "Escrow"]
+    },
+    {
       "name": "DS Food Delivery",
       "path": "docs/ds_fooddelivery.html",
       "status": "release",
