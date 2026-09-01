@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Bridge — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+    <a class="topbar-link" href="https://discord.gg/WRfVqsrAVC" target="_blank" rel="noopener">Discord ↗</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS Bridge</h1>
+        <p class="subtitle">Universal multi-framework bridge — framework, inventory, fuel, target, and vehicle keys — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.1.0</span>
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-green">Qbox</span>
+          <span class="badge badge-green">ESX</span>
+          <span class="badge badge-blue">FiveM</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-green">No SQL</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS Bridge is a shared dependency used by all DS Customs resources. It provides a single, normalised API that abstracts away the underlying framework (QBCore, Qbox, ESX), inventory (ox_inventory, qb-inventory, ps-inventory, qs-inventory), fuel (ox_fuel, LegacyFuel, ps-fuel, cdn-fuel, lc_fuel, esx-sna-fuel), target (ox_target, qb-target, ds_target), and vehicle keys (qb-vehiclekeys, qbx_vehiclekeys, ds_vehiclekeys) scripts running on your server.</p>
+        <p>Every DS Customs resource calls <code>exports['ds_bridge']:SomeFunction()</code> instead of calling framework- or script-specific APIs directly. You configure ds_bridge once in <code>config.lua</code> and all resources automatically use the correct implementation.</p>
+        <div class="callout tip">DS Bridge also fires normalised events (<code>ds_bridge:playerLoaded</code>, etc.) that any resource can listen to regardless of which framework is active — no framework-specific event names needed.</div>
+      </div>
+
+      <!-- ── 2. Installation ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">2 — Installation</h2>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Place the <code>ds_bridge</code> folder inside your resources directory (e.g. <code>[Dependencies]</code>).</li>
+          <li>Add <code>ensure ds_bridge</code> to your <code>server.cfg</code> <strong>before</strong> any DS Customs resource that depends on it.</li>
+          <li>Open <code>config.lua</code> and set each option to match the scripts you have installed on your server.</li>
+          <li>Done — no SQL, no further setup required.</li>
+        </ol>
+        <pre><code><span class="c"># server.cfg</span>
+ensure ds_bridge         <span class="c"># must come before all ds_ resources</span>
+ensure ds_vehiclekeys
+ensure ds_garages
+ensure ds_atmrobbery
+<span class="c"># ... other ds_ resources</span>
+</code></pre>
+      </div>
+
+      <!-- ── 3. Configuration ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">3 — Configuration — config.lua</h2>
+        <p><code>config.lua</code> is open and unencrypted. Set each option to the exact resource name of the script you are running. These names must match both the resource folder name on your server <em>and</em> the filename of the bridge module inside <code>ds_bridge</code>.</p>
+
+        <pre><code>Bridge.Config.Framework  = <span class="s">'qb-core'</span>      <span class="c">-- 'qb-core' | 'qbx_core' | 'es_extended'</span>
+Bridge.Config.Fuel       = <span class="s">'ox_fuel'</span>      <span class="c">-- 'ox_fuel' | 'ps-fuel' | 'cdn-fuel' | 'LegacyFuel' | 'lc_fuel' | 'esx-sna-fuel'</span>
+Bridge.Config.Inventory  = <span class="s">'ox_inventory'</span> <span class="c">-- 'ox_inventory' | 'qb-inventory' | 'ps-inventory' | 'qs-inventory'</span>
+Bridge.Config.Target     = <span class="s">'qb-target'</span>    <span class="c">-- 'ox_target' | 'qb-target' | 'ds_target'</span>
+Bridge.Config.VehicleKeys= <span class="s">'qb-vehiclekeys'</span> <span class="c">-- 'qb-vehiclekeys' | 'qbx_vehiclekeys' | 'ds_vehiclekeys'</span>
+
+Bridge.Config.Debug      = <span class="k">false</span>          <span class="c">-- true prints module loading info to the console</span>
+</code></pre>
+
+        <h4>Built-in options per category</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Category</th><th>Config key</th><th>Built-in values</th></tr></thead>
+            <tbody>
+              <tr><td>Framework</td><td><code>Bridge.Config.Framework</code></td><td><code>qb-core</code>, <code>qbx_core</code>, <code>es_extended</code></td></tr>
+              <tr><td>Fuel</td><td><code>Bridge.Config.Fuel</code></td><td><code>ox_fuel</code>, <code>ps-fuel</code>, <code>cdn-fuel</code>, <code>LegacyFuel</code>, <code>lc_fuel</code>, <code>esx-sna-fuel</code></td></tr>
+              <tr><td>Inventory</td><td><code>Bridge.Config.Inventory</code></td><td><code>ox_inventory</code>, <code>qb-inventory</code>, <code>ps-inventory</code>, <code>qs-inventory</code></td></tr>
+              <tr><td>Target</td><td><code>Bridge.Config.Target</code></td><td><code>ox_target</code>, <code>qb-target</code>, <code>ds_target</code></td></tr>
+              <tr><td>Vehicle Keys</td><td><code>Bridge.Config.VehicleKeys</code></td><td><code>qb-vehiclekeys</code>, <code>qbx_vehiclekeys</code>, <code>ds_vehiclekeys</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 4. Custom modules ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="custom-modules">4 — Adding Custom Modules</h2>
+        <p>DS Bridge supports custom module folders. This lets you add support for a script that is not built in — for example a different inventory system — without modifying any encrypted files.</p>
+
+        <h4>How module loading works</h4>
+        <p>The loader maps each config value to a filename. For the built-in categories (<code>inventories</code>, <code>fuel</code>, etc.) it loads <strong>only the one file matching your config value</strong> from that folder. For custom modules declared in <code>Bridge.Config.Modules</code> it loads <strong>every</strong> <code>.lua</code> file found in the module's <code>server/</code> and <code>client/</code> sub-folders.</p>
+
+        <h4>Adding a custom inventory (or any built-in category)</h4>
+        <p>To add a new inventory not in the built-in list — e.g. <code>my_inventory</code>:</p>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Set <code>Bridge.Config.Inventory = 'my_inventory'</code> in <code>config.lua</code>.</li>
+          <li>Create <code>ds_bridge/inventories/server/my_inventory.lua</code> — implement the <code>Bridge.Inventory.*</code> server API (see Section 6).</li>
+          <li>Create <code>ds_bridge/inventories/client/my_inventory.lua</code> — implement the <code>Bridge.Inventory.*</code> client API (see Section 7).</li>
+          <li>Add the two glob patterns to <code>fxmanifest.lua</code> so FiveM can find the new files — the existing wildcard <code>inventories/server/*.lua</code> and <code>inventories/client/*.lua</code> already covers any file added to those folders, so no manifest change is needed.</li>
+        </ol>
+        <div class="callout tip">The same approach applies to all built-in categories: <code>framework</code>, <code>fuel</code>, <code>target</code>, and <code>vehiclekeys</code>. The config value must exactly match the <code>.lua</code> filename (without the extension).</div>
+
+        <h4>Adding a fully custom module folder</h4>
+        <p>For a completely new category (e.g. <code>dispatch</code>, <code>housing</code>) that doesn't fit an existing folder:</p>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Add the folder name to <code>Bridge.Config.Modules</code> in <code>config.lua</code>:
+            <pre style="margin-top:8px"><code>Bridge.Config.Modules = { <span class="s">'dispatch'</span> }</code></pre>
+          </li>
+          <li>Create the folder structure:
+            <pre style="margin-top:8px"><code>ds_bridge/dispatch/server/dispatch.lua
+ds_bridge/dispatch/client/dispatch.lua</code></pre>
+          </li>
+          <li>Add the glob patterns to <code>fxmanifest.lua</code>:
+            <pre style="margin-top:8px"><code><span class="c">-- in server_scripts { }</span>
+<span class="s">'dispatch/server/*.lua'</span>,
+
+<span class="c">-- in client_scripts { }</span>
+<span class="s">'dispatch/client/*.lua'</span>,</code></pre>
+          </li>
+        </ol>
+        <div class="callout">Custom modules load <strong>all</strong> <code>.lua</code> files in their <code>server/</code> and <code>client/</code> folders — there is no single-file selection for them. You can split your implementation across as many files as you like.</div>
+      </div>
+
+      <!-- ── 5. Normalised events ────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="events">5 — Normalised Events</h2>
+        <p>DS Bridge listens to the active framework's native events and re-fires them under consistent <code>ds_bridge:</code> names. Any resource can listen to these without knowing which framework is running.</p>
+
+        <h4>Server-side events</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Event</th><th>Parameters</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>ds_bridge:playerLoaded</code></td><td><code>source</code></td><td>A player finished loading into the server.</td></tr>
+              <tr><td><code>ds_bridge:playerUnloaded</code></td><td><code>source</code></td><td>A player is being unloaded / disconnected.</td></tr>
+              <tr><td><code>ds_bridge:playerDataUpdated</code></td><td><code>source, key, value</code></td><td>A player's data changed (job, gang, money, etc.).</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Client-side events</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Event</th><th>Parameters</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>ds_bridge:playerLoaded</code></td><td>—</td><td>The local player finished loading.</td></tr>
+              <tr><td><code>ds_bridge:playerUnloaded</code></td><td>—</td><td>The local player is being unloaded.</td></tr>
+              <tr><td><code>ds_bridge:playerDataUpdated</code></td><td><code>key, value</code></td><td>The local player's data changed.</td></tr>
+              <tr><td><code>ds_bridge:vehicleKeysGranted</code></td><td><code>plate</code></td><td>The local player was given keys to a vehicle.</td></tr>
+              <tr><td><code>ds_bridge:vehicleKeysRevoked</code></td><td><code>plate</code></td><td>The local player's keys for a vehicle were removed.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <pre><code><span class="c">-- Server example</span>
+AddEventHandler(<span class="s">'ds_bridge:playerLoaded'</span>, <span class="k">function</span>(source)
+    print(<span class="s">'Player loaded: '</span> .. source)
+<span class="k">end</span>)
+
+<span class="c">-- Client example</span>
+AddEventHandler(<span class="s">'ds_bridge:vehicleKeysGranted'</span>, <span class="k">function</span>(plate)
+    print(<span class="s">'Got keys for: '</span> .. tostring(plate))
+<span class="k">end</span>)</code></pre>
+      </div>
+
+      <!-- ── 6. Server exports ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="server-exports">6 — Server-Side Exports</h2>
+        <p>All server exports are called via <code>exports['ds_bridge']:FunctionName(...)</code>. These are also the exact function signatures you must implement in your <code>Bridge.*</code> tables when writing a custom module.</p>
+
+        <h3 class="entry-title" id="sv-framework">Framework</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export</th><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>GetPlayer</code></td><td><code>(source)</code></td><td>table</td><td>Normalised player object for the given source.</td></tr>
+              <tr><td><code>GetPlayerByCitizenId</code></td><td><code>(citizenid)</code></td><td>table</td><td>Player object matched by citizen ID string.</td></tr>
+              <tr><td><code>GetPlayers</code></td><td><code>()</code></td><td>table</td><td>All online players keyed by source.</td></tr>
+              <tr><td><code>GetCitizenId</code></td><td><code>(source)</code></td><td>string</td><td>Citizen ID for the given source.</td></tr>
+              <tr><td><code>GetJob</code></td><td><code>(source)</code></td><td>table</td><td><code>{ name, label, grade, grade_label }</code></td></tr>
+              <tr><td><code>GetGang</code></td><td><code>(source)</code></td><td>table</td><td><code>{ name, label, grade, grade_label }</code></td></tr>
+              <tr><td><code>GetMoney</code></td><td><code>(source, accountType)</code></td><td>number</td><td>Player balance. <code>accountType</code> defaults to <code>'cash'</code>.</td></tr>
+              <tr><td><code>AddMoney</code></td><td><code>(source, accountType, amount, reason)</code></td><td>void</td><td>Add money to a player account.</td></tr>
+              <tr><td><code>RemoveMoney</code></td><td><code>(source, accountType, amount, reason)</code></td><td>boolean</td><td>Remove money. Returns <code>false</code> if insufficient funds.</td></tr>
+              <tr><td><code>Notify</code></td><td><code>(source, message, notifyType)</code></td><td>void</td><td>Send a framework notification to a player.</td></tr>
+              <tr><td><code>GetShared</code></td><td><code>()</code></td><td>table</td><td>Framework shared data (items, vehicles, jobs, etc.).</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="sv-inventory">Inventory</h3>
+        <p>These are the functions your <code>inventories/server/my_inventory.lua</code> must populate on <code>Bridge.Inventory</code>.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export / Bridge function</th><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>AddItem</code></td><td><code>(source, item, count, metadata)</code></td><td>boolean</td><td>Add an item to a player's inventory.</td></tr>
+              <tr><td><code>RemoveItem</code></td><td><code>(source, item, count, metadata)</code></td><td>boolean</td><td>Remove an item from a player's inventory.</td></tr>
+              <tr><td><code>GetItemCount</code></td><td><code>(source, item)</code></td><td>number</td><td>Count of a specific item in the player's inventory.</td></tr>
+              <tr><td><code>HasItem</code></td><td><code>(source, item, count)</code></td><td>boolean</td><td><code>true</code> if player has at least <code>count</code> of <code>item</code> (default 1).</td></tr>
+              <tr><td><code>GetInventory</code></td><td><code>(source)</code></td><td>table</td><td>Full inventory as an array of item tables.</td></tr>
+              <tr><td><code>RegisterStash</code></td><td><code>(stashId, options)</code></td><td>void</td><td>Register a stash before the client opens it. <code>options</code>: <code>{ slots, weight, owner, groups, coords }</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="sv-vehiclekeys">Vehicle Keys</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export / Bridge function</th><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>GiveVehicleKeys</code></td><td><code>(source, plateOrVehicle, skipNotify)</code></td><td>void</td><td>Give keys to a player.</td></tr>
+              <tr><td><code>RemoveVehicleKeys</code></td><td><code>(source, plateOrVehicle, skipNotify)</code></td><td>void</td><td>Remove keys from a player.</td></tr>
+              <tr><td><code>HasVehicleKeys</code></td><td><code>(source, plateOrVehicle)</code></td><td>boolean</td><td>Returns <code>true</code> if the player has keys.</td></tr>
+              <tr><td><code>RemoveVehicleOwnership</code></td><td><code>(plate, citizenid)</code></td><td>boolean</td><td>Permanently delete all ownership data for a plate.</td></tr>
+              <tr><td><code>SetVehicleOwner</code></td><td><code>(plate, owner)</code></td><td>void</td><td>Set the database owner of a plate (ds_vehiclekeys only; no-op for others).</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="sv-target">Target (server-side)</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export / Bridge function</th><th>Signature</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>SetEntityHasOptions</code></td><td><code>(netId)</code></td><td>Marks a networked entity as having target options via statebag (ox_target only; no-op for others).</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="sv-meta">Meta</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export</th><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>GetActiveModule</code></td><td><code>(category)</code></td><td>string</td><td>Returns the active implementation name for a category. e.g. <code>GetActiveModule('inventory')</code> → <code>'ox_inventory'</code>.</td></tr>
+              <tr><td><code>GetVersion</code></td><td><code>()</code></td><td>string</td><td>Returns the ds_bridge version string.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <pre><code><span class="c">-- Server usage example</span>
+<span class="k">local</span> added = exports[<span class="s">'ds_bridge'</span>]:AddItem(source, <span class="s">'water'</span>, <span class="n">1</span>)
+<span class="k">if</span> added <span class="k">then</span>
+    exports[<span class="s">'ds_bridge'</span>]:Notify(source, <span class="s">'You received a water bottle.'</span>, <span class="s">'success'</span>)
+<span class="k">end</span>
+
+<span class="k">local</span> job = exports[<span class="s">'ds_bridge'</span>]:GetJob(source)
+<span class="k">if</span> job.name == <span class="s">'police'</span> <span class="k">then</span>
+    <span class="c">-- do police stuff</span>
+<span class="k">end</span></code></pre>
+      </div>
+
+      <!-- ── 7. Client exports ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="client-exports">7 — Client-Side Exports</h2>
+        <p>All client exports are called via <code>exports['ds_bridge']:FunctionName(...)</code>. These are also the exact function signatures you must implement on <code>Bridge.*</code> when writing a custom client module.</p>
+
+        <h3 class="entry-title" id="cl-framework">Framework</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export / Bridge function</th><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>GetPlayerData</code></td><td><code>()</code></td><td>table</td><td>Local player data table.</td></tr>
+              <tr><td><code>IsLoggedIn</code></td><td><code>()</code></td><td>boolean</td><td><code>true</code> if the local player is logged in.</td></tr>
+              <tr><td><code>GetCitizenId</code></td><td><code>()</code></td><td>string</td><td>Local player's citizen ID.</td></tr>
+              <tr><td><code>GetJob</code></td><td><code>()</code></td><td>table</td><td><code>{ name, label, grade, grade_label }</code></td></tr>
+              <tr><td><code>GetGang</code></td><td><code>()</code></td><td>table</td><td><code>{ name, label, grade, grade_label }</code></td></tr>
+              <tr><td><code>Notify</code></td><td><code>(message, notifyType)</code></td><td>void</td><td>Show a notification to the local player.</td></tr>
+              <tr><td><code>TriggerCallback</code></td><td><code>(name, cb, ...)</code></td><td>void</td><td>Trigger a framework server callback.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="cl-fuel">Fuel</h3>
+        <p>These are the functions your <code>fuel/client/my_fuel.lua</code> must populate on <code>Bridge.Fuel</code>.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export / Bridge function</th><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>GetFuel</code></td><td><code>(vehicle)</code></td><td>number</td><td>Current fuel level (0–100) of a vehicle entity handle.</td></tr>
+              <tr><td><code>SetFuel</code></td><td><code>(vehicle, level)</code></td><td>void</td><td>Set the fuel level (0–100) of a vehicle entity handle.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="cl-inventory">Inventory</h3>
+        <p>These are the functions your <code>inventories/client/my_inventory.lua</code> must populate on <code>Bridge.Inventory</code>.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export / Bridge function</th><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>GetItemCount</code></td><td><code>(item)</code></td><td>number</td><td>Count of a specific item in the local player's inventory.</td></tr>
+              <tr><td><code>HasItem</code></td><td><code>(item, count)</code></td><td>boolean</td><td><code>true</code> if the local player has at least <code>count</code> of <code>item</code>.</td></tr>
+              <tr><td><code>OpenStash</code></td><td><code>(stashId)</code></td><td>void</td><td>Open a stash UI by stash ID.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="cl-vehiclekeys">Vehicle Keys</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export / Bridge function</th><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>HasVehicleKeys</code></td><td><code>(plateOrVehicle)</code></td><td>boolean</td><td>Returns <code>true</code> if the local player has keys.</td></tr>
+              <tr><td><code>GiveVehicleKeys</code></td><td><code>(plateOrVehicle)</code></td><td>void</td><td>Give the local player keys.</td></tr>
+              <tr><td><code>RemoveVehicleKeys</code></td><td><code>(plateOrVehicle)</code></td><td>void</td><td>Remove the local player's keys.</td></tr>
+              <tr><td><code>ToggleVehicleLock</code></td><td><code>()</code></td><td>void</td><td>Lock or unlock the closest vehicle (if the player has keys).</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="cl-target">Target</h3>
+        <p>These are the functions your <code>target/client/my_target.lua</code> must populate on <code>Bridge.Target</code>.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export / Bridge function</th><th>Signature</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>AddCircleZone</code></td><td><code>(name, center, radius, options, targetoptions)</code></td><td>Add a circle-zone target.</td></tr>
+              <tr><td><code>AddBoxZone</code></td><td><code>(name, center, length, width, options, targetoptions)</code></td><td>Add a box-zone target.</td></tr>
+              <tr><td><code>AddPolyZone</code></td><td><code>(name, points, options, targetoptions)</code></td><td>Add a poly-zone target.</td></tr>
+              <tr><td><code>RemoveZone</code></td><td><code>(name)</code></td><td>Remove a zone target by name.</td></tr>
+              <tr><td><code>AddTargetEntity</code></td><td><code>(entities, parameters)</code></td><td>Add target options to specific entity handles.</td></tr>
+              <tr><td><code>RemoveTargetEntity</code></td><td><code>(entities, labels)</code></td><td>Remove target options from entity handles.</td></tr>
+              <tr><td><code>AddTargetModel</code></td><td><code>(models, parameters)</code></td><td>Add target options to model hash(es).</td></tr>
+              <tr><td><code>RemoveTargetModel</code></td><td><code>(models, labels)</code></td><td>Remove target options from model(s).</td></tr>
+              <tr><td><code>AddTargetBone</code></td><td><code>(bones, parameters)</code></td><td>Add target options to vehicle bone(s).</td></tr>
+              <tr><td><code>AddGlobalPed</code></td><td><code>(parameters)</code></td><td>Add options to every ped globally.</td></tr>
+              <tr><td><code>AddGlobalVehicle</code></td><td><code>(parameters)</code></td><td>Add options to every vehicle globally.</td></tr>
+              <tr><td><code>AddGlobalObject</code></td><td><code>(parameters)</code></td><td>Add options to every object globally.</td></tr>
+              <tr><td><code>AddGlobalPlayer</code></td><td><code>(parameters)</code></td><td>Add options to every other player globally.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="cl-meta">Meta</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Export</th><th>Signature</th><th>Returns</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>GetActiveModule</code></td><td><code>(category)</code></td><td>string</td><td>Active implementation name for a bridge category. e.g. <code>GetActiveModule('fuel')</code> → <code>'ox_fuel'</code>.</td></tr>
+              <tr><td><code>GetVersion</code></td><td><code>()</code></td><td>string</td><td>Returns the ds_bridge version string.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <pre><code><span class="c">-- Client usage example</span>
+<span class="k">local</span> fuel = exports[<span class="s">'ds_bridge'</span>]:GetFuel(vehicle)
+<span class="k">if</span> fuel &lt; <span class="n">10</span> <span class="k">then</span>
+    exports[<span class="s">'ds_bridge'</span>]:Notify(<span class="s">'Low fuel!'</span>, <span class="s">'error'</span>)
+<span class="k">end</span>
+
+<span class="k">local</span> job = exports[<span class="s">'ds_bridge'</span>]:GetJob()
+<span class="k">if</span> job.name == <span class="s">'mechanic'</span> <span class="k">then</span>
+    exports[<span class="s">'ds_bridge'</span>]:AddCircleZone(<span class="s">'lift_1'</span>, coords, <span class="n">1.5</span>, {}, {
+        options  = {{ label = <span class="s">'Use Lift'</span>, icon = <span class="s">'fas fa-car'</span>, action = <span class="k">function</span>() ... <span class="k">end</span> }},
+        distance = <span class="n">1.5</span>,
+    })
+<span class="k">end</span></code></pre>
+      </div>
+
+      <!-- ── 8. Custom module template ──────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="module-template">8 — Custom Module Template</h2>
+        <p>Use these starter templates when writing a new inventory (or any other built-in category) module. Replace <code>my_inventory</code> with your config value throughout.</p>
+
+        <h4>inventories/server/my_inventory.lua</h4>
+        <pre><code>Bridge.Inventory = Bridge.Inventory or {}
+
+<span class="k">function</span> Bridge.Inventory.AddItem(source, item, count, metadata)
+    <span class="k">return</span> exports.my_inventory:AddItem(source, item, count, metadata)
+<span class="k">end</span>
+
+<span class="k">function</span> Bridge.Inventory.RemoveItem(source, item, count, metadata)
+    <span class="k">return</span> exports.my_inventory:RemoveItem(source, item, count, metadata)
+<span class="k">end</span>
+
+<span class="k">function</span> Bridge.Inventory.GetItemCount(source, item)
+    <span class="k">return</span> exports.my_inventory:GetItemCount(source, item)
+<span class="k">end</span>
+
+<span class="k">function</span> Bridge.Inventory.HasItem(source, item, count)
+    <span class="k">return</span> exports.my_inventory:GetItemCount(source, item) >= (count or <span class="n">1</span>)
+<span class="k">end</span>
+
+<span class="k">function</span> Bridge.Inventory.GetInventory(source)
+    <span class="k">return</span> exports.my_inventory:GetInventoryItems(source)
+<span class="k">end</span>
+
+<span class="k">function</span> Bridge.Inventory.RegisterStash(stashId, options)
+    exports.my_inventory:RegisterStash(stashId, options.slots or <span class="n">50</span>, options.weight or <span class="n">100000</span>)
+<span class="k">end</span>
+
+print(<span class="s">'[ds_bridge] inventories/server: my_inventory loaded'</span>)</code></pre>
+
+        <h4>inventories/client/my_inventory.lua</h4>
+        <pre><code>Bridge.Inventory = Bridge.Inventory or {}
+
+<span class="k">function</span> Bridge.Inventory.GetItemCount(item)
+    <span class="k">return</span> exports.my_inventory:GetItemCount(item)
+<span class="k">end</span>
+
+<span class="k">function</span> Bridge.Inventory.HasItem(item, count)
+    <span class="k">return</span> exports.my_inventory:GetItemCount(item) >= (count or <span class="n">1</span>)
+<span class="k">end</span>
+
+<span class="k">function</span> Bridge.Inventory.OpenStash(stashId)
+    exports.my_inventory:OpenStash(stashId)
+<span class="k">end</span>
+
+print(<span class="s">'[ds_bridge] inventories/client: my_inventory loaded'</span>)</code></pre>
+
+        <div class="callout tip">Check the built-in files (e.g. <code>inventories/server/ox_inventory.lua</code>) for reference implementations. They are the authoritative examples of what each category's <code>Bridge.*</code> table must expose.</div>
+      </div>
+
+      <!-- ── 9. File structure ──────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="file-structure">9 — File Structure</h2>
+        <pre><code>ds_bridge/
+├── fxmanifest.lua                <span class="c">← Resource manifest (always plain — never encrypted)</span>
+├── config.lua                    <span class="c">← All user configuration (open, unencrypted)</span>
+├── modulesloader.lua             <span class="c">← Discovers and registers every module folder</span>
+├── main/
+│   ├── server/init.lua           <span class="c">← Server bootstrap — loads selected module files</span>
+│   └── client/init.lua           <span class="c">← Client bootstrap — loads selected module files</span>
+├── exports/
+│   ├── events.lua                <span class="c">← Normalised ds_bridge: events (shared)</span>
+│   ├── server.lua                <span class="c">← Registers all Bridge.* functions as FiveM exports (server)</span>
+│   └── client.lua                <span class="c">← Registers all Bridge.* functions as FiveM exports (client)</span>
+├── framework/
+│   ├── server/  qb-core.lua  qbx_core.lua  es_extended.lua
+│   └── client/  qb-core.lua  qbx_core.lua  es_extended.lua
+├── fuel/
+│   ├── server/  ox_fuel.lua  ps-fuel.lua  cdn-fuel.lua  LegacyFuel.lua  lc_fuel.lua  esx-sna-fuel.lua
+│   └── client/  (same)
+├── inventories/
+│   ├── server/  ox_inventory.lua  qb-inventory.lua  ps-inventory.lua  qs-inventory.lua
+│   └── client/  (same)
+├── target/
+│   ├── server/  ox_target.lua  qb-target.lua  ds_target.lua
+│   └── client/  (same)
+└── vehiclekeys/
+    ├── server/  qb-vehiclekeys.lua  qbx_vehiclekeys.lua  ds_vehiclekeys.lua
+    └── client/  (same)</code></pre>
+      </div>
+
+      <!-- ── 10. Notes ──────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="notes">10 — Notes</h2>
+        <ul style="padding-left:20px;line-height:2.2">
+          <li><code>config.lua</code> and <code>fxmanifest.lua</code> are always plain and unencrypted — everything else is Escrow-protected.</li>
+          <li>The config value for each category must exactly match the <code>.lua</code> filename (without the extension) of the module file you want to load.</li>
+          <li>When adding a new file to an existing built-in category folder (e.g. <code>inventories/server/</code>), no manifest changes are needed — the existing <code>*.lua</code> wildcard glob already covers it.</li>
+          <li>When adding a completely new module folder via <code>Bridge.Config.Modules</code>, you must add the corresponding glob lines to <code>fxmanifest.lua</code> so FiveM registers those files.</li>
+          <li>DS Bridge has <strong>no database calls</strong> and <strong>no hard dependencies</strong> beyond the framework and inventory scripts you configure.</li>
+          <li>Set <code>Bridge.Config.Debug = true</code> to print module loading info to the server console — useful when diagnosing why a module is not loading.</li>
+        </ul>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+
+  <script src="../script.js"></script>
+</body>
+</html>

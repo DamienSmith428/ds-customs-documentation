@@ -1,6 +1,13 @@
 {
   "resources": [
     {
+      "name": "DS Bridge",
+      "path": "docs/ds_bridge.html",
+      "status": "release",
+      "description": "Universal multi-framework bridge for all DS Customs resources. Abstracts framework, inventory, fuel, target, and vehicle keys behind a single normalised API. Supports custom modules.",
+      "tags": ["QBCore", "Qbox", "ESX", "FiveM", "Dependency"]
+    },
+    {
       "name": "DS ATM Robbery",
       "path": "docs/ds_atmrobbery.html",
       "status": "release",
@@ -74,6 +81,7 @@
       "name": "DS MDT",
       "path": "docs/ds_mdt.html",
       "status": "coming soon",
+      "hidden": true,
       "description": "Full-featured Mobile Data Terminal for law enforcement. Reports, warrants, BOLOs, dispatch, live map, citations, licenses, and more.",
       "tags": ["QBCore", "FiveM", "Escrow"]
     },
@@ -81,6 +89,7 @@
       "name": "DS MDT — DOJ",
       "path": "docs/ds_mdt_doj.html",
       "status": "coming soon",
+      "hidden": true,
       "description": "Department of Justice terminal for judges, prosecutors, and defense attorneys. Warrant review, motions, hearings, verdicts, court orders, and client management.",
       "tags": ["QBCore", "FiveM", "Requires ds_mdt", "Escrow"]
     },
@@ -88,6 +97,7 @@
       "name": "Enhanced QB Police Job",
       "path": "docs/qb_policejob.html",
       "status": "coming soon",
+      "hidden": true,
       "description": "Full-featured Enhanced police job with armory, garage, evidence collection, ANPR, fingerprint DB, file cabinet, weapon registry, security cameras, and dispatch exports.",
       "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory", "Escrow"]
     },
@@ -95,6 +105,7 @@
       "name": "DS Prison Creator",
       "path": "docs/ds_prisoncreator.html",
       "status": "coming soon",
+      "hidden": true,
       "description": "Complete in-game jail & prison builder — cells, doors, cameras, outfits, canteen, commissary, visitor check-in, court transport, and full officer management UI.",
       "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory", "Escrow"]
     },

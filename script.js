@@ -29,7 +29,7 @@
     try {
       const res  = await fetch(rootPath('manifest.json'));
       const data = await res.json();
-      return data.resources || [];
+      return (data.resources || []).filter(function (r) { return !r.hidden; });
     } catch (e) {
       console.warn('DS Docs: could not load manifest.json', e);
       return [];
