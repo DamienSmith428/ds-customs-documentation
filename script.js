@@ -36,6 +36,32 @@
     }
   }
 
+  /* ── Doc banner: inject if manifest entry has a banner path ──────────── */
+
+  function buildDocBanner(resources) {
+    const docHeader = document.querySelector('.content .doc-header');
+    if (!docHeader) return;                        // not a doc page
+
+    const current = cleanPath(location.pathname);
+    const entry = resources.find(function (r) {
+      const rPath = cleanPath('/' + r.path.replace(/^\.?\//, ''));
+      return current.endsWith(rPath.replace(/\.html$/, '')) ||
+             current.endsWith(rPath);
+    });
+
+    if (!entry || !entry.banner) return;           // no banner defined
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'doc-banner';
+
+    const img = document.createElement('img');
+    img.src = rootPath(entry.banner);
+    img.alt = entry.name + ' banner';
+    wrapper.appendChild(img);
+
+    docHeader.parentNode.insertBefore(wrapper, docHeader);
+  }
+
   /* ── Sidebar: inject resource links ──────────────────────────────────── */
 
   function buildSidebar(resources) {
@@ -175,6 +201,7 @@
 
     buildSidebar(resources);
     buildIndexCards(resources);
+    buildDocBanner(resources);
     buildDocToc();
     initBackTop();
   });
