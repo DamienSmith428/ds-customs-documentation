@@ -602,20 +602,16 @@ a:hover { color: #79bfff; text-decoration: none; }
    ══════════════════════════════════════════════════════════════════════════ */
 .doc-banner {
   width: 100%;
-  height: 220px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   margin-bottom: 36px;
   position: relative;
-  flex-shrink: 0;
   overflow: hidden;
 }
 
 .doc-banner img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center bottom;
+  height: auto;
   display: block;
 }
 
