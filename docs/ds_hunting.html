@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Hunting — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+    <a class="topbar-link" href="https://discord.gg/WRfVqsrAVC" target="_blank" rel="noopener">Discord ↗</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS Hunting</h1>
+        <p class="subtitle">Full-featured wildlife hunting system with graded loot, carry animations, a butcher shop NUI, server leaderboard, 75 achievements, anti-farm, and managed spawn zones — multi-framework, multi-inventory, multi-target — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.0.0</span>
+          <span class="badge badge-green">QBX Core</span>
+          <span class="badge badge-green">QB-Core</span>
+          <span class="badge badge-green">ESX</span>
+          <span class="badge badge-purple">ox_inventory</span>
+          <span class="badge badge-purple">qb-inventory</span>
+          <span class="badge badge-purple">ps-inventory</span>
+          <span class="badge badge-purple">qs-inventory</span>
+          <span class="badge badge-purple">tgiann-inventory</span>
+          <span class="badge badge-blue">ox_lib</span>
+          <span class="badge badge-blue">oxmysql</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-red">Escrow</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS Hunting is a complete wildlife economy for FiveM servers. Players track and kill animals across the map, skin or pick up the carcass, carry it back to a butcher NPC, and sell graded loot for cash. Kill quality is determined server-side by weapon choice and bone hit — a headshot with the right weapon yields a <strong>perfect-grade</strong> item worth double the base price.</p>
+        <p>Progression is tracked persistently in MySQL. A server-wide leaderboard NPC displays the top hunters at all times. A 75-achievement system with escalating cash rewards keeps long-term players engaged without locking core gameplay behind a grind wall.</p>
+        <p>All compatibility logic lives in isolated bridge files — only the one matching your config is ever active. There is no dead code path or cross-framework bleed. <code>config.lua</code> and <code>spawnzones.lua</code> are fully open; all other files are escrow-protected.</p>
+
+        <h3 class="entry-title" id="features">Feature Summary</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Feature</th><th>Detail</th></tr></thead>
+            <tbody>
+              <tr><td>7 huntable animal species</td><td>Boar, Deer, Mountain Lion, Coyote, Rabbit, Hawk, Cormorant — each with unique carry animations, loot tables, and headshot bone definitions.</td></tr>
+              <tr><td>3-grade kill quality system</td><td>Grade determined server-side: weapon type + headshot bone = perfect (★★★, 2× price), good weapon alone = good (★★☆, 1× price), other = poor (★☆☆, 0.5× price).</td></tr>
+              <tr><td>Carry &amp; drag animations</td><td>Small animals (rabbit, hawk, etc.) are shoulder-carried. Large animals (boar, deer, mountain lion) are dragged. Per-animal attachment offsets fully tuned in config.</td></tr>
+              <tr><td>Butcher NPC + shop UI</td><td>NPC ped at a configurable location. Custom NUI shows owned hunting loot with per-grade images and live prices. Sells individual items or all at once.</td></tr>
+              <tr><td>Server leaderboard</td><td>Separate NPC near the butcher. NUI ranks all players by total kills. Configurable blip, ped model, and interaction zone.</td></tr>
+              <tr><td>75-achievement system</td><td>Per-species kill milestones (8 tiers × 7 animals = 56), total kill milestones (9), and earnings milestones (10). Rewards up to $40,000 cash. All stored in MySQL, claimed via NUI.</td></tr>
+              <tr><td>Anti-farm protection</td><td>Server-side zone-radius tracking with configurable kill cap, time window, zone size, and per-player or global scope. Blocked kills trigger a locale notification.</td></tr>
+              <tr><td>Managed spawn zones</td><td>8 handcrafted zones across the map. Animals only spawn when a player is nearby; despawn after the last player leaves. Activation radius and intervals are tunable.</td></tr>
+              <tr><td>Multi-framework bridges</td><td>QBX Core, QB-Core, ESX. Active bridge chosen at startup via <code>Config.Framework</code>.</td></tr>
+              <tr><td>Multi-inventory bridges</td><td>ox_inventory, qb-inventory, ps-inventory, qs-inventory, tgiann-inventory. Active bridge chosen via <code>Config.Inventory</code>.</td></tr>
+              <tr><td>Multi-target bridges</td><td>ox_target, qb-target, ds_target, or proximity E-prompt (no target resource required). Set via <code>Config.UseTarget</code> and <code>Config.TargetResource</code>.</td></tr>
+              <tr><td>Locale / i18n</td><td>All player-facing strings live in <code>locales/en.json</code> (French also shipped). Add any language by dropping a new JSON file.</td></tr>
+              <tr><td>Open config files</td><td><code>config.lua</code> and <code>spawnzones.lua</code> are excluded from escrow. All prices, yields, NPC coords, blips, anti-farm rules, and grade multipliers are editable.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 2. Requirements ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="requirements">2 — Requirements</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Resource</th><th>Required?</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>ox_lib</code></td><td>Yes</td><td>Used for context menus, notifications, and callbacks. Must start before ds_hunting.</td></tr>
+              <tr><td><code>oxmysql</code></td><td>Yes</td><td>Async MySQL library for stats, achievements, and leaderboard. Must start before ds_hunting.</td></tr>
+              <tr><td>Framework</td><td>Yes (one)</td><td><code>qbx_core</code>, <code>qb-core</code>, or <code>esx</code>. Set via <code>Config.Framework</code>.</td></tr>
+              <tr><td>Inventory</td><td>Yes (one)</td><td><code>ox_inventory</code>, <code>qb-inventory</code>, <code>ps-inventory</code>, <code>qs-inventory</code>, or <code>tgiann-inventory</code>. Set via <code>Config.Inventory</code>.</td></tr>
+              <tr><td>Target resource</td><td>No</td><td>Required only when <code>Config.UseTarget = true</code>. Options: <code>ox_target</code>, <code>qb-target</code>, <code>ds_target</code>. Set via <code>Config.TargetResource</code>. Set <code>Config.UseTarget = false</code> to use the built-in E-prompt instead.</td></tr>
+              <tr><td>OneSync</td><td>Yes</td><td>Required by the manifest (<code>/onesync</code>). Managed spawn zones rely on server-side ped tracking.</td></tr>
+              <tr><td>Server build</td><td>5181+</td><td>Declared as <code>/server:5181</code> in the manifest.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">ds_hunting has <strong>no external UI library dependency</strong>. The butcher shop and leaderboard UIs are self-contained in the <code>ui/</code> folder and loaded via the resource's own NUI page.</div>
+      </div>
+
+      <!-- ── 3. Installation ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">3 — Installation</h2>
+
+        <h3 class="entry-title" id="install-drop">Drop-in</h3>
+        <p>Copy the <code>ds_hunting</code> folder into your resources directory.</p>
+
+        <h3 class="entry-title" id="install-sql">Database</h3>
+        <p>Two tables are created automatically by the resource on first start via <code>server/modules/stats.lua</code>:</p>
+        <pre><code><span class="c">-- Created automatically — no manual SQL import needed</span>
+ds_hunting_stats        <span class="c">-- per-player kill counts and total earnings</span>
+ds_hunting_achievements <span class="c">-- per-player unlocked and claimed achievement arrays (JSON)</span></code></pre>
+        <div class="callout tip">No SQL file needs to be imported manually. Both tables are created with <code>CREATE TABLE IF NOT EXISTS</code> on the first server start.</div>
+
+        <h3 class="entry-title" id="install-items">Inventory Items</h3>
+        <p>Add all hunting items to your inventory's item definition file. Grab the ready-to-use item definitions and inventory images from the <code>INSTALL-ME/</code> folder included in the resource:</p>
+        <ul style="margin: 8px 0 12px 20px; display:flex; flex-direction:column; gap:5px;">
+          <li><code>INSTALL-ME/item.txt</code> — item definitions (copy into your inventory's items file)</li>
+          <li><code>INSTALL-ME/inv images/</code> — PNG images for all hunting items (copy into your inventory's images folder)</li>
+        </ul>
+        <div class="callout warn">Item images inside <code>INSTALL-ME/inv images/</code> use generic grade icons (<code>hunting_meat_1.png</code>, <code>hunting_pelt_2.png</code>, etc.) shared by all species. If your inventory supports per-item images, the butcher shop UI uses its own <code>ui/images/</code> folder with species-specific per-grade art.</div>
+
+        <h3 class="entry-title" id="install-cfg">server.cfg Start Order</h3>
+        <pre><code>ensure oxmysql
+ensure ox_lib
+ensure qbx_core      <span class="c"># or qb-core / esx</span>
+ensure ox_inventory  <span class="c"># or whichever inventory you use</span>
+ensure ox_target     <span class="c"># only if Config.UseTarget = true</span>
+ensure ds_hunting
+</code></pre>
+
+        <h3 class="entry-title" id="install-config">Quick-Start Config</h3>
+        <p>Open <code>config.lua</code> and set the three stack keys to match your server:</p>
+        <pre><code>Config.Framework      = <span class="s">'qbx_core'</span>    <span class="c">-- 'qbx_core' | 'qb-core' | 'esx'</span>
+Config.Inventory      = <span class="s">'ox_inventory'</span> <span class="c">-- 'ox_inventory' | 'qb-inventory' | 'ps-inventory' | 'qs-inventory' | 'tgiann-inventory'</span>
+Config.UseTarget      = <span class="k">true</span>           <span class="c">-- true = target resource | false = E-prompt</span>
+Config.TargetResource = <span class="s">'ox_target'</span>   <span class="c">-- 'ox_target' | 'qb-target' | 'ds_target' (only used when UseTarget = true)</span>
+</code></pre>
+      </div>
+
+      <!-- ── 4. Configuration ───────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">4 — Configuration — config.lua</h2>
+        <p>All settings live in <code>config.lua</code>, which is excluded from escrow and fully open to edit. <code>spawnzones.lua</code> is also open and controls all animal spawn zones.</p>
+
+        <!-- 4.1 Stack -->
+        <h3 class="entry-title" id="config-stack">Framework / Inventory / Target</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.Framework</code></td><td><code>'qbx_core'</code></td><td>Active framework bridge. Accepted: <code>'qbx_core'</code>, <code>'qb-core'</code>, <code>'esx'</code>.</td></tr>
+              <tr><td><code>Config.Inventory</code></td><td><code>'ox_inventory'</code></td><td>Active inventory bridge. Accepted: <code>'ox_inventory'</code>, <code>'qb-inventory'</code>, <code>'ps-inventory'</code>, <code>'qs-inventory'</code>, <code>'tgiann-inventory'</code>.</td></tr>
+              <tr><td><code>Config.UseTarget</code></td><td><code>true</code></td><td><code>true</code> — register targets on dead animal peds using a third-party target resource. <code>false</code> — use a proximity E-prompt with an <code>ox_lib</code> context menu instead.</td></tr>
+              <tr><td><code>Config.TargetResource</code></td><td><code>'ox_target'</code></td><td>Which target resource to use when <code>UseTarget = true</code>. Accepted: <code>'ox_target'</code>, <code>'qb-target'</code>, <code>'ds_target'</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.2 Animals -->
+        <h3 class="entry-title" id="config-animals">Animals — Config.carcass</h3>
+        <p>Maps a GTA ped model hash to a base carcass name used as the item-name prefix for all harvested loot.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Model</th><th>Base Name</th></tr></thead>
+            <tbody>
+              <tr><td><code>a_c_boar</code></td><td><code>boar</code></td></tr>
+              <tr><td><code>a_c_chickenhawk</code></td><td><code>hawk</code></td></tr>
+              <tr><td><code>a_c_cormorant</code></td><td><code>cormorant</code></td></tr>
+              <tr><td><code>a_c_coyote</code></td><td><code>coyote</code></td></tr>
+              <tr><td><code>a_c_deer</code></td><td><code>deer</code></td></tr>
+              <tr><td><code>a_c_mtlion</code></td><td><code>mtlion</code></td></tr>
+              <tr><td><code>a_c_rabbit_01</code></td><td><code>rabbit</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>To add a new animal, add an entry here and matching entries in <code>Config.harvestYields</code>, <code>Config.carcassPos</code>, <code>Config.headshotBones</code>, and <code>Config.itemPrices</code>.</p>
+
+        <!-- 4.3 Harvest Yields -->
+        <h3 class="entry-title" id="config-yields">Harvest Yields — Config.harvestYields</h3>
+        <p>Controls what items are given when a player skins an animal. The grade suffix (<code>_1</code>, <code>_2</code>, <code>_3</code>) is appended at runtime — only the base name is defined here.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Animal</th><th>Meat</th><th>Pelt</th><th>Feathers</th></tr></thead>
+            <tbody>
+              <tr><td><code>boar</code></td><td><code>boar_meat</code> ×2</td><td><code>boar_pelt</code> ×1</td><td>—</td></tr>
+              <tr><td><code>hawk</code></td><td><code>hawk_meat</code> ×1</td><td>—</td><td><code>hawk_feathers</code> ×2</td></tr>
+              <tr><td><code>cormorant</code></td><td><code>cormorant_meat</code> ×1</td><td>—</td><td><code>cormorant_feathers</code> ×2</td></tr>
+              <tr><td><code>coyote</code></td><td><code>coyote_meat</code> ×1</td><td><code>coyote_pelt</code> ×1</td><td>—</td></tr>
+              <tr><td><code>deer</code></td><td><code>deer_meat</code> ×3</td><td><code>deer_pelt</code> ×1</td><td>—</td></tr>
+              <tr><td><code>mtlion</code></td><td><code>mtlion_meat</code> ×2</td><td><code>mtlion_pelt</code> ×1</td><td>—</td></tr>
+              <tr><td><code>rabbit</code></td><td><code>rabbit_meat</code> ×1</td><td><code>rabbit_pelt</code> ×1</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.4 Grades -->
+        <h3 class="entry-title" id="config-grades">Kill Grades — Config.grades &amp; Config.goodWeapon</h3>
+        <p>Grade is determined <strong>server-side</strong> at the moment the animal dies. The grade suffix is appended to the item name before it is added to the player's inventory.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Grade</th><th>Label</th><th>Condition</th><th>Price Multiplier</th></tr></thead>
+            <tbody>
+              <tr class="state-2"><td>1 — Poor</td><td><code>★☆☆</code></td><td>Killed with any weapon not in <code>Config.goodWeapon</code></td><td>0.5×</td></tr>
+              <tr class="state-0"><td>2 — Good</td><td><code>★★☆</code></td><td>Killed with a weapon in <code>Config.goodWeapon</code></td><td>1.0×</td></tr>
+              <tr class="state-1"><td>3 — Perfect</td><td><code>★★★</code></td><td>Good weapon <strong>and</strong> kill shot hit the animal's headshot bone</td><td>2.0×</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Default <code>Config.goodWeapon</code> list: <code>WEAPON_MUSKET</code>, <code>WEAPON_SNIPERRIFLE</code>, <code>WEAPON_KNIFE</code>. Add or remove weapon hashes to adjust which weapons qualify for grade 2+.</p>
+        <div class="callout tip">Headshot bones are defined per-animal in <code>Config.headshotBones</code>. These are GTA bone IDs — the defaults are correct for all seven shipped animals. Only change them if you add custom animal models.</div>
+
+        <!-- 4.5 Prices -->
+        <h3 class="entry-title" id="config-prices">Sell Prices — Config.itemPrices</h3>
+        <p>Base price per single item sold at the butcher. The grade multiplier from <code>Config.grades</code> is applied on top at sell time. All values are in server currency units ($).</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Item base name</th><th>Base price</th><th>Poor (×0.5)</th><th>Good (×1.0)</th><th>Perfect (×2.0)</th></tr></thead>
+            <tbody>
+              <tr><td><code>boar_meat</code></td><td>$120</td><td>$60</td><td>$120</td><td>$240</td></tr>
+              <tr><td><code>boar_pelt</code></td><td>$180</td><td>$90</td><td>$180</td><td>$360</td></tr>
+              <tr><td><code>hawk_meat</code></td><td>$90</td><td>$45</td><td>$90</td><td>$180</td></tr>
+              <tr><td><code>hawk_feathers</code></td><td>$60</td><td>$30</td><td>$60</td><td>$120</td></tr>
+              <tr><td><code>cormorant_meat</code></td><td>$70</td><td>$35</td><td>$70</td><td>$140</td></tr>
+              <tr><td><code>cormorant_feathers</code></td><td>$45</td><td>$22</td><td>$45</td><td>$90</td></tr>
+              <tr><td><code>coyote_meat</code></td><td>$80</td><td>$40</td><td>$80</td><td>$160</td></tr>
+              <tr><td><code>coyote_pelt</code></td><td>$130</td><td>$65</td><td>$130</td><td>$260</td></tr>
+              <tr><td><code>deer_meat</code></td><td>$100</td><td>$50</td><td>$100</td><td>$200</td></tr>
+              <tr><td><code>deer_pelt</code></td><td>$200</td><td>$100</td><td>$200</td><td>$400</td></tr>
+              <tr><td><code>mtlion_meat</code></td><td>$160</td><td>$80</td><td>$160</td><td>$320</td></tr>
+              <tr><td><code>mtlion_pelt</code></td><td>$300</td><td>$150</td><td>$300</td><td>$600</td></tr>
+              <tr><td><code>rabbit_meat</code></td><td>$50</td><td>$25</td><td>$50</td><td>$100</td></tr>
+              <tr><td><code>rabbit_pelt</code></td><td>$75</td><td>$37</td><td>$75</td><td>$150</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.6 Anti-farm -->
+        <h3 class="entry-title" id="config-antifarm">Anti-Farm — Config.antiFarm</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>enable</code></td><td><code>true</code></td><td>Master switch. Set to <code>false</code> to disable all anti-farm checks.</td></tr>
+              <tr><td><code>size</code></td><td><code>70.0</code></td><td>Radius in metres that defines a "zone" for tracking purposes. Kills within this radius of a previous kill in the same window are counted together.</td></tr>
+              <tr><td><code>time</code></td><td><code>600</code></td><td>Time window in seconds. Zone kill records older than this are discarded.</td></tr>
+              <tr><td><code>maxAmount</code></td><td><code>3</code></td><td>Maximum kills allowed inside a zone within the time window before blocking.</td></tr>
+              <tr><td><code>personal</code></td><td><code>true</code></td><td><code>true</code> — tracking is per-player. <code>false</code> — all players share the same zone kill counters (server-wide limit per zone).</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">When a kill is blocked, the player receives the locale string <code>stop_farm</code>: <em>"Too many kills here — try a different area"</em>. The kill event is voided server-side before any items are awarded.</div>
+
+        <!-- 4.7 NPC Locations -->
+        <h3 class="entry-title" id="config-npcs">NPC Locations</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Field</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.butcher</code></td><td><code>coords</code></td><td><code>vector4(969.31, -2109.54, 31.48, 51.62)</code></td><td>World position and heading for the butcher NPC.</td></tr>
+              <tr><td></td><td><code>ped</code></td><td><code>'a_m_m_farmer_01'</code></td><td>GTA ped model for the butcher.</td></tr>
+              <tr><td></td><td><code>blip.sprite</code></td><td><code>141</code></td><td>Map blip sprite ID.</td></tr>
+              <tr><td></td><td><code>blip.colour</code></td><td><code>43</code></td><td>Map blip colour.</td></tr>
+              <tr><td></td><td><code>zone</code></td><td><code>{ length=2.5, width=2.5, minZ=30.0, maxZ=35.0 }</code></td><td>Interaction zone dimensions.</td></tr>
+              <tr><td><code>Config.leaderboard</code></td><td><code>coords</code></td><td><code>vec4(968.32, -2105.68, 31.47, 108.49)</code></td><td>World position and heading for the rankings NPC.</td></tr>
+              <tr><td></td><td><code>ped</code></td><td><code>'IG_Hunter'</code></td><td>GTA ped model for the leaderboard NPC.</td></tr>
+              <tr><td></td><td><code>blip.label</code></td><td><code>'Hunter Rankings'</code></td><td>Map blip label text.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.8 Debug -->
+        <h3 class="entry-title" id="config-debug">Debug</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.Debug</code></td><td><code>false</code></td><td>Prints verbose logs to the server/client console (F8). Disable in production.</td></tr>
+              <tr><td><code>Config.DebugZones</code></td><td><code>false</code></td><td>Draws zone markers and labels in the world for all registered interaction zones. Useful for placement testing.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 5. Spawn Zones ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="spawnzones">5 — Spawn Zones — spawnzones.lua</h2>
+        <p>Spawn zones are defined in <code>spawnzones.lua</code>, which is excluded from escrow. Each zone maintains a minimum and maximum live animal count, repopulating whenever a player is nearby. Zones go dormant when no player is within <code>Config.SpawnZoneSettings.activationRadius</code> metres — spawned peds are deleted after <code>despawnDelay</code> seconds.</p>
+
+        <h3 class="entry-title" id="spawnzones-defaults">Default Zones</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Location</th><th>Animals</th><th>Min / Max</th></tr></thead>
+            <tbody>
+              <tr><td><code>alamo_sea_north</code></td><td>Alamo Sea (North)</td><td>Deer, Coyote, Rabbit</td><td>3 / 6</td></tr>
+              <tr><td><code>grand_senora_west</code></td><td>Grand Senora Desert</td><td>Boar, Deer, Rabbit</td><td>9 / 15</td></tr>
+              <tr><td><code>mount_chiliad_base</code></td><td>Mount Chiliad Base</td><td>Deer, Mountain Lion, Coyote</td><td>2 / 4</td></tr>
+              <tr><td><code>tongva_hills</code></td><td>Tongva Hills</td><td>Deer, Coyote, Rabbit</td><td>3 / 6</td></tr>
+              <tr><td><code>vinewood_hills_north</code></td><td>Vinewood Hills</td><td>Deer, Rabbit</td><td>2 / 4</td></tr>
+              <tr><td><code>paleto_forest</code></td><td>Paleto Forest</td><td>Boar, Deer, Mountain Lion, Rabbit</td><td>4 / 8</td></tr>
+              <tr><td><code>raton_canyon_birds</code></td><td>Raton Canyon</td><td>Hawk, Cormorant</td><td>2 / 5</td></tr>
+              <tr><td><code>alamo_sea_shore_birds</code></td><td>Alamo Sea Shore</td><td>Cormorant, Hawk</td><td>3 / 6</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="spawnzones-schema">Zone Entry Schema</h3>
+        <pre><code>{
+    <span class="p">name</span>    = <span class="s">'my_zone'</span>,              <span class="c">-- unique identifier for debug logging</span>
+    <span class="p">coords</span>  = <span class="f">vector3</span>(<span class="n">x</span>, <span class="n">y</span>, <span class="n">z</span>),     <span class="c">-- centre of the spawn area</span>
+    <span class="p">radius</span>  = <span class="n">150.0</span>,                 <span class="c">-- metres around the centre for ped placement</span>
+    <span class="p">animals</span> = { <span class="s">'a_c_deer'</span>, <span class="s">'a_c_rabbit_01'</span> }, <span class="c">-- one is chosen at random per spawn event</span>
+    <span class="p">min</span>     = <span class="n">3</span>,                     <span class="c">-- minimum live animals maintained in the zone</span>
+    <span class="p">max</span>     = <span class="n">6</span>,                     <span class="c">-- maximum live animals allowed at once</span>
+}</code></pre>
+
+        <h3 class="entry-title" id="spawnzones-settings">Behaviour Settings — Config.SpawnZoneSettings</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>activationRadius</code></td><td><code>400.0</code></td><td>Metres from a zone's centre within which a player must be for the zone to become active.</td></tr>
+              <tr><td><code>checkInterval</code></td><td><code>15000</code></td><td>Milliseconds between each spawn manager re-evaluation pass for active zones.</td></tr>
+              <tr><td><code>despawnDelay</code></td><td><code>30</code></td><td>Seconds after the last nearby player leaves before managed peds in that zone are deleted. Set to <code>0</code> to despawn immediately.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 6. Hunting Flow ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="hunting-flow">6 — Hunting Flow</h2>
+        <p>The full sequence from kill to cash, with where each step runs:</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Step</th><th>Where</th><th>What happens</th></tr></thead>
+            <tbody>
+              <tr><td>1 — Kill</td><td>Client</td><td>Player kills an animal. The client detects the death, checks if the ped model is in <code>Config.carcass</code>, and registers a target or E-prompt on the corpse.</td></tr>
+              <tr><td>2 — Anti-farm check</td><td>Server</td><td>Before any loot is awarded, the server runs the anti-farm zone check. If the kill is blocked, the player is notified and the flow stops.</td></tr>
+              <tr><td>3 — Grade resolution</td><td>Server</td><td>The server evaluates the killing weapon hash against <code>Config.goodWeapon</code> and checks if the kill bone was in <code>Config.headshotBones</code>. Grade 1, 2, or 3 is assigned.</td></tr>
+              <tr><td>4 — Skin animal</td><td>Client → Server</td><td>Player selects "Skin Animal". A skinning animation plays client-side. On completion, the server adds the graded loot items to the player's inventory and records the kill in <code>ds_hunting_stats</code>.</td></tr>
+              <tr><td>5 — Pick up carcass</td><td>Client</td><td>Player selects "Pick Up Carcass". The carcass ped is attached to the player using the carry or drag animation defined in <code>Config.carcassPos</code>.</td></tr>
+              <tr><td>6 — Carry to butcher</td><td>Client</td><td>Player walks to the butcher NPC. Press <kbd>G</kbd> at any time to drop the carcass. A "too far" check prevents selling if the player is not near the actual carcass.</td></tr>
+              <tr><td>7 — Sell</td><td>Client → Server</td><td>Player opens the butcher shop UI. The server validates each item before sending shop data. Player confirms the sale. Server removes items from inventory, adds money, and records earnings in stats.</td></tr>
+              <tr><td>8 — Achievements</td><td>Server</td><td>After every kill and every sale, the server runs <code>Achievements.CheckAndUnlock</code>. Any newly unlocked achievements are sent to the client, which displays a notification. Cash rewards are claimable via the leaderboard NUI.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 7. Achievements ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="achievements">7 — Achievement System</h2>
+        <p>All 75 achievements are defined entirely server-side in <code>server/modules/achievements.lua</code>. There are three categories:</p>
+
+        <h3 class="entry-title" id="achievements-species">Per-Species Kill Milestones (56 achievements)</h3>
+        <p>Every species has 8 kill tier achievements. Rewards scale with the tier.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Tier</th><th>Kills</th><th>Reward</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>1</td><td>$150</td></tr>
+              <tr><td>2</td><td>5</td><td>$300</td></tr>
+              <tr><td>3</td><td>15</td><td>$500</td></tr>
+              <tr><td>4</td><td>30</td><td>$800</td></tr>
+              <tr><td>5</td><td>60</td><td>$1,200</td></tr>
+              <tr><td>6</td><td>100</td><td>$2,000</td></tr>
+              <tr><td>7</td><td>200</td><td>$3,500</td></tr>
+              <tr><td>8</td><td>500</td><td>$6,000</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="achievements-total">Total Kill Milestones (9 achievements)</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Title</th><th>Total Kills</th><th>Reward</th></tr></thead>
+            <tbody>
+              <tr><td>First Blood</td><td>10</td><td>$250</td></tr>
+              <tr><td>Budding Hunter</td><td>25</td><td>$400</td></tr>
+              <tr><td>Trail Tracker</td><td>50</td><td>$700</td></tr>
+              <tr><td>Wild Game Hunter</td><td>100</td><td>$1,200</td></tr>
+              <tr><td>Season Hunter</td><td>250</td><td>$2,500</td></tr>
+              <tr><td>Master of the Hunt</td><td>500</td><td>$4,000</td></tr>
+              <tr><td>Legend of the Wild</td><td>1,000</td><td>$7,500</td></tr>
+              <tr><td>Apex Predator</td><td>2,500</td><td>$15,000</td></tr>
+              <tr><td>Mythic Hunter</td><td>5,000</td><td>$30,000</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="achievements-earnings">Earnings Milestones (10 achievements)</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Title</th><th>Total Earned</th><th>Reward</th></tr></thead>
+            <tbody>
+              <tr><td>First Payday</td><td>$500</td><td>$100</td></tr>
+              <tr><td>Steady Income</td><td>$2,500</td><td>$250</td></tr>
+              <tr><td>Serious Business</td><td>$7,500</td><td>$500</td></tr>
+              <tr><td>Well-Stocked</td><td>$15,000</td><td>$1,000</td></tr>
+              <tr><td>Seasoned Trader</td><td>$30,000</td><td>$2,000</td></tr>
+              <tr><td>Hunting Mogul</td><td>$60,000</td><td>$3,500</td></tr>
+              <tr><td>Six-Figure Hunter</td><td>$100,000</td><td>$6,000</td></tr>
+              <tr><td>Quarter Million</td><td>$250,000</td><td>$12,000</td></tr>
+              <tr><td>Half a Million</td><td>$500,000</td><td>$20,000</td></tr>
+              <tr><td>Hunter King</td><td>$999,999</td><td>$40,000</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">Achievement unlock checks run server-side after every successful skin and every successful sale. Newly unlocked achievements are pushed to the client via <code>TriggerClientEvent('ds_hunting:achievementUnlocked', ...)</code> and displayed using <code>ox_lib</code>. Rewards are claimable through the leaderboard NUI and paid out via the active framework's money function.</div>
+
+        <h3 class="entry-title" id="achievements-db">Database Schema</h3>
+        <pre><code><span class="c">-- Auto-created on first start</span>
+ds_hunting_achievements (
+    citizenid  VARCHAR(50) PRIMARY KEY,
+    unlocked   LONGTEXT,   <span class="c">-- JSON array of unlocked achievement IDs</span>
+    claimed    LONGTEXT    <span class="c">-- JSON array of claimed (rewarded) achievement IDs</span>
+)</code></pre>
+      </div>
+
+      <!-- ── 8. Compat Bridges ───────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="bridges">8 — Compatibility Bridges</h2>
+        <p>Each bridge is a standalone Lua file in <code>compat/</code>. Every file contains a guard at the top that returns immediately if it is not the active bridge — only one executes per startup.</p>
+
+        <h3 class="entry-title" id="bridges-framework">Framework Bridges</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Config value</th><th>Client file</th><th>Server file</th><th>What it provides</th></tr></thead>
+            <tbody>
+              <tr><td><code>'qbx_core'</code></td><td><code>compat/frameworks/client/qbx_core.lua</code></td><td><code>compat/frameworks/server/qbx_core.lua</code></td><td>Player identity, money operations, job checks</td></tr>
+              <tr><td><code>'qb-core'</code></td><td><code>compat/frameworks/client/qb-core.lua</code></td><td><code>compat/frameworks/server/qb-core.lua</code></td><td>Same as above via QB-Core API</td></tr>
+              <tr><td><code>'esx'</code></td><td><code>compat/frameworks/client/esx.lua</code></td><td><code>compat/frameworks/server/esx.lua</code></td><td>Same as above via ESX API</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="bridges-inventory">Inventory Bridges</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Config value</th><th>What it provides</th></tr></thead>
+            <tbody>
+              <tr><td><code>'ox_inventory'</code></td><td>Item add/remove via ox_inventory exports. Checks item counts using <code>exports.ox_inventory:GetItemCount</code>.</td></tr>
+              <tr><td><code>'qb-inventory'</code></td><td>Item add/remove via QBCore player object functions.</td></tr>
+              <tr><td><code>'ps-inventory'</code></td><td>Item add/remove via ps-inventory exports.</td></tr>
+              <tr><td><code>'qs-inventory'</code></td><td>Item add/remove via qs-inventory exports.</td></tr>
+              <tr><td><code>'tgiann-inventory'</code></td><td>Item add/remove via tgiann-inventory exports.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="bridges-target">Target Bridges</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Config</th><th>Behaviour</th></tr></thead>
+            <tbody>
+              <tr><td><code>UseTarget = true</code>, <code>TargetResource = 'ox_target'</code></td><td>Registers entity targets on dead animal peds using <code>exports.ox_target:addEntityZone</code>.</td></tr>
+              <tr><td><code>UseTarget = true</code>, <code>TargetResource = 'qb-target'</code></td><td>Registers entity targets using <code>exports['qb-target']:AddTargetEntity</code>.</td></tr>
+              <tr><td><code>UseTarget = true</code>, <code>TargetResource = 'ds_target'</code></td><td>Registers entity targets using ds_target's identical export API.</td></tr>
+              <tr><td><code>UseTarget = false</code></td><td>Uses a proximity loop with an <code>ox_lib</code> context menu on <kbd>E</kbd>. No third-party target resource needed.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 9. Escrow ──────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="escrow">9 — Escrow</h2>
+        <div class="escrow-row">
+          <div class="escrow-card open-card">
+            <h4>Open (not escrowed)</h4>
+            <ul>
+              <li><code>config.lua</code></li>
+              <li><code>spawnzones.lua</code></li>
+            </ul>
+          </div>
+          <div class="escrow-card closed-card">
+            <h4>Escrowed</h4>
+            <ul>
+              <li>All <code>client/</code> modules</li>
+              <li>All <code>server/</code> modules</li>
+              <li>All <code>compat/</code> bridges</li>
+              <li><code>ui/</code> NUI files</li>
+              <li><code>versionchecker.lua</code></li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout warn">Locale files (<code>locales/*.json</code>) are loaded by the resource at runtime but are not listed in the escrow ignore block — they ship as plain JSON and are readable, but editing them may require a resource restart to take effect.</div>
+      </div>
+
+      <!-- ── 10. FAQ ────────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="faq">10 — FAQ</h2>
+
+        <h3 class="entry-title" id="faq-no-target">Animals aren't showing interaction prompts.</h3>
+        <p>Verify that <code>Config.UseTarget</code> and <code>Config.TargetResource</code> match your running setup. If using <code>ox_target</code>, confirm it is started before <code>ds_hunting</code>. If using the E-prompt mode (<code>UseTarget = false</code>), confirm the player is standing close enough to the dead animal — targets are only registered on peds whose model is in <code>Config.carcass</code>. Enable <code>Config.Debug = true</code> and check the F8 console for target registration logs.</p>
+
+        <h3 class="entry-title" id="faq-grade-1">Everything I harvest is grade 1 (poor).</h3>
+        <p>Grade is determined by the weapon used to kill the animal. Only weapons listed in <code>Config.goodWeapon</code> produce grade 2 or 3. The default list is <code>WEAPON_MUSKET</code>, <code>WEAPON_SNIPERRIFLE</code>, and <code>WEAPON_KNIFE</code>. If players are using other weapons, add those hashes to <code>Config.goodWeapon</code>. For grade 3 (perfect), the kill shot must also hit the specific headshot bone defined in <code>Config.headshotBones</code> for that animal.</p>
+
+        <h3 class="entry-title" id="faq-antifarm">Players are getting blocked too quickly by anti-farm.</h3>
+        <p>Tune <code>Config.antiFarm</code>: increase <code>maxAmount</code> to allow more kills per zone, reduce <code>size</code> to make zones smaller (so the radius covers less area), or increase <code>time</code> to widen the tracking window. Setting <code>personal = false</code> switches from per-player to server-wide zone limits, which is more restrictive — switch it back to <code>true</code> for per-player limits.</p>
+
+        <h3 class="entry-title" id="faq-no-achievements">Achievements aren't unlocking.</h3>
+        <p>Confirm that <code>oxmysql</code> is running and the <code>ds_hunting_stats</code> and <code>ds_hunting_achievements</code> tables were created (check the server console on first start). Achievement checks run after every successful skin and sell — if loot is being awarded but achievements are not triggering, enable <code>Config.Debug = true</code> and watch for achievement-related server console output. Also verify the player's <code>citizenid</code> is being resolved correctly by the active framework bridge.</p>
+
+        <h3 class="entry-title" id="faq-no-spawn">Animals aren't spawning in the spawn zones.</h3>
+        <p>Spawn zones only activate when a player is within <code>Config.SpawnZoneSettings.activationRadius</code> metres (default 400 m) of the zone centre. If no player is nearby, no peds spawn. Confirm <code>Config.UseSpawnZones = true</code> in <code>config.lua</code>. Enable <code>Config.Debug = true</code> and look for spawn manager logs in the server console. Also confirm OneSync is enabled — the server-side spawn manager requires it.</p>
+
+        <h3 class="entry-title" id="faq-items-missing">Items aren't appearing in the player's inventory after skinning.</h3>
+        <p>Confirm <code>Config.Inventory</code> matches a running inventory resource. The resolved inventory bridge logs a message on startup. Check that the item names in your inventory definition match the names in <code>Config.harvestYields</code> plus the grade suffix (e.g. <code>deer_meat_2</code>). All item definitions and images are provided in <code>INSTALL-ME/</code>.</p>
+
+        <h3 class="entry-title" id="faq-carry">The carry / drag animation looks wrong or the carcass is floating.</h3>
+        <p>Carry attachment offsets are defined per-animal in <code>Config.carcassPos</code> in <code>config.lua</code>. Adjust the <code>xPos</code>, <code>yPos</code>, <code>zPos</code>, <code>xRot</code>, <code>yRot</code>, <code>zRot</code> values for the affected animal. Set <code>drag = true</code> for large animals (drag animation) and <code>drag = false</code> for small ones (shoulder carry).</p>
+
+        <h3 class="entry-title" id="faq-add-animal">Can I add more animal species?</h3>
+        <p>Yes. Add an entry to <code>Config.carcass</code>, <code>Config.harvestYields</code>, <code>Config.carcassPos</code>, <code>Config.headshotBones</code>, and <code>Config.itemPrices</code> for the new animal. Add the new species to any spawn zones you want it to appear in. Create the item definitions and optionally add UI images to <code>ui/images/</code>. The resource reads all five tables at runtime — no core code changes are required.</p>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- Back to top -->
+  <button id="back-top" aria-label="Back to top">↑</button>
+
+  <script src="../script.js"></script>
+</body>
+</html>

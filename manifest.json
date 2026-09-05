@@ -1,6 +1,13 @@
 {
   "resources": [
     {
+      "name": "DS Hunting",
+      "path": "docs/ds_hunting.html",
+      "status": "release",
+      "description": "Full-featured wildlife hunting system with 7 animal species, a 3-grade loot quality system, carry animations, butcher shop NUI, server leaderboard, 75 achievements, anti-farm protection, and 8 managed spawn zones. Multi-framework, multi-inventory, multi-target.",
+      "tags": ["QBCore", "Qbox", "ESX", "FiveM", "ox_lib", "oxmysql", "Escrow"]
+    },
+    {
       "name": "DS Bridge",
       "path": "docs/ds_bridge.html",
       "status": "release",
