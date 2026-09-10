@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Duty Creator — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+    <a class="topbar-link" href="https://discord.gg/WRfVqsrAVC" target="_blank" rel="noopener">Discord ↗</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS Duty Creator</h1>
+        <p class="subtitle">In-game admin NUI panel for placing and managing duty clock-in/out locations for any job — no config editing required — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.0.0</span>
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-green">Qbox</span>
+          <span class="badge badge-green">ESX</span>
+          <span class="badge badge-blue">FiveM</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-purple">oxmysql</span>
+          <span class="badge badge-teal">Free</span>
+          <span class="badge badge-red">Escrow</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ──────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS Duty Creator is a free, fully in-game admin tool for placing duty clock-in and clock-out locations for any job on your server. Open the <code>/dutycreator</code> NUI panel, select a job, and use the visual placement mode to drop a duty zone anywhere in the world — all without editing a single config file or restarting the server.</p>
+        <ul style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Pick any job from the live job list (sourced directly from your framework).</li>
+          <li>Place duty locations in-world using a visual ray-cast cursor — just aim and press <kbd>E</kbd>.</li>
+          <li>All locations are stored in MySQL and loaded automatically on every server start.</li>
+          <li>Each location registers a sphere zone using your configured target resource — players see a <strong>Clock In</strong> or <strong>Clock Out</strong> option depending on their current duty state.</li>
+          <li>Delete any location from inside the NUI panel at any time.</li>
+          <li>Supports <strong>QBCore</strong>, <strong>Qbox (qbx_core)</strong>, and <strong>ESX</strong> out of the box.</li>
+          <li>Supports <strong>ox_target</strong>, <strong>qb-target</strong>, and <strong>ds_target</strong>.</li>
+        </ul>
+        <div class="callout tip">This is a <strong>free</strong> resource. All files except <code>config.lua</code> are escrow encrypted via Cfx escrow. <code>config.lua</code> is fully open and editable.</div>
+      </div>
+
+      <!-- ── 2. Requirements ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="requirements">2 — Requirements</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Resource</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>ox_lib</code></td><td>Required. Used for callbacks, notifications, and the text UI hint during placement mode.</td></tr>
+              <tr><td><code>oxmysql</code></td><td>Required for all database operations.</td></tr>
+              <tr><td><code>qbx_core</code> / <code>qb-core</code> / <code>es_extended</code></td><td>One framework must be running. Set <code>Config.Framework</code> to match.</td></tr>
+              <tr><td><code>ox_target</code> / <code>qb-target</code> / <code>ds_target</code></td><td>One target resource must be running. Set <code>Config.Target</code> to match.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 3. Installation ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">3 — Installation</h2>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Place the <code>ds_dutycreator</code> folder inside your <code>resources</code> directory (e.g. <code>resources/[ds]/ds_dutycreator</code>).</li>
+          <li>Add <code>ensure ds_dutycreator</code> to your <code>server.cfg</code> <strong>after</strong> <code>ox_lib</code>, <code>oxmysql</code>, your framework, and your target resource.</li>
+          <li>Start the resource — the <code>ds_duty_locations</code> table is created automatically on first run. No SQL import required.</li>
+          <li>Open <code>config.lua</code> and set <code>Config.Framework</code> and <code>Config.Target</code> to match your server.</li>
+          <li>In-game, type <code>/dutycreator</code> to open the panel.</li>
+        </ol>
+
+        <h3 class="entry-title" id="install-cfg">server.cfg Start Order</h3>
+        <pre><code>ensure ox_lib
+ensure oxmysql
+ensure qbx_core        <span class="c"># or qb-core / es_extended</span>
+ensure ox_target       <span class="c"># or qb-target / ds_target</span>
+ensure ds_dutycreator
+</code></pre>
+        <div class="callout">The <code>ds_duty_locations</code> MySQL table is created automatically using <code>CREATE TABLE IF NOT EXISTS</code> — safe to restart as many times as needed without losing data.</div>
+      </div>
+
+      <!-- ── 4. Configuration ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">4 — Configuration — config.lua</h2>
+        <p><code>config.lua</code> is the <strong>only file that is not escrow encrypted</strong>. It is fully open and freely editable.</p>
+        <pre><code>Config = {}
+
+<span class="c">-- The chat command that opens the Duty Creator UI.</span>
+Config.Command = <span class="s">'dutycreator'</span>
+
+<span class="c">-- Which framework is running on this server.</span>
+<span class="c">-- Options: 'qbx_core' | 'qb-core' | 'esx'</span>
+Config.Framework = <span class="s">'qbx_core'</span>
+
+<span class="c">-- Which targeting resource is installed on this server.</span>
+<span class="c">-- Options: 'ds_target' | 'ox_target' | 'qb-target'</span>
+Config.Target = <span class="s">'ox_target'</span>
+
+<span class="c">-- Radius (in metres) around each duty location that triggers the target option.</span>
+Config.TargetRadius = <span class="n">1.5</span>
+
+<span class="c">-- Icon shown in the target menu (ox_target / ds_target support icons).</span>
+Config.TargetIcon = <span class="s">'fa-solid fa-clock'</span>
+</code></pre>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Option</th><th>Values</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.Command</code></td><td>string</td><td>The chat command used to open the Duty Creator panel. Default: <code>'dutycreator'</code>.</td></tr>
+              <tr><td><code>Config.Framework</code></td><td><code>'qbx_core'</code> / <code>'qb-core'</code> / <code>'esx'</code></td><td>The framework running on your server. Used to fetch the job list and toggle on/off-duty state.</td></tr>
+              <tr><td><code>Config.Target</code></td><td><code>'ox_target'</code> / <code>'qb-target'</code> / <code>'ds_target'</code></td><td>The target resource used to register the Clock In / Clock Out sphere zones.</td></tr>
+              <tr><td><code>Config.TargetRadius</code></td><td>number (metres)</td><td>Radius of each duty sphere zone. Default: <code>1.5</code>.</td></tr>
+              <tr><td><code>Config.TargetIcon</code></td><td>Font Awesome class string</td><td>Icon displayed in the target menu option. Supported by <code>ox_target</code> and <code>ds_target</code>. Default: <code>'fa-solid fa-clock'</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 5. Duty Creator Panel ────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="panel">5 — Duty Creator Panel — /dutycreator</h2>
+        <p>Open the panel in-game with <code>/dutycreator</code>. Press <kbd>Escape</kbd> or click <strong>✕</strong> to close the panel.</p>
+
+        <h3 class="entry-title" id="panel-jobs">Job List</h3>
+        <p>The left sidebar lists every job registered in your framework (sourced live at panel open). Use the <strong>search bar</strong> to filter jobs by name in real time. Click any job to open its duty locations in the right panel.</p>
+
+        <h3 class="entry-title" id="panel-locations">Managing Locations</h3>
+        <p>With a job selected, the right panel shows all existing duty locations for that job. Each entry shows the world coordinates and a <strong>Delete</strong> button. To add a new location, click <strong>+ Add Location</strong> — this closes the NUI and enters <strong>Placement Mode</strong>.</p>
+
+        <h3 class="entry-title" id="panel-placement">Placement Mode</h3>
+        <p>In placement mode a red ray-cast cursor projects from your camera onto the world surface, along with a visual guide line from your character. A text hint appears at the top of the screen:</p>
+        <pre><code>[E] Place Location   [Backspace] Cancel
+</code></pre>
+        <p>All player controls are locked during placement except camera look, camera zoom, and the two action keys. Once you aim at your desired spot:</p>
+        <ul style="padding-left:20px;line-height:2.2;margin-bottom:14px">
+          <li>Press <kbd>E</kbd> to confirm — the coordinates are saved to the database, the zone is registered immediately, and the NUI panel reopens showing the new entry.</li>
+          <li>Press <kbd>Backspace</kbd> to cancel — no changes are made and the NUI panel reopens.</li>
+        </ul>
+
+        <h3 class="entry-title" id="panel-delete">Deleting a Location</h3>
+        <p>Click <strong>Delete</strong> on any location row. The row is removed from the database and the corresponding target zone is unregistered immediately — no restart required.</p>
+      </div>
+
+      <!-- ── 6. Duty Toggle ───────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="duty-toggle">6 — Duty Toggle</h2>
+        <p>When a player walks within <code>Config.TargetRadius</code> metres of a duty location and uses the target interaction, the zone shows one of two options:</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Option</th><th>Visible when</th><th>Result</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Clock In</strong></td><td>Player is currently <em>off duty</em></td><td>Toggles the player on-duty in the framework and sends a success notification.</td></tr>
+              <tr><td><strong>Clock Out</strong></td><td>Player is currently <em>on duty</em></td><td>Toggles the player off-duty in the framework and sends an inform notification.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">The server verifies that the player's current job matches the duty location's assigned job before toggling. If they are not employed in the correct job, the toggle is rejected and they receive an error notification.</div>
+
+        <h3 class="entry-title" id="duty-framework">Framework Behaviour</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Framework</th><th>Toggle method</th></tr></thead>
+            <tbody>
+              <tr><td><code>qbx_core</code></td><td>Server-side via <code>exports['qbx_core']:SetJobDuty(src, state)</code></td></tr>
+              <tr><td><code>qb-core</code></td><td>Server-side via <code>player.Functions.SetJobDuty(state)</code></td></tr>
+              <tr><td><code>esx</code></td><td>Server-side via <code>xPlayer.setMeta('onduty', state)</code> — the new state is also forwarded to the client via a net event so the duty check stays accurate.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 7. Database ──────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="database">7 — Database</h2>
+        <p>A single table is created automatically on first resource start. No manual SQL import is ever needed.</p>
+
+        <h4>ds_duty_locations schema</h4>
+        <pre><code>CREATE TABLE IF NOT EXISTS `ds_duty_locations` (
+    `id`       INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `jobname`  VARCHAR(64)  NOT NULL,
+    `x`        FLOAT        NOT NULL,
+    `y`        FLOAT        NOT NULL,
+    `z`        FLOAT        NOT NULL,
+    PRIMARY KEY (`id`),
+    INDEX `idx_jobname` (`jobname`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+</code></pre>
+        <p>One row per duty location. Multiple locations per job are supported — add as many as you need. Locations are loaded on every server start via a single <code>SELECT</code> query and registered as target zones on the client.</p>
+      </div>
+
+      <!-- ── 8. File Structure ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="file-structure">8 — File Structure</h2>
+        <pre><code>ds_dutycreator/
+├── config.lua                  <span class="c">← Framework, target, radius, icon options (open, editable)</span>
+├── fxmanifest.lua              <span class="c">← Resource manifest (v1.0.0)</span>
+│
+├── client/
+│   └── main.lua                <span class="c">← NUI callbacks, placement mode, zone registration (escrow)</span>
+│
+├── server/
+│   ├── main.lua                <span class="c">← Table init, job fetch, location CRUD, duty toggle (escrow)</span>
+│   └── versionchecker.lua      <span class="c">← Startup version check against GitHub releases (escrow)</span>
+│
+└── html/
+    ├── index.html              <span class="c">← NUI root</span>
+    ├── style.css               <span class="c">← Panel styles</span>
+    └── app.js                  <span class="c">← Panel NUI logic (job list, location list, placement flow)</span></code></pre>
+        <div class="callout"><code>config.lua</code> is the only file excluded from escrow encryption and can be freely edited. All other Lua files are encrypted via Cfx escrow.</div>
+      </div>
+
+      <!-- ── 9. Version Checker ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="version-checker">9 — Version Checker</h2>
+        <p>On every server start, DS Duty Creator checks for updates by fetching the latest version number from the DS Customs GitHub. The result is printed to the server console:</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Console output</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><span style="color:#4ade80">Running latest version 1.0.0</span></td><td>You are up to date.</td></tr>
+              <tr><td><span style="color:#facc15">Your version 1.0.0 is outdated! Latest version is 1.x.x</span></td><td>A newer version is available — update via Tebex.</td></tr>
+              <tr><td><span style="color:#a78bfa">Your version is higher than the latest</span></td><td>You are running a pre-release or development build.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>If no version file exists for the resource on GitHub the check is silently skipped — this will never cause errors or delay server startup.</p>
+      </div>
+
+      <!-- ── 10. FAQ ──────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="faq">10 — FAQ</h2>
+
+        <h3 class="entry-title" id="faq-restart">Do duty locations persist after a server restart?</h3>
+        <p>Yes. All locations are stored in the <code>ds_duty_locations</code> MySQL table and loaded automatically on every resource start. Zones are re-registered on all clients as they connect.</p>
+
+        <h3 class="entry-title" id="faq-wrongjob">A player at a duty location doesn't see the Clock In option</h3>
+        <p>The server verifies the player's current job matches the duty location's assigned job. If they are employed in a different job they will not see the option. The <code>canInteract</code> check on the client also hides the matching option based on current duty state.</p>
+
+        <h3 class="entry-title" id="faq-nozones">Zones don't appear after placing a location</h3>
+        <p>Zones are registered on the client immediately after a successful <code>addLocation</code> callback — no restart is needed. If a zone doesn't appear, verify that your <code>Config.Target</code> matches the resource that is actually running on your server, and that the target resource started before <code>ds_dutycreator</code>.</p>
+
+        <h3 class="entry-title" id="faq-nojobs">The job list is empty</h3>
+        <p>The job list is fetched live from your framework at panel open. Verify that <code>Config.Framework</code> is set correctly and that your framework resource is running and started before <code>ds_dutycreator</code>.</p>
+
+        <h3 class="entry-title" id="faq-esx">ESX duty state isn't updating on the client</h3>
+        <p>When using ESX, the server fires a <code>ds_dutycreator:setDutyState</code> net event to the player after every toggle. The client stores this state and uses it for the <code>canInteract</code> check. If the state appears stale, verify your ESX version exposes <code>xPlayer.setMeta</code>.</p>
+
+        <h3 class="entry-title" id="faq-free">Is this really free?</h3>
+        <p>Yes. DS Duty Creator is completely free. You can find it on the DS Customs Tebex store at no cost. <code>config.lua</code> is open and editable; all other Lua files are escrow encrypted to protect the source.</p>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+
+  <script src="../script.js"></script>
+</body>
+</html>

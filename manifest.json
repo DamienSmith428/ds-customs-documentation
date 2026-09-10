@@ -51,6 +51,14 @@
       "tags": ["QBCore", "FiveM", "oxmysql", "Escrow"]
     },
     {
+      "name": "DS Duty Creator",
+      "path": "docs/ds_dutycreator.html",
+      "status": "release",
+      "description": "Free in-game admin tool for placing and managing duty clock-in/out locations for any job. Visual placement mode, multi-framework, multi-target. No config editing required.",
+      "tags": ["QBCore", "Qbox", "ESX", "FiveM", "ox_lib", "oxmysql", "Free", "Escrow"],
+      "banner": "images/banners/DS-DutyCreator-Docs.png"
+    },
+    {
       "name": "DS DJ Booths",
       "path": "docs/ds_djbooths.html",
       "status": "release",
