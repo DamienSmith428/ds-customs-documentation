@@ -1,6 +1,13 @@
 {
   "resources": [
     {
+      "name": "DS Mining",
+      "path": "docs/ds_mining.html",
+      "status": "release",
+      "description": "Multi-framework, multi-inventory, target-aware mining script with 11 ore types, a server-side refinery queue, pickaxe break mechanics, a sell shop NPC, and a full NUI for selling and refining.",
+      "tags": ["QBCore", "Qbox", "ESX", "FiveM", "ox_lib", "oxmysql", "Escrow"]
+    },
+    {
       "name": "DS Hunting",
       "path": "docs/ds_hunting.html",
       "status": "release",

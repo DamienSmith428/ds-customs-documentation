@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Mining — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+    <a class="topbar-link" href="https://discord.gg/WRfVqsrAVC" target="_blank" rel="noopener">Discord ↗</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS Mining</h1>
+        <p class="subtitle">Multi-framework, multi-inventory, target-aware mining script with 11 ore types, a server-side refinery queue, a sell shop, pickaxe break mechanics, and a full NUI — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.0.0</span>
+          <span class="badge badge-green">QBX Core</span>
+          <span class="badge badge-green">QB-Core</span>
+          <span class="badge badge-green">ESX</span>
+          <span class="badge badge-purple">ox_inventory</span>
+          <span class="badge badge-purple">qb-inventory</span>
+          <span class="badge badge-purple">ps-inventory</span>
+          <span class="badge badge-purple">qs-inventory</span>
+          <span class="badge badge-purple">tgiann-inventory</span>
+          <span class="badge badge-blue">ox_lib</span>
+          <span class="badge badge-blue">oxmysql</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-red">Escrow</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS Mining is a complete ore mining economy for FiveM servers. Players head to any of the configurable rock nodes, equip a pickaxe, and mine raw ores via an animated progress bar. Mined ores can be sold directly at the sell shop NPC or submitted to the refinery NPC for server-side processing into refined bars and gems worth significantly more per unit.</p>
+        <p>All compatibility logic lives in isolated bridge files inside <code>core/</code> — only the files matching your config are ever active. <code>config.lua</code> and <code>strings.lua</code> are fully open; all other files are escrow-protected.</p>
+
+        <h3 class="entry-title" id="features">Feature Summary</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Feature</th><th>Detail</th></tr></thead>
+            <tbody>
+              <tr><td>11 mineable ore types</td><td>Coal, Iron, Steel, Copper, Silver, Gold, Quartz, Diamond, Emerald, Titanium, Platinum — each with unique sell price range and mine time.</td></tr>
+              <tr><td>Animated mining</td><td>Pickaxe prop attached to the player's hand, looping hammer animation, and a cancellable <code>ox_lib</code> progress bar per mine attempt.</td></tr>
+              <tr><td>Pickaxe break mechanic</td><td>Configurable chance for the pickaxe to break on each swing. When triggered, the pickaxe item is removed and the player is notified.</td></tr>
+              <tr><td>Sell shop NPC</td><td>Proximity-spawned NPC ped with a custom NUI sell panel. Players can sell individual ore types or an entire tab (raw or refined) in one click.</td></tr>
+              <tr><td>Refinery NPC &amp; queue</td><td>Second NPC ped opens a refinery UI. Players submit raw ores for processing; the server inserts a queue row and awards the refined item after a configurable timer.</td></tr>
+              <tr><td>11 refined ore outputs</td><td>Every raw ore has a matching refined counterpart (bars, ingots, cut gems) with a higher sell price than the raw input.</td></tr>
+              <tr><td>Server-authoritative sell &amp; refine</td><td>All item checks, distance validation, and inventory operations run server-side. Players farther than 5 m from a shop when a sell event fires are kicked.</td></tr>
+              <tr><td>Anti-cheat distance check</td><td>The mine-rock server event verifies the player is within 10 m of the claimed mining area. Exceeding this kicks the player.</td></tr>
+              <tr><td>Map blips</td><td>Each mining area gets a map blip. The sell shop and refinery each get their own labelled blip.</td></tr>
+              <tr><td>Multi-framework bridges</td><td>QBX Core, QB-Core, ESX. Active bridge chosen at startup via <code>Config.Framework</code>.</td></tr>
+              <tr><td>Multi-inventory bridges</td><td>ox_inventory, qb-inventory, ps-inventory, qs-inventory, tgiann-inventory. Set via <code>Config.Inventory</code>.</td></tr>
+              <tr><td>Multi-target bridges</td><td>ox_target, qb-target, ds_target, or proximity E-prompt. Set via <code>Config.UseTarget</code> and <code>Config.TargetResource</code>.</td></tr>
+              <tr><td>Open config files</td><td><code>config.lua</code> and <code>strings.lua</code> are excluded from escrow. All prices, timers, NPC coords, ore definitions, and notification strings are editable.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 2. Requirements ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="requirements">2 — Requirements</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Resource</th><th>Required?</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>ox_lib</code></td><td>Yes</td><td>Used for progress bars, text UI, points, notifications, and callbacks. Must start before ds_mining.</td></tr>
+              <tr><td><code>oxmysql</code></td><td>Yes</td><td>Async MySQL library for the refinery queue table. Must start before ds_mining.</td></tr>
+              <tr><td>Framework</td><td>Yes (one)</td><td><code>qbx_core</code>, <code>qb-core</code>, or <code>esx</code>. Set via <code>Config.Framework</code>.</td></tr>
+              <tr><td>Inventory</td><td>Yes (one)</td><td><code>ox_inventory</code>, <code>qb-inventory</code>, <code>ps-inventory</code>, <code>qs-inventory</code>, or <code>tgiann-inventory</code>. Set via <code>Config.Inventory</code>.</td></tr>
+              <tr><td>Target resource</td><td>No</td><td>Required only when <code>Config.UseTarget = true</code>. Options: <code>ox_target</code>, <code>qb-target</code>, <code>ds_target</code>. Set via <code>Config.TargetResource</code>. Set <code>Config.UseTarget = false</code> to use the built-in E-prompt instead.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 3. Installation ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">3 — Installation</h2>
+
+        <h3 class="entry-title" id="install-drop">Drop-in</h3>
+        <p>Copy the <code>ds_mining</code> folder into your resources directory.</p>
+
+        <h3 class="entry-title" id="install-sql">Database</h3>
+        <p>Import the refinery queue table by running the included SQL file against your database:</p>
+        <pre><code><span class="c">-- sql/ds_mining_refining.sql</span>
+CREATE TABLE IF NOT EXISTS `ds_mining_refining` (
+    `id`               INT UNSIGNED   NOT NULL AUTO_INCREMENT,
+    `citizenid`        VARCHAR(50)    NOT NULL,
+    `input_item`       VARCHAR(60)    NOT NULL,
+    `input_quantity`   INT UNSIGNED   NOT NULL DEFAULT 1,
+    `output_item`      VARCHAR(60)    NOT NULL,
+    `output_quantity`  INT UNSIGNED   NOT NULL DEFAULT 1,
+    `ready_at`         BIGINT         NOT NULL,
+    PRIMARY KEY (`id`),
+    INDEX `idx_citizenid` (`citizenid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;</code></pre>
+        <div class="callout tip">Rows are hard-deleted from the table when a player collects their refined item, so the table stays small over time. No periodic cleanup is needed.</div>
+
+        <h3 class="entry-title" id="install-items">Inventory Items</h3>
+        <p>Add all mining items to your inventory's item definitions. The ready-to-use definitions are in <code>Install/items.txt</code> (ox_inventory / QBCore / QBX format). For ESX servers, run <code>sql/mining_items-ESX-ONLY.sql</code> instead.</p>
+        <p>Copy the inventory images from <code>Install/</code> into your inventory's images folder. Images are provided for all 11 raw ores, all 11 refined items, and the pickaxe.</p>
+
+        <h3 class="entry-title" id="install-cfg">server.cfg Start Order</h3>
+        <pre><code>ensure oxmysql
+ensure ox_lib
+ensure qbx_core      <span class="c"># or qb-core / esx</span>
+ensure ox_inventory  <span class="c"># or whichever inventory you use</span>
+ensure ox_target     <span class="c"># only if Config.UseTarget = true</span>
+ensure ds_mining
+</code></pre>
+
+        <h3 class="entry-title" id="install-config">Quick-Start Config</h3>
+        <p>Open <code>configuration/config.lua</code> and set the four keys to match your server stack:</p>
+        <pre><code>Config.Framework      = <span class="s">'qbx'</span>         <span class="c">-- 'qbx' | 'qbcore' | 'esx'</span>
+Config.Inventory      = <span class="s">'ox_inventory'</span> <span class="c">-- 'ox_inventory' | 'qb-inventory' | 'ps-inventory' | 'qs-inventory' | 'tgiann-inventory'</span>
+Config.UseTarget      = <span class="k">true</span>           <span class="c">-- true = target resource | false = E-prompt</span>
+Config.TargetResource = <span class="s">'ox_target'</span>   <span class="c">-- 'ox_target' | 'qb-target' | 'ds_target' (only used when UseTarget = true)</span>
+</code></pre>
+        <div class="callout warn">Players must obtain a <code>pickaxe_mining</code> item before they can mine. Add it to a shop or give it via an admin command — it is not handed out by default.</div>
+      </div>
+
+      <!-- ── 4. Configuration ───────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">4 — Configuration — config.lua</h2>
+        <p>All settings live in <code>configuration/config.lua</code>, which is excluded from escrow. <code>configuration/strings.lua</code> controls all player-facing notification and UI text.</p>
+
+        <!-- 4.1 Bridge -->
+        <h3 class="entry-title" id="config-bridge">Framework / Inventory / Target</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.Framework</code></td><td><code>'qbx'</code></td><td>Active framework bridge. Accepted: <code>'qbx'</code>, <code>'qbcore'</code>, <code>'esx'</code>.</td></tr>
+              <tr><td><code>Config.Inventory</code></td><td><code>'ox_inventory'</code></td><td>Active inventory bridge. Accepted: <code>'ox_inventory'</code>, <code>'qb-inventory'</code>, <code>'ps-inventory'</code>, <code>'qs-inventory'</code>, <code>'tgiann-inventory'</code>.</td></tr>
+              <tr><td><code>Config.UseTarget</code></td><td><code>true</code></td><td><code>true</code> — register sphere zones and ped targets using the target resource. <code>false</code> — use proximity E-prompt via <code>ox_lib</code> text UI.</td></tr>
+              <tr><td><code>Config.TargetResource</code></td><td><code>'ox_target'</code></td><td>Which target resource to use when <code>UseTarget = true</code>. Accepted: <code>'ox_target'</code>, <code>'qb-target'</code>, <code>'ds_target'</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.2 Pickaxe -->
+        <h3 class="entry-title" id="config-axe">Pickaxe — Config.axe</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>prop</code></td><td><code>prop_tool_pickaxe</code></td><td>GTA V prop model hash attached to the player's hand during mining.</td></tr>
+              <tr><td><code>canBreak</code></td><td><code>true</code></td><td>Whether the pickaxe can break after a successful mine. When <code>false</code>, the pickaxe is never consumed by breaking.</td></tr>
+              <tr><td><code>breakChance</code></td><td><code>20</code></td><td>Percentage chance (1–100) the pickaxe breaks on each successful mine. Only evaluated when <code>canBreak = true</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">When the axe breaks, the <code>pickaxe_mining</code> item is removed server-side via <code>ds_customs:axeBroke</code>. If the server finds the player no longer has the item (possible race condition or exploit), it kicks them.</div>
+
+        <!-- 4.3 Ores -->
+        <h3 class="entry-title" id="config-ores">Ore Definitions — Config.rocks</h3>
+        <p>Each entry defines one mineable ore. The ore awarded per swing is chosen at random from this table by the server callback <code>ds_customs:getRockData</code>.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Item</th><th>Label</th><th>Sell Price Range</th><th>Mine Time</th></tr></thead>
+            <tbody>
+              <tr><td><code>coal_mining</code></td><td>Coal</td><td>$20 – $40</td><td>2,500 ms</td></tr>
+              <tr><td><code>iron_mining</code></td><td>Iron Ore</td><td>$70 – $100</td><td>3,000 ms</td></tr>
+              <tr><td><code>steel_mining</code></td><td>Steel Ore</td><td>$40 – $60</td><td>3,000 ms</td></tr>
+              <tr><td><code>copper_mining</code></td><td>Copper Ore</td><td>$110 – $140</td><td>3,500 ms</td></tr>
+              <tr><td><code>quartz_mining</code></td><td>Quartz Crystal</td><td>$60 – $90</td><td>3,500 ms</td></tr>
+              <tr><td><code>silver_mining</code></td><td>Silver Ore</td><td>$130 – $160</td><td>5,000 ms</td></tr>
+              <tr><td><code>diamond_mining</code></td><td>Diamond</td><td>$150 – $180</td><td>5,500 ms</td></tr>
+              <tr><td><code>gold_mining</code></td><td>Gold Ore</td><td>$200 – $250</td><td>6,500 ms</td></tr>
+              <tr><td><code>emerald_mining</code></td><td>Emerald</td><td>$190 – $220</td><td>6,000 ms</td></tr>
+              <tr><td><code>titanium_mining</code></td><td>Titanium Ore</td><td>$220 – $280</td><td>7,000 ms</td></tr>
+              <tr><td><code>platinum_mining</code></td><td>Platinum Ore</td><td>$260 – $320</td><td>8,000 ms</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Each entry schema:</p>
+        <pre><code>{ <span class="p">item</span> = <span class="s">'iron_mining'</span>, <span class="p">price</span> = {<span class="n">70</span>, <span class="n">100</span>}, <span class="p">mineTime</span> = <span class="n">3000</span>, <span class="p">image</span> = <span class="s">'iron_mining.png'</span> }</code></pre>
+
+        <!-- 4.4 Refined Ores -->
+        <h3 class="entry-title" id="config-refined">Refined Ore Definitions — Config.refinedrocks</h3>
+        <p>Maps each raw ore to its refined counterpart. The refinery UI uses these entries to build its recipe list, and the server uses them to validate and process refining jobs.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Input Item</th><th>Output Item</th><th>Output Label</th><th>Output Price Range</th><th>Refine Time</th></tr></thead>
+            <tbody>
+              <tr><td><code>coal_mining</code></td><td><code>coal_refined</code></td><td>Compressed Coal Brick</td><td>$80 – $110</td><td>90 s per unit</td></tr>
+              <tr><td><code>iron_mining</code></td><td><code>iron_refined</code></td><td>Refined Iron Bar</td><td>$180 – $220</td><td>120 s per unit</td></tr>
+              <tr><td><code>steel_mining</code></td><td><code>steel_refined</code></td><td>Refined Steel Bar</td><td>$120 – $160</td><td>120 s per unit</td></tr>
+              <tr><td><code>copper_mining</code></td><td><code>copper_refined</code></td><td>Refined Copper Bar</td><td>$280 – $340</td><td>150 s per unit</td></tr>
+              <tr><td><code>quartz_mining</code></td><td><code>quartz_refined</code></td><td>Polished Quartz</td><td>$200 – $260</td><td>180 s per unit</td></tr>
+              <tr><td><code>silver_mining</code></td><td><code>silver_refined</code></td><td>Silver Bar</td><td>$340 – $420</td><td>240 s per unit</td></tr>
+              <tr><td><code>diamond_mining</code></td><td><code>diamond_refined</code></td><td>Cut Diamond</td><td>$440 – $540</td><td>270 s per unit</td></tr>
+              <tr><td><code>emerald_mining</code></td><td><code>emerald_refined</code></td><td>Cut Emerald</td><td>$500 – $620</td><td>270 s per unit</td></tr>
+              <tr><td><code>gold_mining</code></td><td><code>gold_refined</code></td><td>Gold Bar</td><td>$520 – $640</td><td>300 s per unit</td></tr>
+              <tr><td><code>titanium_mining</code></td><td><code>titanium_refined</code></td><td>Titanium Ingot</td><td>$620 – $780</td><td>configurable</td></tr>
+              <tr><td><code>platinum_mining</code></td><td><code>platinum_refined</code></td><td>Platinum Ingot</td><td>$760 – $940</td><td>420 s per unit</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout tip">Refine time is multiplied by the quantity submitted. Submitting 5× iron ore at 120 s each gives a ready time of 600 seconds from submission.</div>
+        <p>Each entry schema:</p>
+        <pre><code>{ <span class="p">inputItem</span>   = <span class="s">'iron_mining'</span>,
+  <span class="p">outputItem</span>  = <span class="s">'iron_refined'</span>,
+  <span class="p">outputPrice</span> = {<span class="n">180</span>, <span class="n">220</span>},
+  <span class="p">refineTime</span>  = <span class="n">120</span>,           <span class="c">-- seconds per unit</span>
+  <span class="p">image</span>       = <span class="s">'iron_refined.png'</span> }</code></pre>
+
+        <!-- 4.5 Mining Areas -->
+        <h3 class="entry-title" id="config-areas">Mining Areas — Config.miningAreas</h3>
+        <p>A table of <code>vec3</code> world positions. Each entry spawns one rock node (sphere target zone / E-prompt point) and one map blip. The default seven nodes are located near the quarry area.</p>
+        <pre><code>Config.miningAreas = {
+    <span class="f">vec3</span>(<span class="n">2977.45</span>, <span class="n">2741.62</span>, <span class="n">44.62</span>),
+    <span class="f">vec3</span>(<span class="n">2982.64</span>, <span class="n">2750.89</span>, <span class="n">42.99</span>),
+    <span class="c">-- add or remove entries freely</span>
+}</code></pre>
+        <div class="callout">Each area's interaction radius is <strong>1.5 m</strong> (target mode) or <strong>2.0 m</strong> (E-prompt mode). The server's anti-cheat check allows up to <strong>10 m</strong> from the area centre — this accounts for slight position drift during the progress bar animation.</div>
+
+        <!-- 4.6 Sell Shop -->
+        <h3 class="entry-title" id="config-sell">Sell Shop — Config.sellShop</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>enabled</code></td><td><code>true</code></td><td>Master toggle. Set to <code>false</code> to disable the sell shop entirely.</td></tr>
+              <tr><td><code>coords</code></td><td><code>vec3(122.1, 6405.69, 30.46)</code></td><td>World position of the sell ped spawn point.</td></tr>
+              <tr><td><code>heading</code></td><td><code>314.65</code></td><td>Heading (degrees) the sell ped faces.</td></tr>
+              <tr><td><code>ped</code></td><td><code>'cs_joeminuteman'</code></td><td>GTA V ped model name for the sell NPC.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.7 Refinery Shop -->
+        <h3 class="entry-title" id="config-refinery">Refinery Shop — Config.refineryShop</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>enabled</code></td><td><code>true</code></td><td>Master toggle. Set to <code>false</code> to disable the refinery entirely.</td></tr>
+              <tr><td><code>coords</code></td><td><code>vec3(119.5, 6402.1, 30.46)</code></td><td>World position of the refinery ped spawn point.</td></tr>
+              <tr><td><code>heading</code></td><td><code>134.65</code></td><td>Heading (degrees) the refinery ped faces.</td></tr>
+              <tr><td><code>ped</code></td><td><code>'cs_floyd'</code></td><td>GTA V ped model name for the refinery NPC.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout tip">Both NPC peds are proximity-spawned — they only exist in the world when a player is within 30 m. They are deleted and their models released when the player moves away, keeping resource usage minimal.</div>
+
+        <!-- 4.8 Notifications -->
+        <h3 class="entry-title" id="config-notify">Notifications</h3>
+        <p>Notifications are fired via the <code>ds_customs:notify</code> net event, which calls <code>lib.notify</code> by default. To swap the notification system, edit the <code>RegisterNetEvent</code> handler at the bottom of <code>config.lua</code>:</p>
+        <pre><code>RegisterNetEvent(<span class="s">'ds_customs:notify'</span>)
+AddEventHandler(<span class="s">'ds_customs:notify'</span>, <span class="k">function</span>(title, message, msgType)
+    lib.notify({
+        title       = title,
+        description = message,
+        type        = msgType <span class="k">or</span> <span class="s">'inform'</span>,
+    })
+<span class="k">end</span>)</code></pre>
+        <p>Replace the body with any notification library your server uses. All notification strings are editable in <code>configuration/strings.lua</code>.</p>
+
+        <!-- 4.9 ESX compat -->
+        <h3 class="entry-title" id="config-esx">ESX Legacy Option</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.oldESX</code></td><td><code>false</code></td><td>Set to <code>true</code> if you receive a <code>canCarryItem</code> error on older ESX versions that use a weight/limit system instead of the modern carry API.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.10 Debug -->
+        <h3 class="entry-title" id="config-debug">Debug — Config.Debug</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.Debug</code></td><td><code>false</code></td><td>Set to <code>true</code> to enable verbose <code>[ds_mining] [DEBUG]</code> prints in the server console and the client F8 console. Disable in production — it is noisy.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout tip">When debug is enabled you will see prints for every stage of the mining flow: startup config summary, blip and zone registration, pickaxe checks, rock data selection, progress bar start / cancel / complete, axe break rolls, anti-cheat distance checks, inventory add/remove operations, and all DB queries for the refinery queue.</div>
+      </div>
+
+      <!-- ── 5. Strings ─────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="strings">5 — Strings — strings.lua</h2>
+        <p>All player-facing text lives in <code>configuration/strings.lua</code> inside the <code>Strings</code> table. Edit any value to localise or rephrase notification messages, text UI prompts, blip labels, and target option labels without touching any other file.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default value</th><th>Used for</th></tr></thead>
+            <tbody>
+              <tr><td><code>mining_blips</code></td><td><code>'Mine'</code></td><td>Map blip label for each mining area node.</td></tr>
+              <tr><td><code>sell_shop_blip</code></td><td><code>'Mining Sales'</code></td><td>Map blip label for the sell shop.</td></tr>
+              <tr><td><code>refinery_blip</code></td><td><code>'Mining Refinery'</code></td><td>Map blip label for the refinery.</td></tr>
+              <tr><td><code>mining_progress</code></td><td><code>'Mining...'</code></td><td>Progress bar label during a mine swing.</td></tr>
+              <tr><td><code>mine_rock</code></td><td><code>'[E] - Mine Rock'</code></td><td>Text UI shown near a rock node (E-prompt mode).</td></tr>
+              <tr><td><code>sell_material</code></td><td><code>'[E] - Open Mining Shop'</code></td><td>Text UI shown near the sell ped (E-prompt mode).</td></tr>
+              <tr><td><code>open_refinery</code></td><td><code>'[E] - Open Refinery'</code></td><td>Text UI shown near the refinery ped (E-prompt mode).</td></tr>
+              <tr><td><code>target_mine_rock</code></td><td><code>'Mine Rock'</code></td><td>Option label in the target menu for rock nodes.</td></tr>
+              <tr><td><code>target_sell_material</code></td><td><code>'Open Mining Shop'</code></td><td>Option label in the target menu for the sell ped.</td></tr>
+              <tr><td><code>target_open_refinery</code></td><td><code>'Open Refinery'</code></td><td>Option label in the target menu for the refinery ped.</td></tr>
+              <tr><td><code>rewarded</code> / <code>rewarded_desc</code></td><td><code>'Mined Rock'</code></td><td>Success notification when ore is added to inventory.</td></tr>
+              <tr><td><code>sold_for</code> / <code>sold_for_desc</code></td><td><code>'Items Sold'</code></td><td>Success notification after a sell. Uses <code>%s</code> format specifiers for count, label, and price.</td></tr>
+              <tr><td><code>refine_started</code> / <code>refine_started_desc</code></td><td><code>'Refining Started'</code></td><td>Notification when a refinery job is queued.</td></tr>
+              <tr><td><code>refine_collected</code> / <code>refine_collected_desc</code></td><td><code>'Collected'</code></td><td>Notification when a finished refined item is collected.</td></tr>
+              <tr><td><code>no_pickaxe</code> / <code>no_pickaxe_desc</code></td><td><code>'No Pickaxe'</code></td><td>Error shown when a player has no <code>pickaxe_mining</code> item.</td></tr>
+              <tr><td><code>axe_broke</code> / <code>axe_broke_desc</code></td><td><code>'Axe Broke'</code></td><td>Error shown when the pickaxe breaks.</td></tr>
+              <tr><td><code>cantcarry</code> / <code>cantcarry_desc</code></td><td><code>'Can't Carry'</code></td><td>Error shown when the player's inventory is full.</td></tr>
+              <tr><td><code>not_enough_ore</code></td><td><code>'Not Enough Ore'</code></td><td>Error shown when submitting more ore than the player owns.</td></tr>
+              <tr><td><code>refine_not_ready</code></td><td><code>'Not Ready'</code></td><td>Error shown when trying to collect before the timer expires.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 6. Mining Flow ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="mining-flow">6 — Mining Flow</h2>
+        <p>The full sequence from approach to ore in inventory:</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Step</th><th>Where</th><th>What happens</th></tr></thead>
+            <tbody>
+              <tr><td>1 — Interaction</td><td>Client</td><td>Player enters a rock node (2 m radius). In E-prompt mode a text UI appears; in target mode a target option appears. Pressing <kbd>E</kbd> / selecting the option calls <code>startMining(areaIndex)</code>.</td></tr>
+              <tr><td>2 — Pickaxe check</td><td>Server (callback)</td><td><code>ds_customs:checkPick</code> verifies the player has at least 1 <code>pickaxe_mining</code> in their inventory. If not, an error notification fires and mining is aborted.</td></tr>
+              <tr><td>3 — Rock data</td><td>Server (callback)</td><td><code>ds_customs:getRockData</code> picks a random entry from <code>Config.rocks</code> and returns its item name and <code>mineTime</code> to the client.</td></tr>
+              <tr><td>4 — Progress bar</td><td>Client</td><td>The pickaxe prop is attached to the player's right hand. The looping hammer animation plays. <code>lib.progressBar</code> runs for <code>mineTime</code> ms. Movement, vehicle entry, and combat are disabled. Player can cancel with the configured cancel key.</td></tr>
+              <tr><td>5 — Mine rock</td><td>Client → Server</td><td>On bar completion, the client fires <code>ds_customs:mineRock</code>. The server validates the player is within 10 m of the area, checks carry capacity, and awards the ore item.</td></tr>
+              <tr><td>6 — Axe break check</td><td>Client → Server</td><td>After a successful mine, the client rolls <code>math.random(1, 100) &lt; breakChance</code>. If triggered, <code>ds_customs:axeBroke</code> removes the <code>pickaxe_mining</code> item server-side.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 7. Refinery Flow ───────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="refinery-flow">7 — Refinery Flow</h2>
+        <p>The sequence from raw ore to refined item:</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Step</th><th>Where</th><th>What happens</th></tr></thead>
+            <tbody>
+              <tr><td>1 — Open refinery</td><td>Client → Server (callback)</td><td>Player interacts with the refinery NPC. <code>ds_customs:getRefineryData</code> fetches all recipe definitions with the player's current ore counts, plus any pending/ready queue rows from the database.</td></tr>
+              <tr><td>2 — Submit job</td><td>Client → Server (event)</td><td>Player picks a recipe, enters a quantity, and confirms. <code>ds_customs:startRefining</code> validates proximity (&lt;5 m), available ore count, deducts the input ores, and inserts a row into <code>ds_mining_refining</code> with a <code>ready_at</code> Unix timestamp.</td></tr>
+              <tr><td>3 — Timer</td><td>Server (database)</td><td>No active server thread runs for individual jobs — readiness is determined purely by comparing <code>os.time()</code> to <code>ready_at</code> at collection time.</td></tr>
+              <tr><td>4 — Collect</td><td>Client → Server (event)</td><td>Player opens the refinery UI and clicks Collect on a ready row. <code>ds_customs:collectRefined</code> validates proximity, ownership (<code>citizenid</code> match), readiness, and carry capacity. On success, the output items are added and the database row is deleted.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">If the player's inventory is full at collection time, the row is <strong>not</strong> deleted — they can try again after freeing space. The refined items are never lost.</div>
+      </div>
+
+      <!-- ── 8. Database Schema ──────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="database">8 — Database Schema</h2>
+        <pre><code>ds_mining_refining (
+    id               INT UNSIGNED   AUTO_INCREMENT PRIMARY KEY,
+    citizenid        VARCHAR(50)    <span class="c">-- player identifier from the active framework</span>
+    input_item       VARCHAR(60)    <span class="c">-- raw ore item name (e.g. 'iron_mining')</span>
+    input_quantity   INT UNSIGNED   <span class="c">-- how many units were submitted</span>
+    output_item      VARCHAR(60)    <span class="c">-- refined item name (e.g. 'iron_refined')</span>
+    output_quantity  INT UNSIGNED   <span class="c">-- how many units will be awarded (= input_quantity)</span>
+    ready_at         BIGINT         <span class="c">-- Unix timestamp when the job is ready to collect</span>
+    INDEX idx_citizenid (citizenid)
+)</code></pre>
+        <div class="callout tip">Rows are hard-deleted on collection. To manually clear a stuck job, run <code>DELETE FROM ds_mining_refining WHERE id = &lt;id&gt;;</code>.</div>
+      </div>
+
+      <!-- ── 9. Compatibility Bridges ───────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="bridges">9 — Compatibility Bridges</h2>
+        <p>All bridge files live under <code>core/</code>. Each file contains a guard at the top that returns immediately if it is not the active bridge — only the matching file executes per startup.</p>
+
+        <h3 class="entry-title" id="bridges-framework">Framework Bridges</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Config value</th><th>Client file</th><th>Server file</th><th>What it provides</th></tr></thead>
+            <tbody>
+              <tr><td><code>'qbx'</code></td><td><code>core/framework/client/qbx.lua</code></td><td><code>core/framework/server/qbx.lua</code></td><td>Player identity, money operations, item labels, kick function</td></tr>
+              <tr><td><code>'qbcore'</code></td><td><code>core/framework/client/qbcore.lua</code></td><td><code>core/framework/server/qbcore.lua</code></td><td>Same as above via QB-Core API</td></tr>
+              <tr><td><code>'esx'</code></td><td><code>core/framework/client/esx.lua</code></td><td><code>core/framework/server/esx.lua</code></td><td>Same as above via ESX API</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="bridges-inventory">Inventory Bridges</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Config value</th><th>What it provides</th></tr></thead>
+            <tbody>
+              <tr><td><code>'ox_inventory'</code></td><td><code>HasItem</code>, <code>AddItem</code>, <code>RemoveItem</code>, <code>GetItemCount</code>, <code>CanCarry</code> via ox_inventory exports.</td></tr>
+              <tr><td><code>'qb-inventory'</code></td><td>Same operations via QBCore player object functions.</td></tr>
+              <tr><td><code>'ps-inventory'</code></td><td>Same operations via ps-inventory exports.</td></tr>
+              <tr><td><code>'qs-inventory'</code></td><td>Same operations via qs-inventory exports.</td></tr>
+              <tr><td><code>'tgiann-inventory'</code></td><td>Same operations via tgiann-inventory exports.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="bridges-target">Target Bridges</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Config</th><th>Behaviour</th></tr></thead>
+            <tbody>
+              <tr><td><code>UseTarget = true</code>, <code>TargetResource = 'ox_target'</code></td><td>Registers 1.5 m sphere zones on rock coords and entity targets on NPC peds using ox_target exports.</td></tr>
+              <tr><td><code>UseTarget = true</code>, <code>TargetResource = 'qb-target'</code></td><td>Same using qb-target exports.</td></tr>
+              <tr><td><code>UseTarget = true</code>, <code>TargetResource = 'ds_target'</code></td><td>Same using ds_target's identical export API.</td></tr>
+              <tr><td><code>UseTarget = false</code></td><td>Uses <code>lib.points</code> for rock areas (event-driven, no polling loop) and a proximity check loop for NPC peds. <code>lib.showTextUI</code> prompts replace target options.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 10. Escrow ─────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="escrow">10 — Escrow</h2>
+        <div class="escrow-row">
+          <div class="escrow-card open-card">
+            <h4>Open (not escrowed)</h4>
+            <ul>
+              <li><code>configuration/config.lua</code></li>
+              <li><code>configuration/strings.lua</code></li>
+            </ul>
+          </div>
+          <div class="escrow-card closed-card">
+            <h4>Escrowed</h4>
+            <ul>
+              <li>All <code>client/</code> files</li>
+              <li>All <code>server/</code> files</li>
+              <li>All <code>core/</code> bridge files</li>
+              <li><code>html/</code> NUI files</li>
+              <li><code>versionchecker.lua</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 11. FAQ ────────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="faq">11 — FAQ</h2>
+
+        <h3 class="entry-title" id="faq-no-pickaxe">Players can't start mining — "No Pickaxe" every time.</h3>
+        <p>The server callback <code>ds_customs:checkPick</code> checks for the item <code>pickaxe_mining</code> (note the <code>_mining</code> suffix — not plain <code>pickaxe</code>). Confirm the item name in your inventory definitions matches exactly. Also verify the item was added to <code>Install/items.txt</code> (or the ESX SQL file) and that your inventory resource was restarted after the import.</p>
+
+        <h3 class="entry-title" id="faq-no-target">Rock nodes aren't showing interaction prompts.</h3>
+        <p>Verify <code>Config.UseTarget</code> and <code>Config.TargetResource</code> match your running setup. If using <code>ox_target</code>, confirm it starts before <code>ds_mining</code>. In E-prompt mode (<code>UseTarget = false</code>), the prompt only appears within 2 m of a rock node — stand closer. Check the F8 console for any bridge load errors on startup.</p>
+
+        <h3 class="entry-title" id="faq-axe-kick">Players are getting kicked when their axe breaks.</h3>
+        <p>The <code>ds_customs:axeBroke</code> server event removes <code>pickaxe_mining</code> from the player's inventory. If the item is not found when the event fires, the player is kicked as a potential exploit. This can happen if the item was removed by another script between the client-side check and the server event arriving. Ensure no other resource is consuming the pickaxe item concurrently. You can adjust the anti-cheat tolerance by editing the <code>axeBroke</code> handler in the escrow-protected server file.</p>
+
+        <h3 class="entry-title" id="faq-refinery-stuck">Refinery job is stuck — player can't collect.</h3>
+        <p>Connect to your database and check the <code>ds_mining_refining</code> table for the player's <code>citizenid</code>. If the <code>ready_at</code> timestamp is in the past and collection still fails, confirm the player is within 5 m of the refinery ped and that <code>Config.refineryShop.coords</code> matches the actual ped position. To manually clear a stuck row: <code>DELETE FROM ds_mining_refining WHERE id = &lt;id&gt;;</code>.</p>
+
+        <h3 class="entry-title" id="faq-cancarry">Getting a <code>canCarryItem</code> error on ESX.</h3>
+        <p>Set <code>Config.oldESX = true</code> in <code>config.lua</code>. This switches the carry check to the legacy ESX weight/limit API instead of the modern <code>canCarryItem</code> export.</td></p>
+
+        <h3 class="entry-title" id="faq-add-ore">Can I add more ore types?</h3>
+        <p>Yes. Add an entry to <code>Config.rocks</code> with the item name, price range, mine time, and image filename. If you want it refinable, add a matching entry to <code>Config.refinedrocks</code>. Create the item definition in your inventory and add the item images to <code>html/images/</code>. The server and NUI read all entries at startup — no core code changes are required.</p>
+
+        <h3 class="entry-title" id="faq-prices">How are sell prices calculated?</h3>
+        <p>Each ore item sold calls <code>math.random(price[1], price[2])</code> once per unit. The total reward is the sum of all individual rolls. This means selling 10× iron ore at <code>{70, 100}</code> will award between $700 and $1,000, distributed randomly per item.</p>
+
+        <h3 class="entry-title" id="faq-notification">How do I change the notification system?</h3>
+        <p>Edit the <code>ds_customs:notify</code> event handler at the bottom of <code>configuration/config.lua</code>. Replace <code>lib.notify</code> with your preferred notification library. The handler receives <code>title</code>, <code>message</code>, and <code>msgType</code> (<code>'success'</code>, <code>'error'</code>, <code>'inform'</code>) as arguments.</p>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- Back to top -->
+  <button id="back-top" aria-label="Back to top">↑</button>
+
+  <script src="../script.js"></script>
+</body>
+</html>
