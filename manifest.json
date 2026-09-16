@@ -1,6 +1,14 @@
 {
   "resources": [
     {
+      "name": "DS Burgershot",
+      "path": "docs/ds_burgershot.html",
+      "status": "release",
+      "description": "Full-featured player-owned restaurant job with a multi-station kitchen pipeline, live retail store, cash register billing, in-game HR management, prep storage, and a delivery mini-job. Multi-framework, multi-inventory, multi-target.",
+      "tags": ["QBCore", "Qbox", "FiveM", "ox_lib", "oxmysql", "Escrow"],
+      "banner": "images/banners/DS-Burgershot-Docs.png"
+    },
+    {
       "name": "DS Mining",
       "path": "docs/ds_mining.html",
       "status": "release",
@@ -19,7 +27,8 @@
     {
       "name": "DS Bridge",
       "path": "docs/ds_bridge.html",
-      "status": "release",
+      "status": "coming soon",
+      "hidden": true,
       "description": "Universal multi-framework bridge for all DS Customs resources. Abstracts framework, inventory, fuel, target, and vehicle keys behind a single normalised API. Supports custom modules.",
       "tags": ["QBCore", "Qbox", "ESX", "FiveM", "Dependency"]
     },

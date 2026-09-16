@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Burgershot — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+    <a class="topbar-link" href="https://discord.gg/WRfVqsrAVC" target="_blank" rel="noopener">Discord ↗</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS Burgershot</h1>
+        <p class="subtitle">Full-featured player-owned restaurant job. Employees cook real food through a multi-station kitchen pipeline, stock a live retail shop, bill customers at the cash register, manage staff via an in-game HR panel, and run deliveries for bonus pay — all inside a modular multi-framework, multi-inventory bridge system.</p>
+        <div class="badge-row">
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-green">Qbox</span>
+          <span class="badge badge-blue">FiveM</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-purple">ox_inventory / qs-inventory / qb-inventory</span>
+          <span class="badge badge-gray">ox_lib</span>
+          <span class="badge badge-gray">oxmysql</span>
+          <span class="badge badge-gray">Escrow</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS Burgershot is a complete player-run restaurant resource built around a realistic kitchen workflow. Employees collect raw ingredients, prep them at dedicated stations, cook proteins on the grill or deep fryer, and assemble finished burgers and sides before stocking them into the retail store for customers to purchase. A cash register billing system, in-game HR management, and a delivery mini-job round out the experience for every play style.</p>
+
+        <h4>Feature summary</h4>
+        <ul style="padding-left:20px;line-height:2.1">
+          <li>Five cooking stations — Cutting Board, BBQ/Grill, Deep Fryer, Assembly, and Drinks — each with its own target zone, animation, duration, and optional skill check</li>
+          <li>Multi-step cooking pipeline — raw ingredients → prepped → cooked → assembled finished item</li>
+          <li>Shared prep storage — intermediate items can be deposited and withdrawn by any on-duty employee</li>
+          <li>Live retail store — employees stock items; customers browse, add to cart, and checkout via the NUI shop</li>
+          <li>Boss-adjustable item prices — managers change store prices in-game without editing config</li>
+          <li>Cash register billing — employees generate a receipt item on every customer transaction</li>
+          <li>In-game HR panel — grade 3+ managers can hire, fire, promote, demote, and view the business bank balance</li>
+          <li>Duty clock-in/out zone — server-managed duty state with Discord webhook logging</li>
+          <li>Wardrobe ped — employees equip the restaurant uniform from a nearby NPC</li>
+          <li>Delivery mini-job — drive a van to randomised delivery locations for a pay bonus; items are consumed from inventory on delivery</li>
+          <li>Multi-framework bridge — QBCore and Qbox (ESX switchable via <code>Config.Framework</code>)</li>
+          <li>Auto-detecting inventory — supports ox_inventory, qs-inventory, ps-inventory, tgiann-inventory, and QBCore native</li>
+          <li>Multi-target bridge — ox_target, qb-target, or ds_target selectable via <code>Config.Target</code></li>
+          <li>Discord webhook logs for all HR events, billing, and deliveries</li>
+          <li>Map blip and configurable optional world markers at all interaction zones</li>
+        </ul>
+      </div>
+
+      <!-- ── 2. Dependencies ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="dependencies">2 — Dependencies</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Resource</th><th>Required</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>qb-core</code> / <code>qbx_core</code></td><td>Yes</td><td>QBCore or Qbox framework — set <code>Config.Framework = "qb"</code></td></tr>
+              <tr><td><code>oxmysql</code></td><td>Yes</td><td>All database queries use the oxmysql API</td></tr>
+              <tr><td><code>ox_lib</code></td><td>Yes</td><td>Used for context menus, input dialogs, and progress circles at cooking stations</td></tr>
+              <tr><td><code>ds_notify</code></td><td>Yes</td><td>Notification system — included in DS Customs suite</td></tr>
+              <tr><td><code>ds_progressbar</code></td><td>Yes</td><td>Progress bar shown during cooking — included in DS Customs suite</td></tr>
+              <tr><td><code>ds_prompt</code></td><td>Yes</td><td>Key interaction prompts — included in DS Customs suite</td></tr>
+              <tr><td><code>ds_businessbanking</code></td><td>Yes</td><td>Business bank account for store revenue — included in DS Customs suite</td></tr>
+              <tr><td><code>ox_target</code> / <code>qb-target</code> / <code>ds_target</code></td><td>One required</td><td>Set via <code>Config.Target</code>; any one of the three supported targets is sufficient</td></tr>
+              <tr><td><code>ox_inventory</code> / <code>qs-inventory</code> / <code>qb-inventory</code></td><td>One required</td><td>Auto-detected at startup; falls back to QBCore native inventory</td></tr>
+              <tr><td><code>illenium-appearance</code> / <code>qb-clothing</code> / <code>fivem-appearance</code></td><td>One required</td><td>Set via <code>Config.Appearance</code> — used for the wardrobe uniform ped</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 3. Installation ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">3 — Installation</h2>
+        <ol style="padding-left:20px;line-height:2.2;margin-bottom:16px;color:var(--text-dim)">
+          <li>Place <code>ds_burgershot</code> inside your server's <code>resources</code> directory.</li>
+          <li>Run <strong>or</strong> import <code>SQL + items + job/setup.sql</code> into your database — or let the resource auto-create the tables on first start.</li>
+          <li>Add all item definitions from <code>SQL + items + job/items.txt</code> to your inventory resource (qb-inventory or ox_inventory format — both are included in the file).</li>
+          <li>Add the job definition from <code>SQL + items + job/job.txt</code> to your framework's job list (<code>qb-core/shared/jobs.lua</code> for QBCore, or your ESX jobs table).</li>
+          <li>Open <code>shared/config.lua</code> and set <code>Config.Framework</code>, <code>Config.Inventory</code>, <code>Config.Target</code>, and <code>Config.Appearance</code> to match your server.</li>
+          <li>Adjust all location vectors in <code>Config.Locations</code> to fit your Burgershot interior.</li>
+          <li>Add <code>ensure ds_burgershot</code> to <code>server.cfg</code> <strong>after</strong> all dependencies.</li>
+        </ol>
+
+        <pre><code><span class="c"># server.cfg — ensure in this order</span>
+ensure oxmysql
+ensure ox_lib
+ensure qb-core          <span class="c"># or qbx_core</span>
+
+<span class="c"># DS Customs utilities (required)</span>
+ensure ds_notify
+ensure ds_progressbar
+ensure ds_prompt
+ensure ds_businessbanking
+
+<span class="c"># Your chosen target & inventory (examples)</span>
+ensure ox_target
+ensure ox_inventory
+
+ensure ds_burgershot</code></pre>
+
+        <div class="callout tip">The SQL tables are created automatically on first server start using <code>CREATE TABLE IF NOT EXISTS</code>. The <code>setup.sql</code> file is provided for reference or manual import if preferred.</div>
+      </div>
+
+      <!-- ── 4. Configuration ───────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">4 — Configuration — config.lua</h2>
+        <p><code>shared/config.lua</code> is the only open (not escrowed) file. All server-admin settings live here. Do not add logic — bridge files handle framework and inventory abstraction.</p>
+
+        <h4>Framework &amp; Bridge Selection</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Options</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.Framework</code></td><td><code>"qb"</code> · <code>"esx"</code></td><td>Select QBCore/Qbox or ESX as the active framework.</td></tr>
+              <tr><td><code>Config.Inventory</code></td><td><code>"auto"</code> · <code>"ox"</code> · <code>"qs"</code> · <code>"ps"</code> · <code>"tgiann"</code> · <code>"qb"</code></td><td><code>"auto"</code> detects at startup in the order: tgiann → ps → qs → ox → qb fallback.</td></tr>
+              <tr><td><code>Config.Target</code></td><td><code>"ox"</code> · <code>"qb"</code> · <code>"ds"</code></td><td>Interaction target resource. <code>"ds"</code> = ds_target (identical API to qb-target).</td></tr>
+              <tr><td><code>Config.Appearance</code></td><td><code>"illenium"</code> · <code>"qb"</code> · <code>"esx"</code> · <code>"fivem"</code></td><td>Clothing/appearance resource used when employees equip their uniform.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>General Settings</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.StoreName</code></td><td><code>"Burgershot"</code></td><td>Display name used in notifications and receipts.</td></tr>
+              <tr><td><code>Config.Debug</code></td><td><code>false</code></td><td>Set <code>true</code> to print verbose logs to the server console.</td></tr>
+              <tr><td><code>Config.JobName</code></td><td><code>"burgershot"</code></td><td>QBCore/ESX job name — must match the job definition in your framework.</td></tr>
+              <tr><td><code>Config.BusinessAccount</code></td><td><code>"burgershot"</code></td><td>Business bank account name used by <code>ds_businessbanking</code>.</td></tr>
+              <tr><td><code>Config.BillingEmployeeCut</code></td><td><code>0.50</code></td><td>Fraction of each billing transaction paid to the employee as cash (e.g. <code>0.50</code> = 50%).</td></tr>
+              <tr><td><code>Config.ReceiptEnabled</code></td><td><code>true</code></td><td>Whether billing transactions generate a receipt item.</td></tr>
+              <tr><td><code>Config.ReceiptItem</code></td><td><code>"bs_receipt"</code></td><td>Item name given to the customer on billing. Must be registered in your inventory.</td></tr>
+              <tr><td><code>Config.ShowMarkers</code></td><td><code>false</code></td><td>Set <code>true</code> to render cylinder markers at all interaction zones.</td></tr>
+              <tr><td><code>Config.MarkerDrawDistance</code></td><td><code>15.0</code></td><td>Distance in metres at which markers start rendering.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Delivery Settings</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Config.DeliveryVehicle</code></td><td><code>"boxville4"</code></td><td>Vehicle model spawned at the delivery vehicle spawn point.</td></tr>
+              <tr><td><code>Config.DeliveryPedModel</code></td><td><code>"mp_m_shopkeep_01"</code></td><td>Ped model for the delivery interaction NPC inside the restaurant.</td></tr>
+              <tr><td><code>Config.DeliveryMoney</code></td><td><code>{ min=500, max=1000 }</code></td><td>Pay range for a completed delivery run.</td></tr>
+              <tr><td><code>Config.DeliveryItems</code></td><td>array of item names</td><td>Items consumed from the employee's inventory on a successful delivery.</td></tr>
+              <tr><td><code>Config.DeliveryLocations</code></td><td>array of vector4</td><td>Randomised drop-off points across the map. Add or remove entries freely.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Discord Webhook Logging</h4>
+        <pre><code>Config.DiscordWebhook = <span class="s">''</span>   <span class="c">-- paste your webhook URL here</span>
+Config.DiscordLogo    = <span class="s">''</span>   <span class="c">-- paste a logo image URL here (shown as embed thumbnail)</span>
+Config.LogColor       = <span class="n">16737612</span>  <span class="c">-- embed colour (decimal) — default orange</span></code></pre>
+        <p>Leave <code>Config.DiscordWebhook</code> empty to disable all Discord logging.</p>
+      </div>
+
+      <!-- ── 5. Locations ───────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="locations">5 — Location Vectors</h2>
+        <p>All in-world interaction points are defined in <code>Config.Locations</code>. Adjust every vector to match your server's Burgershot interior layout.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><code>customerStore</code></td><td>Target zone where customers open the shop NUI to browse and buy.</td></tr>
+              <tr><td><code>employeeStore</code></td><td>Target zone where employees open the stock management NUI to deposit items and set prices.</td></tr>
+              <tr><td><code>HRMenu</code></td><td>Target zone for the HR panel (grade 3+ only) — hire, fire, promote, demote, view bank balance.</td></tr>
+              <tr><td><code>Duty</code></td><td>Clock-in / clock-out interaction point.</td></tr>
+              <tr><td><code>WashingHands</code></td><td>Mandatory hand-washing step required before employees can begin cooking.</td></tr>
+              <tr><td><code>CashRegister</code></td><td>Billing point where employees charge a customer and issue a receipt.</td></tr>
+              <tr><td><code>WardrobePed</code></td><td><code>vector4</code> — spawn position and heading of the uniform wardrobe ped.</td></tr>
+              <tr><td><code>DeliveryPed</code></td><td><code>vector4</code> — spawn position and heading of the delivery interaction NPC.</td></tr>
+              <tr><td><code>DeliveryVehicleSpawn</code></td><td><code>vector4</code> — where the delivery van spawns when a run is started.</td></tr>
+              <tr><td><code>storeBlip</code></td><td><code>vector3</code> — map blip position for the restaurant.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 6. Cooking Stations ────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="cooking-stations">6 — Cooking Stations</h2>
+        <p>Cooking stations are defined in <code>Config.CookingStations</code>. Each entry describes a physical target zone in the world, the ox_lib context menu items available at that station, and the recipe required to produce each output item.</p>
+
+        <h4>Station schema</h4>
+        <pre><code>Config.CookingStations = {
+    {
+        id         = <span class="s">"cutting"</span>,          <span class="c">-- unique station identifier</span>
+        label      = <span class="s">"Cutting Board"</span>,
+        menuId     = <span class="s">"cuttingBoard"</span>,     <span class="c">-- ox_lib context menu ID</span>
+        anim       = { dict = <span class="s">"..."</span>, clip = <span class="s">"..."</span> },  <span class="c">-- animation played during cooking</span>
+        duration   = <span class="n">10000</span>,              <span class="c">-- milliseconds the progress bar runs</span>
+        skillCheck = <span class="k">true</span>,               <span class="c">-- whether an ox_lib skill check fires mid-progress</span>
+        target     = {
+            coords  = vector3(<span class="n">x</span>, <span class="n">y</span>, <span class="n">z</span>),
+            width   = <span class="n">1.0</span>, length = <span class="n">3.2</span>, heading = <span class="n">35</span>,
+            minZ    = <span class="n">10.97</span>, maxZ = <span class="n">13.97</span>,
+            icon    = <span class="s">"fa-solid fa-knife"</span>, label = <span class="s">"Cutting Board"</span>
+        },
+        items = {
+            { label = <span class="s">"Slice Potato"</span>, output = <span class="s">"cutpotato"</span>, recipe = {{ name = <span class="s">"potato"</span>, amount = <span class="n">1</span> }} },
+        }
+    },
+}</code></pre>
+
+        <h4>Default stations</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Station</th><th>Produces</th><th>Skill Check</th></tr></thead>
+            <tbody>
+              <tr><td>Cutting Board</td><td>Cut Potato, Sliced Onion, Sliced Tomato, Shredded Lettuce</td><td>Yes</td></tr>
+              <tr><td>BBQ / Grill</td><td>Cooked Burger Patty, Cooked Vegan Patty</td><td>No</td></tr>
+              <tr><td>Deep Fryer</td><td>Fries, Chicken Nuggets</td><td>No</td></tr>
+              <tr><td>Make Food (Assembly)</td><td>Bleeder, Heart Stopper, Vegan Burger, Torpedo, Moneyshot</td><td>Yes</td></tr>
+              <tr><td>Drinks Station</td><td>Coke, Coffee, Milkshake</td><td>Yes</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">Stations that have <code>skillCheck = true</code> trigger an ox_lib skill-check challenge mid-progress. Failing cancels the current cook and refunds no ingredients.</div>
+      </div>
+
+      <!-- ── 7. Menu Items & Recipes ────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="recipes">7 — Menu Items &amp; Recipes</h2>
+        <p>The Assembly station produces the five sellable burgers. Each recipe requires pre-cooked and pre-prepped intermediates — players must work through the kitchen pipeline before assembling a final item.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Item</th><th>Output name</th><th>Default price</th><th>Recipe summary</th></tr></thead>
+            <tbody>
+              <tr><td>Bleeder Burger</td><td><code>bleeder</code></td><td>$15</td><td>Bun + 1× Cooked Patty + 2× Lettuce + 2× Cheddar + 2× Tomato</td></tr>
+              <tr><td>Heart Stopper</td><td><code>heartstopper</code></td><td>$15</td><td>Bun + 4× Cooked Patty + 3× Lettuce + 5× Cheddar + 3× Tomato</td></tr>
+              <tr><td>Vegan Burger</td><td><code>meatfree</code></td><td>$7</td><td>Bun + 2× Cooked Vegan Patty + 2× Lettuce + 1× Tomato</td></tr>
+              <tr><td>Torpedo Burger</td><td><code>torpedo</code></td><td>$15</td><td>Bun + 1× Cooked Patty + 2× Tomato + 2× Onion</td></tr>
+              <tr><td>Moneyshot Burger</td><td><code>moneyshot</code></td><td>$15</td><td>Bun + 2× Cooked Patty + 2× Tomato + 2× Onion + 2× Lettuce + 2× Cheddar</td></tr>
+              <tr><td>Fries</td><td><code>fries</code></td><td>$5</td><td>1× Cut Potato (deep fried)</td></tr>
+              <tr><td>Chicken Nuggets</td><td><code>cookednuggets</code></td><td>$8</td><td>1× Raw Nuggets (deep fried)</td></tr>
+              <tr><td>Coke</td><td><code>bscoke</code></td><td>$5</td><td>Drinks Station (no recipe ingredients)</td></tr>
+              <tr><td>Coffee</td><td><code>bscoffee</code></td><td>$5</td><td>Drinks Station (no recipe ingredients)</td></tr>
+              <tr><td>Milkshake</td><td><code>milkshake</code></td><td>$6</td><td>Drinks Station (no recipe ingredients)</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>Default item prices in <code>Config.Store.AllowedItems</code> are seeded to the database on first start. After that, managers can update prices live via the employee stock NUI — config changes to prices have no effect on existing database rows.</p>
+      </div>
+
+      <!-- ── 8. Store & Shop System ─────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="store">8 — Store &amp; Shop System</h2>
+
+        <h3 class="entry-title" id="store-stocking">Employee Stocking</h3>
+        <p>On-duty employees open the stock management NUI at the <code>employeeStore</code> target zone. From here they can deposit items from their inventory into the store, adjust prices (grade 3+ only), and view current stock levels. Items must be stocked before they appear in the customer shop.</p>
+
+        <h3 class="entry-title" id="store-customer">Customer Shop</h3>
+        <p>Any player can approach the <code>customerStore</code> target zone to open the shop NUI. Items are grouped by category (Burgers, Sides, Drinks) and show live stock counts and prices pulled from the database. Customers add items to a cart and pay in one checkout transaction. Payment is deducted from the player's bank account and deposited directly into the restaurant's <code>ds_businessbanking</code> account.</p>
+
+        <h3 class="entry-title" id="store-billing">Cash Register Billing</h3>
+        <p>Employees can also bill a nearby player directly from the <code>CashRegister</code> target zone. On a successful transaction, the customer's account is charged, the employee receives <code>Config.BillingEmployeeCut</code> × the transaction total as cash, and a <code>bs_receipt</code> item is given to the customer (if <code>Config.ReceiptEnabled = true</code>).</p>
+      </div>
+
+      <!-- ── 9. HR System ───────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="hr">9 — HR System</h2>
+        <p>The HR panel is accessible at the <code>HRMenu</code> target zone by any employee with grade ≥ 3. It provides full staff management without needing admin access or a server restart.</p>
+
+        <h4>HR actions</h4>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Action</th><th>Min. Grade</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td>Hire</td><td>3</td><td>Set a player's job to <code>burgershot</code> at grade 0 (Trainee).</td></tr>
+              <tr><td>Fire</td><td>3</td><td>Remove a player from the burgershot job.</td></tr>
+              <tr><td>Promote</td><td>3</td><td>Increase a current employee's grade by 1.</td></tr>
+              <tr><td>Demote</td><td>3</td><td>Decrease a current employee's grade by 1.</td></tr>
+              <tr><td>View Business Bank</td><td>3</td><td>View the restaurant's current <code>ds_businessbanking</code> account balance.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>All HR actions are logged to Discord via the configured webhook. Grade 4 (Owner) has no restriction on who they can promote or demote up to grade 3.</p>
+      </div>
+
+      <!-- ── 10. Delivery System ────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="delivery">10 — Delivery System</h2>
+        <p>On-duty employees can interact with the delivery NPC ped (<code>Config.Locations.DeliveryPed</code>) to start a delivery run. A delivery van spawns at <code>Config.Locations.DeliveryVehicleSpawn</code> and a random drop-off location from <code>Config.DeliveryLocations</code> is chosen as the waypoint.</p>
+
+        <p>On arrival at the drop-off point, the driver interacts with a customer ped model from <code>Config.DeliveryTargetPedModels</code>. The delivery items listed in <code>Config.DeliveryItems</code> are removed from the driver's inventory and a payout between <code>Config.DeliveryMoney.min</code> and <code>Config.DeliveryMoney.max</code> is deposited to their bank account.</p>
+
+        <div class="callout tip">Delivery items are taken from the employee's personal inventory, not the store stock. Employees must cook and hold items before starting a delivery run. Default delivery payout is $500–$1,000 per run.</div>
+      </div>
+
+      <!-- ── 11. Job Definition ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="job-definition">11 — Job Definition</h2>
+        <p>The default job grades are defined in <code>SQL + items + job/job.txt</code>. Paste the block into your framework's jobs file or database.</p>
+
+        <pre><code>burgershot = {
+    label = <span class="s">'Burgershot Restaurant'</span>,
+    type  = <span class="s">'restaurant'</span>,
+    defaultDuty = <span class="k">true</span>,
+    offDutyPay  = <span class="k">false</span>,
+    grades = {
+        [<span class="s">'0'</span>] = { name = <span class="s">'Trainee'</span>,    payment = <span class="n">80</span>  },
+        [<span class="s">'1'</span>] = { name = <span class="s">'Crew Member'</span>, payment = <span class="n">120</span> },
+        [<span class="s">'2'</span>] = { name = <span class="s">'Shift Lead'</span>,  payment = <span class="n">170</span> },
+        [<span class="s">'3'</span>] = { name = <span class="s">'Manager'</span>,     payment = <span class="n">240</span> },
+        [<span class="s">'4'</span>] = { name = <span class="s">'Owner'</span>,       isboss = <span class="k">true</span>, payment = <span class="n">350</span> },
+    },
+},</code></pre>
+
+        <p>Grade 3 (Manager) is the minimum for HR access and price management. Grade 4 (Owner) has full boss privileges including viewing and managing the business bank account.</p>
+      </div>
+
+      <!-- ── 12. Database Tables ──────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="database">12 — Database Tables</h2>
+        <p>Two tables are created automatically on first resource start using <code>CREATE TABLE IF NOT EXISTS</code>. No manual SQL import is required, but the file is provided in <code>SQL + items + job/setup.sql</code> for reference.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Table</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><code>ds_burgershot_store_inventory</code></td><td>Persists item stock levels and manager-set prices. One row per item. Seeded from <code>Config.Store.AllowedItems</code> on first start using <code>INSERT IGNORE</code>.</td></tr>
+              <tr><td><code>ds_burgershot_receipts</code></td><td>Purchase history — one row per billing transaction. Stores <code>citizenid</code>, item JSON, total, payment method (<code>cash</code>/<code>bank</code>), source type, and Unix timestamp.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 13. Escrow & Open Files ────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="escrow">13 — Escrow &amp; Open Files</h2>
+        <div class="escrow-row">
+          <div class="escrow-card open-card">
+            <h4>Open (editable)</h4>
+            <ul>
+              <li><code>shared/config.lua</code> — all settings</li>
+              <li><code>SQL + items + job/setup.sql</code></li>
+              <li><code>SQL + items + job/items.txt</code></li>
+              <li><code>SQL + items + job/job.txt</code></li>
+            </ul>
+          </div>
+          <div class="escrow-card closed-card">
+            <h4>Escrowed</h4>
+            <ul>
+              <li><code>client/main.lua</code></li>
+              <li><code>client/shop.lua</code></li>
+              <li><code>client/hr.lua</code></li>
+              <li><code>client/billing.lua</code></li>
+              <li><code>client/storage.lua</code></li>
+              <li><code>server/main.lua</code></li>
+              <li><code>server/shop.lua</code></li>
+              <li><code>server/hr.lua</code></li>
+              <li><code>server/billing.lua</code></li>
+              <li><code>server/storage.lua</code></li>
+              <li><code>html/</code> (NUI)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 14. File Structure ─────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="file-structure">14 — File Structure</h2>
+        <pre><code>ds_burgershot/
+├── fxmanifest.lua                   <span class="c">← Resource manifest (v1.0.1)</span>
+├── shared/
+│   └── config.lua                   <span class="c">← All settings — open and editable</span>
+├── bridge/
+│   ├── inventory_detect.lua         <span class="c">← Auto-detects active inventory at startup</span>
+│   ├── client/
+│   │   ├── framework.lua            <span class="c">← QBCore / ESX client bridge</span>
+│   │   ├── inventory.lua            <span class="c">← Inventory client bridge</span>
+│   │   ├── target.lua               <span class="c">← Target (ox/qb/ds) client bridge</span>
+│   │   └── appearance.lua           <span class="c">← Clothing/wardrobe client bridge</span>
+│   └── server/
+│       ├── framework.lua            <span class="c">← QBCore / ESX server bridge</span>
+│       └── inventory.lua            <span class="c">← Inventory server bridge</span>
+├── client/
+│   ├── main.lua                     <span class="c">← Duty, blips, markers, wardrobe, wash hands</span>
+│   ├── shop.lua                     <span class="c">← Cooking stations, ingredient shops, storage</span>
+│   ├── hr.lua                       <span class="c">← HR panel client logic</span>
+│   ├── billing.lua                  <span class="c">← Cash register client logic</span>
+│   └── storage.lua                  <span class="c">← Prep storage client logic</span>
+├── server/
+│   ├── versionchecker.lua           <span class="c">← Auto version check on startup</span>
+│   ├── main.lua                     <span class="c">← Delivery logic and server events</span>
+│   ├── shop.lua                     <span class="c">← Store stock management server logic</span>
+│   ├── hr.lua                       <span class="c">← HR callbacks and Discord logs</span>
+│   ├── billing.lua                  <span class="c">← Billing server logic and receipts</span>
+│   └── storage.lua                  <span class="c">← Prep storage server logic</span>
+├── html/
+│   ├── index.html                   <span class="c">← NUI root</span>
+│   ├── style.css                    <span class="c">← NUI styles</span>
+│   └── script.js                    <span class="c">← NUI logic</span>
+├── locales/
+│   └── en.json                      <span class="c">← Locale strings</span>
+└── SQL + items + job/
+    ├── setup.sql                    <span class="c">← Table creation SQL</span>
+    ├── items.txt                    <span class="c">← Item definitions (qb-inventory & ox_inventory)</span>
+    └── job.txt                      <span class="c">← Job grades definition</span></code></pre>
+      </div>
+
+      <!-- ── 15. Notes & FAQ ────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="notes">15 — Notes &amp; FAQ</h2>
+        <ul style="padding-left:20px;line-height:2.2;color:var(--text-dim)">
+          <li>Database tables are created automatically on first resource start using <code>CREATE TABLE IF NOT EXISTS</code> — no manual SQL import is required unless preferred.</li>
+          <li>Item definitions in <code>items.txt</code> must be added to your inventory resource before starting the server. Both qb-inventory and ox_inventory formats are provided in the same file.</li>
+          <li>Store item prices are seeded from <code>Config.Store.AllowedItems</code> on first start only (<code>INSERT IGNORE</code>). After that, changes to default prices in config have no effect — use the in-game employee stock NUI to update prices.</li>
+          <li>Employees must wash their hands at the <code>WashingHands</code> interaction point before any cooking station will allow them to cook. The state resets on duty-off.</li>
+          <li>Prep storage is shared between all on-duty employees — any employee can deposit prepped ingredients for another to use in assembly.</li>
+          <li><code>Config.BillingEmployeeCut</code> controls only the cash payout to the billing employee. The full transaction amount is deposited to the business bank account regardless.</li>
+          <li>Set <code>Config.Debug = true</code> and check the server console for detailed logs if any station or zone is not triggering correctly after repositioning vectors.</li>
+          <li>The delivery NPC ped and wardrobe ped are spawned and managed server-side — their models are set via <code>Config.DeliveryPedModel</code> and <code>Config.WardrobePedModel</code> respectively.</li>
+          <li>If you change <code>Config.JobName</code> after first use, update the job definition in your framework accordingly and ensure the database has been cleared or migrated.</li>
+        </ul>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+
+  <script src="../script.js"></script>
+</body>
+</html>
