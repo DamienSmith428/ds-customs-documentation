@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Police Grappler — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <!-- ══ Top bar ══════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+    <a class="topbar-link" href="https://discord.gg/WRfVqsrAVC" target="_blank" rel="noopener">Discord ↗</a>
+  </header>
+
+  <div class="shell">
+
+    <!-- ══ Sidebar ════════════════════════════════════════════════════════ -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <!-- ══ Content ════════════════════════════════════════════════════════ -->
+    <main class="content">
+
+      <!-- Doc header -->
+      <div class="doc-header">
+        <h1>DS Police Grappler</h1>
+        <p class="subtitle">Fully server-authorised police spike-and-grapple system. Officers install a physical grappler arm onto supported patrol vehicles, deploy it to hook a fleeing suspect's rear tyre, and release when the tyre pops and the vehicle stops — with a police-styled NUI HUD, Discord logging, and multi-target support — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.1.0</span>
+          <span class="badge badge-green">QBX Core</span>
+          <span class="badge badge-green">QB-Core</span>
+          <span class="badge badge-green">ESX</span>
+          <span class="badge badge-green">vRP</span>
+          <span class="badge badge-purple">ox_inventory</span>
+          <span class="badge badge-purple">qs-inventory</span>
+          <span class="badge badge-purple">qb-inventory</span>
+          <span class="badge badge-purple">ESX Inventory</span>
+          <span class="badge badge-purple">vRP Inventory</span>
+          <span class="badge badge-blue">oxmysql</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-red">Escrow</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS Police Grappler is a purpose-built law-enforcement tool for FiveM. A permitted officer (job-checked server-side) stands near a configured patrol vehicle and uses a target interaction or the <code>/grappler install</code> command to physically attach a custom prop arm to the rear of the vehicle. While driving, pressing <kbd>Y</kbd> deploys the arm and fires a rope toward the nearest eligible rear wheel of a target vehicle — popping the tyre, triggering a forced handbrake, and clamping the rope until the officer presses <kbd>Y</kbd> again to release.</p>
+        <p>All critical state transitions — install, deploy, attach, remove — are validated server-side before the client is allowed to proceed. A persistent NUI HUD shows live grappler status (Inactive / Installed / Deployed / Attached) and can be dragged to any position on screen; its position is saved per-player in MySQL and restored on next login.</p>
+        <p><code>config.lua</code> is fully open and controls every tunable value. All other files are escrow-protected.</p>
+
+        <h3 class="entry-title" id="features">Feature Summary</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Feature</th><th>Detail</th></tr></thead>
+            <tbody>
+              <tr><td>Physical prop arm</td><td>Three custom YDR props (<code>bv_bumper_a/b</code>, <code>bv_frame_a/b</code>, <code>bv_wheelblock</code>) are streamed with the resource — no external model pack required.</td></tr>
+              <tr><td>Server-authorised state machine</td><td>Inactive → Installed → Deployed → Used. Each transition is gated by a server event that validates permissions, inventory, and pending state before responding.</td></tr>
+              <tr><td>Multi-vehicle support</td><td>Any vehicle can be supported by adding an entry to <code>vehicles{}</code> in <code>config.lua</code>. Each entry specifies the attachment bone, 3-D offset, and rotation for perfect prop alignment.</td></tr>
+              <tr><td>Rope physics</td><td>A native GTA rope is created between the grappler prop and the target vehicle's rear wheel bone. Default length 10 m, max 12 m, type 2.</td></tr>
+              <tr><td>Tyre burst &amp; forced handbrake</td><td>On successful attach: the target tyre is burst (configurable minimum speed), and the target vehicle's handbrake is forced after a configurable delay.</td></tr>
+              <tr><td>NUI HUD</td><td>Police-styled status panel with four state pips (Inactive / Installed / Deployed / Attached), draggable via the <kbd>N</kbd> key, position persisted in MySQL per <code>citizenid</code>.</td></tr>
+              <tr><td>Multi-target support</td><td>ox_target, qb-target, and ds_target all supported. Set via <code>Target.targetResource</code>.</td></tr>
+              <tr><td>Permission checks</td><td>QBX (active), QBCore, ESX, vRP, and ACE permissions all configurable. Master switch <code>Permissions.EnablePermissions</code>.</td></tr>
+              <tr><td>Multi-inventory support</td><td>ox_inventory, qs-inventory, qb-inventory, ESX, vRP. The <code>grappler</code> item is consumed on install and returned on remove.</td></tr>
+              <tr><td>Discord webhook logging</td><td>Install, deploy, remove, and attach events are posted to a configurable Discord webhook with player name, vehicle, and timestamp.</td></tr>
+              <tr><td>Third-party event bridge</td><td>When <code>main.enableEvents = true</code>, the resource fires named events at each state change — allowing integration with MDTs, dispatch systems, or other resources.</td></tr>
+              <tr><td>Open config</td><td><code>config.lua</code> is excluded from escrow. All behaviour, vehicle definitions, translations, and keybinds are freely editable.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 2. Requirements ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="requirements">2 — Requirements</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Resource</th><th>Required?</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>oxmysql</code></td><td>Yes</td><td>Used to persist per-player HUD positions in <code>ds_grappler_ui_positions</code>. Must start before ds_policegrappler.</td></tr>
+              <tr><td>Framework</td><td>Yes (one)</td><td><code>qbx_core</code>, <code>qb-core</code>, <code>esx</code>, or <code>vRP</code>. Used for player identity, job checks, and money in the permission bridge.</td></tr>
+              <tr><td>Inventory</td><td>Yes (one)</td><td><code>ox_inventory</code>, <code>qs-inventory</code>, <code>qb-inventory</code>, ESX inventory, or vRP inventory. Controls the <code>grappler</code> item check and removal.</td></tr>
+              <tr><td>Target resource</td><td>Yes (one)</td><td><code>ox_target</code>, <code>qb-target</code>, or <code>ds_target</code>. Used for the Install / Uninstall interaction on patrol vehicles.</td></tr>
+              <tr><td>Server build</td><td>5181+</td><td>Declared as <code>fx_version 'cerulean'</code> with <code>lua54 'yes'</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">The NUI HUD is fully self-contained inside <code>html/</code> — no external UI framework or library is needed. The custom grappler props are bundled in <code>stream/</code> and loaded via <code>DLC_ITYP_REQUEST</code>.</div>
+      </div>
+
+      <!-- ── 3. Installation ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">3 — Installation</h2>
+
+        <h3 class="entry-title" id="install-drop">Drop-in</h3>
+        <p>Copy the <code>ds_policegrappler</code> folder into your resources directory (recommended path: inside a <code>[police]</code> or <code>[leo]</code> category folder).</p>
+
+        <h3 class="entry-title" id="install-sql">Database</h3>
+        <p>One table is created automatically by the resource on first start via <code>server/ui.lua</code>:</p>
+        <pre><code><span class="c">-- Created automatically — no manual SQL import needed</span>
+ds_grappler_ui_positions (
+    citizenid  VARCHAR(50) PRIMARY KEY,
+    pos_x      FLOAT,   <span class="c">-- HUD X position (percentage of viewport width)</span>
+    pos_y      FLOAT    <span class="c">-- HUD Y position (percentage of viewport height)</span>
+)</code></pre>
+        <div class="callout tip">The table is created with <code>CREATE TABLE IF NOT EXISTS</code> — no manual SQL import is required. If the table already exists from a previous version, it is left untouched.</div>
+
+        <h3 class="entry-title" id="install-items">Inventory Item</h3>
+        <p>Add the <code>grappler</code> item to your inventory's item definition file. The item definition and image are provided in the <code>install/</code> folder:</p>
+        <ul style="margin: 8px 0 12px 20px; display:flex; flex-direction:column; gap:5px;">
+          <li><code>install/item.txt</code> — item definition (copy into your inventory's items file)</li>
+          <li><code>install/grappler.png</code> — inventory image (copy into your inventory's images folder)</li>
+        </ul>
+        <p>For <strong>ox_inventory</strong>, the item entry looks like this:</p>
+        <pre><code><span class="p">grappler</span> = {
+    <span class="p">label</span>  = <span class="s">'Police Grappler'</span>,
+    <span class="p">weight</span> = <span class="n">1000</span>,
+    <span class="p">stack</span>  = <span class="k">false</span>,
+    <span class="p">close</span>  = <span class="k">true</span>,
+    <span class="p">image</span>  = <span class="s">'grappler.png'</span>,
+},</code></pre>
+
+        <h3 class="entry-title" id="install-cfg">server.cfg Start Order</h3>
+        <pre><code>ensure oxmysql
+ensure qbx_core      <span class="c"># or qb-core / esx / vRP</span>
+ensure ox_inventory  <span class="c"># or whichever inventory you use</span>
+ensure ox_target     <span class="c"># or qb-target / ds_target</span>
+ensure ds_policegrappler
+</code></pre>
+
+        <h3 class="entry-title" id="install-webhook">Discord Webhook</h3>
+        <p>Open <code>server/utils.lua</code> and set your webhook URL at the top of the file:</p>
+        <pre><code><span class="k">local</span> webhook = <span class="s">"https://discord.com/api/webhooks/YOUR_WEBHOOK_HERE"</span></code></pre>
+        <div class="callout warn">Logging is enabled by default (<code>logging.enabled = true</code> in <code>config.lua</code>). If you leave the webhook blank, log calls will silently fail — no errors will be thrown but no messages will be posted.</div>
+
+        <h3 class="entry-title" id="install-quickstart">Quick-Start Config</h3>
+        <p>Open <code>config.lua</code> and set the key selectors to match your server stack:</p>
+        <pre><code><span class="c">-- Target system</span>
+Target.targetResource = <span class="s">"ox_target"</span>  <span class="c">-- "ox_target" | "qb-target" | "ds_target"</span>
+
+<span class="c">-- Inventory (set exactly one to true)</span>
+Inventory.oxInventory      = <span class="k">true</span>
+Inventory.quasarInventory  = <span class="k">false</span>
+Inventory.coreInventory    = <span class="k">false</span>
+Inventory.ESX              = <span class="k">false</span>
+Inventory.vRP              = <span class="k">false</span>
+Inventory.qbCore           = <span class="k">false</span>
+
+<span class="c">-- Notifications (set exactly one to true)</span>
+Notifications.Framework.QBX    = <span class="k">true</span>
+Notifications.Framework.QBCore = <span class="k">false</span>
+Notifications.Framework.ESX    = <span class="k">false</span>
+
+<span class="c">-- Permissions (set exactly one framework block's Enabled to true)</span>
+Permissions.QBX.Enabled = <span class="k">true</span>
+Permissions.QBX.CheckJob.Enabled = <span class="k">true</span>
+Permissions.QBX.CheckJob.Jobs = {<span class="s">"police"</span>}
+</code></pre>
+      </div>
+
+      <!-- ── 4. Configuration ───────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">4 — Configuration — config.lua</h2>
+        <p><code>config.lua</code> is excluded from escrow and fully open to edit. Every tunable value is documented below.</p>
+
+        <!-- 4.1 main -->
+        <h3 class="entry-title" id="config-main">main{} — Core Behaviour</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>frameRotation</code></td><td><code>115</code></td><td>Rotation angle (degrees) of the grappler frame prop when mounted on the vehicle. Tune if prop alignment looks off on custom vehicles.</td></tr>
+              <tr><td><code>rotationRate</code></td><td><code>2.0</code></td><td>Multiplier for how fast the arm rotates during deploy animation. 1.0 = base speed, 2.0 = double.</td></tr>
+              <tr><td><code>burstTyre</code></td><td><code>true</code></td><td>Whether the grappler bursts the target vehicle's tyre on successful attach.</td></tr>
+              <tr><td><code>burstTyreLevel</code></td><td><code>700</code></td><td>Minimum vehicle speed (in game units) at which the tyre burst is applied.</td></tr>
+              <tr><td><code>developerMode</code></td><td><code>false</code></td><td>Enables verbose client-side debug output. Disable in production.</td></tr>
+              <tr><td><code>rope.defaultLength</code></td><td><code>10.0</code></td><td>Default length (metres) of the deployed rope.</td></tr>
+              <tr><td><code>rope.maxLength</code></td><td><code>12.0</code></td><td>Maximum length the rope can stretch before it behaves as fully taut.</td></tr>
+              <tr><td><code>rope.type</code></td><td><code>2</code></td><td>Native rope type ID. Type 2 is a smooth heavy rope.</td></tr>
+              <tr><td><code>forceHandbrake.enabled</code></td><td><code>true</code></td><td>Whether to force the handbrake on the target vehicle after a successful grapple.</td></tr>
+              <tr><td><code>forceHandbrake.timeToForceHandbrake</code></td><td><code>2</code></td><td>Seconds after attach before the forced handbrake is applied.</td></tr>
+              <tr><td><code>forceHandbrake.maxSpeedAfterHandbrake</code></td><td><code>40</code></td><td>Speed cap (MPH) enforced on the target vehicle once the handbrake fires.</td></tr>
+              <tr><td><code>disallowedVehicleClasses</code></td><td><code>{8,13,14,15,16}</code></td><td>GTA vehicle class IDs the grappler cannot be used against. Defaults block motorcycles, bicycles, boats, helicopters, and planes.</td></tr>
+              <tr><td><code>disableVehicleOnGrapple</code></td><td><code>false</code></td><td>If <code>true</code>, the target vehicle's engine is disabled on grapple.</td></tr>
+              <tr><td><code>radiusToAttachToVehicle</code></td><td><code>2</code></td><td>Metres from the target tyre the rope must be within to successfully attach. Increase if attach is unreliable.</td></tr>
+              <tr><td><code>checkForUndeletedObjects</code></td><td><code>true</code></td><td>Periodically checks for any orphaned grappler props left in the world and removes them.</td></tr>
+              <tr><td><code>checkDistance</code></td><td><code>100.0</code></td><td>Radius (metres) used by the object cleanup check.</td></tr>
+              <tr><td><code>grapplerInstallDistance</code></td><td><code>10.0</code></td><td>Maximum distance (metres) between the officer and the vehicle for an install to be permitted.</td></tr>
+              <tr><td><code>enableEvents</code></td><td><code>false</code></td><td>Fires named Lua events at each state transition for third-party integration (MDT, dispatch). See <code>client/utils.lua</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.2 vehicles -->
+        <h3 class="entry-title" id="config-vehicles">vehicles{} — Supported Patrol Vehicles</h3>
+        <p>Each key is a vehicle model hash (using the backtick hash syntax). Only vehicles listed here will show the Install target and accept the <code>/grappler install</code> command.</p>
+        <pre><code>vehicles = {
+    [<span class="s">`police`</span>] = {
+        <span class="p">name</span>     = <span class="s">"Response Car"</span>,       <span class="c">-- used in logs only</span>
+        <span class="p">boneName</span> = <span class="s">"engine"</span>,            <span class="c">-- attachment bone on the vehicle model</span>
+        <span class="p">offSet</span>   = {<span class="n">0.0</span>, <span class="n">1.25</span>, <span class="n">0.0</span>},  <span class="c">-- X / Y / Z offset from the bone</span>
+        <span class="p">rotation</span> = {<span class="n">0.0</span>, <span class="n">0.0</span>, <span class="n">0.0</span>},  <span class="c">-- pitch / roll / yaw adjustment</span>
+    },
+}</code></pre>
+        <div class="callout tip">To add a new vehicle, duplicate an entry and change the model hash key. Use <code>developerMode = true</code> to display bone position helpers in-world while tuning <code>offSet</code> and <code>rotation</code>.</div>
+
+        <!-- 4.3 Target -->
+        <h3 class="entry-title" id="config-target">Target{} — Target System</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>targetResource</code></td><td><code>"ox_target"</code></td><td>Which target resource to register Install / Uninstall interactions on. Accepted: <code>"ox_target"</code>, <code>"qb-target"</code>, <code>"ds_target"</code>.</td></tr>
+              <tr><td><code>distance</code></td><td><code>2.5</code></td><td>Metres from the vehicle bone within which the target interaction appears.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.4 GrapplerUI -->
+        <h3 class="entry-title" id="config-ui">GrapplerUI{} — NUI HUD</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>commandName</code></td><td><code>"grapplerui"</code></td><td>Chat command to toggle the HUD. Invoke as <code>/grapplerui</code>.</td></tr>
+              <tr><td><code>focusKey</code></td><td><code>249</code></td><td>Control ID for toggling NUI mouse focus (drag mode). 249 = <kbd>N</kbd> key.</td></tr>
+              <tr><td><code>deployHotkeyLabel</code></td><td><code>"Y"</code></td><td>Label displayed in the HUD for the deploy/release key.</td></tr>
+              <tr><td><code>detachHotkeyLabel</code></td><td><code>"N"</code></td><td>Label displayed in the HUD for the handbrake-release key.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.5 grapplerCommand -->
+        <h3 class="entry-title" id="config-command">grapplerCommand{} — CLI Command</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>enabled</code></td><td><code>true</code></td><td>Whether the <code>/grappler</code> command is registered at all.</td></tr>
+              <tr><td><code>commandName</code></td><td><code>"grappler"</code></td><td>The base command name. Sub-commands: <code>install</code>, <code>deploy</code>, <code>remove</code>, <code>reset</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.6 Inventory -->
+        <h3 class="entry-title" id="config-inventory">Inventory{} — Item Bridge</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>itemName</code></td><td><code>"grappler"</code></td><td>The inventory item name checked and consumed on install.</td></tr>
+              <tr><td><code>oxInventory</code></td><td><code>true</code></td><td>Enable to use ox_inventory.</td></tr>
+              <tr><td><code>quasarInventory</code></td><td><code>false</code></td><td>Enable to use qs-inventory.</td></tr>
+              <tr><td><code>coreInventory</code></td><td><code>false</code></td><td>Enable to use core_inventory (qb-inventory).</td></tr>
+              <tr><td><code>ESX</code></td><td><code>false</code></td><td>Enable to use ESX inventory.</td></tr>
+              <tr><td><code>vRP</code></td><td><code>false</code></td><td>Enable to use vRP inventory.</td></tr>
+              <tr><td><code>qbCore</code></td><td><code>false</code></td><td>Enable to use QB-Core inventory via player object.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn">Enable exactly one inventory flag. Enabling multiple flags simultaneously will cause duplicate item checks.</div>
+
+        <!-- 4.7 Notifications -->
+        <h3 class="entry-title" id="config-notifications">Notifications{} — Notification Bridge</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>Enabled</code></td><td><code>true</code></td><td>Master switch for all player-facing notifications.</td></tr>
+              <tr><td><code>Framework.QBX</code></td><td><code>true</code></td><td>Use QBX Core notifications.</td></tr>
+              <tr><td><code>Framework.QBCore</code></td><td><code>false</code></td><td>Use QB-Core notifications.</td></tr>
+              <tr><td><code>Framework.ESX</code></td><td><code>false</code></td><td>Use ESX notifications.</td></tr>
+              <tr><td><code>Framework.vRP</code></td><td><code>false</code></td><td>Use vRP notifications.</td></tr>
+              <tr><td><code>Framework.okok</code></td><td><code>false</code></td><td>Use okOkNotify.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.8 Permissions -->
+        <h3 class="entry-title" id="config-permissions">Permissions{} — Access Control</h3>
+        <p>Each framework block has its own <code>Enabled</code> switch. Enable the block that matches your framework and configure its sub-options. All checks run server-side.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Block</th><th>Options</th></tr></thead>
+            <tbody>
+              <tr><td><code>EnablePermissions</code></td><td>Master switch. Set <code>false</code> to allow all players regardless of job.</td></tr>
+              <tr><td><code>AcePermissions</code></td><td><code>Enabled</code> — gate access via FiveM ACE permissions.</td></tr>
+              <tr><td><code>ESX</code></td><td><code>Enabled</code>, <code>CheckJob.Enabled</code>, <code>CheckJob.Jobs</code> — restrict by ESX job name.</td></tr>
+              <tr><td><code>vRP</code></td><td><code>Enabled</code>, <code>CheckGroup</code>, <code>CheckPermission</code> — restrict by vRP group or permission string.</td></tr>
+              <tr><td><code>QBCore</code></td><td><code>Enabled</code>, <code>CheckJob.Enabled</code>, <code>CheckJob.Jobs</code>, <code>CheckPermission</code> — restrict by QB-Core job or permission.</td></tr>
+              <tr><td><code>QBX</code></td><td><code>Enabled</code>, <code>CheckJob.Enabled</code>, <code>CheckJob.Jobs</code> — restrict by QBX Core job. Active default: job = <code>"police"</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.9 Deploy key -->
+        <h3 class="entry-title" id="config-keys">Deploy Key</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>useGrapplerDeployKey</code></td><td><code>true</code></td><td>Use the hardcoded control defined in <code>deployGrapplerKey</code>.</td></tr>
+              <tr><td><code>deployGrapplerKey</code></td><td><code>{0, 246}</code></td><td>Control group and control ID for the deploy/retract/release key. Default: group 0, control 246 = <kbd>Y</kbd>.</td></tr>
+              <tr><td><code>useKeyMapping</code></td><td><code>false</code></td><td>Register the key as a FiveM keymapping (player-rebindable in settings). When <code>true</code>, <code>deployGrapplerKey</code> is ignored.</td></tr>
+              <tr><td><code>keyMappingDefault</code></td><td><code>"Y"</code></td><td>The default key shown in the key mapping settings when <code>useKeyMapping = true</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.10 Logging -->
+        <h3 class="entry-title" id="config-logging">logging{} — Discord Logging</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>enabled</code></td><td><code>true</code></td><td>Master switch for Discord webhook logging.</td></tr>
+              <tr><td><code>displayName</code></td><td><code>"Grappler"</code></td><td>Webhook bot display name.</td></tr>
+              <tr><td><code>colour</code></td><td><code>31487</code></td><td>Embed accent colour (decimal). 31487 = bright green.</td></tr>
+              <tr><td><code>title</code></td><td><code>"**New Log**"</code></td><td>Embed title text.</td></tr>
+              <tr><td><code>icon</code></td><td>DS Customs URL</td><td>Webhook avatar icon URL.</td></tr>
+              <tr><td><code>footerIcon</code></td><td>DS Customs URL</td><td>Embed footer icon URL.</td></tr>
+              <tr><td><code>dateFormat</code></td><td><code>"%d-%m-%Y %H:%M:%S"</code></td><td>Timestamp format used in log embeds. Follows <code>os.date</code> format strings.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4.11 Translations -->
+        <h3 class="entry-title" id="config-translations">translations{} — Player-Facing Strings</h3>
+        <p>All notification and command feedback text is defined here. Change any value to localise the resource. Key names are stable across updates.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default text</th></tr></thead>
+            <tbody>
+              <tr><td><code>noPermission</code></td><td>You do not have permission to access this command.</td></tr>
+              <tr><td><code>invalidGrapplerArguments</code></td><td>Invalid command arguments.</td></tr>
+              <tr><td><code>inVehicle</code></td><td>You must not be in a vehicle.</td></tr>
+              <tr><td><code>noVehicleFound</code></td><td>No vehicle found.</td></tr>
+              <tr><td><code>vehicleNotAllowed</code></td><td>This vehicle does not support grapplers.</td></tr>
+              <tr><td><code>cannotPerformAction</code></td><td>You are unable to perform that action.</td></tr>
+              <tr><td><code>drivingVehicle</code></td><td>You must be driving a vehicle to deploy.</td></tr>
+              <tr><td><code>installedGrappler</code></td><td>Installed Grappler</td></tr>
+              <tr><td><code>deployedGrappler</code></td><td>Deployed Grappler</td></tr>
+              <tr><td><code>removedGrappler</code></td><td>Removed Grappler</td></tr>
+              <tr><td><code>usedGrappler</code></td><td>Used Grappler on Vehicle</td></tr>
+              <tr><td><code>installed</code></td><td>Grappler installed.</td></tr>
+              <tr><td><code>removed</code></td><td>Grappler removed.</td></tr>
+              <tr><td><code>deployed</code></td><td>Grappler deployed.</td></tr>
+              <tr><td><code>reset</code></td><td>Grappler reset.</td></tr>
+              <tr><td><code>noItem</code></td><td>You must have the item</td></tr>
+              <tr><td><code>deployGrappler</code></td><td>Deploy Grappler</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 5. Grappler Flow ───────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="grappler-flow">5 — Grappler Flow</h2>
+        <p>The grappler operates as a four-state machine. Each transition is server-authorised before the client proceeds.</p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>State</th><th>HUD label</th><th>Trigger</th><th>What happens</th></tr></thead>
+            <tbody>
+              <tr class="state-2"><td>Inactive</td><td>INACTIVE</td><td>Default / after remove</td><td>No props in world. Officer is on foot near a configured vehicle.</td></tr>
+              <tr class="state-0"><td>Installed</td><td>INSTALLED</td><td>Target "Install Grappler" or <code>/grappler install</code></td><td>Server validates permission + inventory item. Client removes item, spawns bumper + frame props on the vehicle's engine bone. HUD turns on.</td></tr>
+              <tr class="state-1"><td>Deployed</td><td>DEPLOYED</td><td><kbd>Y</kbd> key while driving</td><td>Server validates state. Client plays arm-swing animation, transitions the frame prop to the deployed variant, and begins scanning for a nearby rear wheel of any non-police vehicle within range.</td></tr>
+              <tr class="state-1"><td>Attached</td><td>ATTACHED</td><td>Rope connects to target tyre</td><td>Server validates and confirms. Client spawns wheel-block prop on the target tyre, creates the native rope, bursts the tyre (if <code>burstTyre = true</code>), and starts the handbrake timer. Press <kbd>Y</kbd> to release.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="flow-release">Release &amp; Remove</h3>
+        <ul style="margin: 8px 0 12px 20px; display:flex; flex-direction:column; gap:6px;">
+          <li>Pressing <kbd>Y</kbd> while <strong>Attached</strong> — releases the rope, deletes the wheel-block prop, returns state to Installed.</li>
+          <li>Pressing <kbd>Y</kbd> while <strong>Deployed</strong> (no attach) — retracts the arm, returns to Installed state.</li>
+          <li>Target "Uninstall Grappler" or <code>/grappler remove</code> (from Installed) — server validates, client deletes all props, returns the <code>grappler</code> item to the officer's inventory, state returns to Inactive.</li>
+          <li><code>/grappler reset</code> — emergency reset command that forces all props to be deleted and state to reset to Inactive without returning the item.</li>
+        </ul>
+
+        <h3 class="entry-title" id="flow-hud">NUI HUD</h3>
+        <p>The <code>/grapplerui</code> command opens (or closes) the status HUD. The HUD is only functional for officers driving a vehicle that has the grappler installed. Four state pips update in real time via a polling NUI callback.</p>
+        <ul style="margin: 8px 0 12px 20px; display:flex; flex-direction:column; gap:6px;">
+          <li>Hold <kbd>N</kbd> (control 249) — enters drag mode; the panel can be repositioned with the mouse.</li>
+          <li>Release <kbd>N</kbd> — exits drag mode and saves the new position to MySQL.</li>
+          <li>HUD position is loaded from MySQL on the next <code>/grapplerui</code> open.</li>
+        </ul>
+      </div>
+
+      <!-- ── 6. Commands Reference ──────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="commands">6 — Commands &amp; Controls Reference</h2>
+
+        <h3 class="entry-title" id="commands-chat">Chat Commands</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Command</th><th>Who can use</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code>/grappler install</code></td><td>Permitted officers on foot near a configured vehicle</td><td>Installs the grappler arm onto the nearest matching vehicle. Consumes one <code>grappler</code> item.</td></tr>
+              <tr><td><code>/grappler deploy</code></td><td>Officer driving the installed vehicle</td><td>Deploys the arm (same as pressing <kbd>Y</kbd>).</td></tr>
+              <tr><td><code>/grappler remove</code></td><td>Officer on foot near the installed vehicle</td><td>Removes the grappler and returns the item to inventory.</td></tr>
+              <tr><td><code>/grappler reset</code></td><td>Permitted officers</td><td>Emergency reset — deletes all props, resets state, does not return the item.</td></tr>
+              <tr><td><code>/grapplerui</code></td><td>Permitted officers</td><td>Toggles the NUI HUD on/off.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="entry-title" id="commands-keys">Keybinds</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Context</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr><td><kbd>Y</kbd> (control 246)</td><td>Driving — state Installed</td><td>Deploy the grappler arm.</td></tr>
+              <tr><td><kbd>Y</kbd> (control 246)</td><td>Driving — state Deployed</td><td>Retract the arm (no attach).</td></tr>
+              <tr><td><kbd>Y</kbd> (control 246)</td><td>Driving — state Attached</td><td>Release the rope and retract to Installed.</td></tr>
+              <tr><td><kbd>N</kbd> (control 249)</td><td>HUD open</td><td>Toggle NUI drag mode to reposition the HUD panel.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── 7. Discord Logging ─────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="logging">7 — Discord Logging</h2>
+        <p>When <code>logging.enabled = true</code> in <code>config.lua</code> and a webhook URL is set in <code>server/utils.lua</code>, the server posts a rich embed to Discord for each of the following events:</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Event</th><th>Embed content</th></tr></thead>
+            <tbody>
+              <tr><td>Grappler Installed</td><td>Player name, vehicle model, server timestamp.</td></tr>
+              <tr><td>Grappler Deployed</td><td>Player name, vehicle model, server timestamp.</td></tr>
+              <tr><td>Grappler Removed</td><td>Player name, vehicle model, server timestamp.</td></tr>
+              <tr><td>Grappler Used (attached)</td><td>Player name, officer vehicle model, target vehicle model, server timestamp.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout tip">The embed colour, title, and icons are all configurable in the <code>logging{}</code> block in <code>config.lua</code>. The webhook URL itself lives in <code>server/utils.lua</code> and is kept separate from the open config to avoid accidental exposure.</div>
+      </div>
+
+      <!-- ── 8. Escrow ──────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="escrow">8 — Escrow</h2>
+        <div class="escrow-row">
+          <div class="escrow-card open-card">
+            <h4>Open (not escrowed)</h4>
+            <ul>
+              <li><code>config.lua</code></li>
+            </ul>
+          </div>
+          <div class="escrow-card closed-card">
+            <h4>Escrowed</h4>
+            <ul>
+              <li><code>client/grappler.lua</code></li>
+              <li><code>client/utils.lua</code></li>
+              <li><code>client/target.lua</code></li>
+              <li><code>client/ui.lua</code></li>
+              <li><code>server/grappler.lua</code></li>
+              <li><code>server/utils.lua</code></li>
+              <li><code>server/ui.lua</code></li>
+              <li><code>html/</code> NUI files</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout warn"><code>config.lua</code> is the only open file. All game logic, server events, and inventory bridge code are escrow-protected.</div>
+      </div>
+
+      <!-- ── 9. FAQ ─────────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="faq">9 — FAQ</h2>
+
+        <h3 class="entry-title" id="faq-no-install">The Install target option isn't appearing on my patrol vehicles.</h3>
+        <p>Confirm the vehicle model is listed in <code>vehicles{}</code> in <code>config.lua</code> using the correct backtick hash (<code>[`police`]</code>). Confirm <code>Target.targetResource</code> matches your running target resource and that it is started before <code>ds_policegrappler</code>. Also verify <code>Permissions.EnablePermissions</code> and the active framework's job check — the officer must have the configured job or permissions for the target to be registered. Enable <code>DEBUG_PRINT_ENABLED = true</code> in <code>config.lua</code> and check the F8 console for target registration output.</p>
+
+        <h3 class="entry-title" id="faq-no-attach">The grappler deploys but never attaches to the target vehicle.</h3>
+        <p>The rope will only connect if the target vehicle's rear wheel is within <code>radiusToAttachToVehicle</code> metres (default 2 m) when <kbd>Y</kbd> is pressed. The target vehicle's class must not be in <code>disallowedVehicleClasses</code>. Make sure the officer vehicle is close behind the target — the grappler is designed for PIT-manoeuvre range. Increase <code>radiusToAttachToVehicle</code> slightly if you find the tolerance too tight.</p>
+
+        <h3 class="entry-title" id="faq-prop-offset">The grappler prop is in the wrong position on my vehicle.</h3>
+        <p>Each vehicle has its own <code>offSet</code> and <code>rotation</code> values in <code>vehicles{}</code>. Enable <code>developerMode = true</code> to display live bone markers. Adjust the three floats in <code>offSet</code> (X/Y/Z) and <code>rotation</code> until the prop sits correctly on the rear bumper. Also try changing the <code>boneName</code> — some vehicle models attach better to a rear-specific bone.</p>
+
+        <h3 class="entry-title" id="faq-no-permission">Officers get "no permission" even though their job is set correctly.</h3>
+        <p>Confirm that <code>Permissions.EnablePermissions = true</code> and that exactly one framework permission block has <code>Enabled = true</code>. The active block's <code>CheckJob.Jobs</code> array must contain a job name that exactly matches the player's job name as stored in the framework database (case-sensitive on some frameworks). Also check that the permission check server event fires — enable <code>DEBUG_PRINT_ENABLED = true</code> and watch the server console.</p>
+
+        <h3 class="entry-title" id="faq-no-hud">The NUI HUD isn't showing up.</h3>
+        <p>Run <code>/grapplerui</code> to toggle the HUD on. The HUD is only operational when the officer is driving a vehicle that has a grappler installed. If you see the HUD briefly and it hides itself, the status poll returned "no active grappler" — confirm the vehicle is in the Installed state. If the HUD never appears, check the F8 console for NUI errors and confirm <code>html/index.html</code> is present and the resource started cleanly.</p>
+
+        <h3 class="entry-title" id="faq-item-not-returned">The grappler item isn't being returned on uninstall.</h3>
+        <p>Confirm that <code>Inventory</code> has exactly one flag set to <code>true</code> and that it matches your running inventory resource. The item name in your inventory definition must match <code>Inventory.itemName</code> (default <code>"grappler"</code>). If using ox_inventory, confirm the item entry was added to <code>ox_inventory/data/items.lua</code> and the resource was restarted after the change.</p>
+
+        <h3 class="entry-title" id="faq-discord">Discord logs aren't posting.</h3>
+        <p>Open <code>server/utils.lua</code> and confirm the webhook variable at the top of the file contains a valid Discord webhook URL. Confirm <code>logging.enabled = true</code> in <code>config.lua</code>. Test the webhook URL directly in a tool like Postman or a browser-based webhook tester to rule out Discord-side issues (rate limits, deleted channel, wrong URL).</p>
+
+        <h3 class="entry-title" id="faq-add-vehicle">Can I add more patrol vehicles?</h3>
+        <p>Yes. Add a new entry to <code>vehicles{}</code> in <code>config.lua</code> using the vehicle's model hash as the key. Set an appropriate <code>boneName</code> (usually <code>"engine"</code> or a rear-bumper bone), then tune <code>offSet</code> and <code>rotation</code> with <code>developerMode = true</code> until the prop aligns correctly. No resource restart is required if you use <code>ensure ds_policegrappler</code> after saving the config.</p>
+      </div>
+
+      <footer class="site-footer">
+        <p>&copy; DS Customs. All rights reserved.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- Back to top -->
+  <button id="back-top" aria-label="Back to top">↑</button>
+
+  <script src="../script.js"></script>
+</body>
+</html>

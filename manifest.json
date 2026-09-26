@@ -25,6 +25,13 @@
       "banner": "images/banners/DS-Hunting-Docs.png"
     },
     {
+      "name": "DS Police Grappler",
+      "path": "docs/ds_policegrappler.html",
+      "status": "release",
+      "description": "Server-authorised police grappler system. Install a physical arm on any configured patrol vehicle, deploy it to hook a fleeing suspect's rear tyre, and force a stop — with a draggable NUI HUD, persistent position, Discord logging, and multi-target support.",
+      "tags": ["QBCore", "Qbox", "ESX", "FiveM", "oxmysql", "ox_inventory", "Escrow"]
+    },
+    {
       "name": "DS Bridge",
       "path": "docs/ds_bridge.html",
       "status": "coming soon",
