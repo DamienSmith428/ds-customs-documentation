@@ -39,7 +39,7 @@
       <!-- Doc header -->
       <div class="doc-header">
         <h1>DS Mining</h1>
-        <p class="subtitle">Multi-framework, multi-inventory, target-aware mining script with 11 ore types, a server-side refinery queue, a sell shop, pickaxe break mechanics, and a full NUI — by DS Customs</p>
+        <p class="subtitle">Multi-framework, multi-inventory, target-aware mining script with 11 ore types, a server-side refinery queue with progressive per-unit collection, an ox_lib skill check system on the refinery, a sell shop, pickaxe break mechanics, and a full NUI — by DS Customs</p>
         <div class="badge-row">
           <span class="badge badge-gray">v1.0.0</span>
           <span class="badge badge-green">QBX Core</span>
@@ -72,7 +72,9 @@
               <tr><td>Animated mining</td><td>Pickaxe prop attached to the player's hand, looping hammer animation, and a cancellable <code>ox_lib</code> progress bar per mine attempt.</td></tr>
               <tr><td>Pickaxe break mechanic</td><td>Configurable chance for the pickaxe to break on each swing. When triggered, the pickaxe item is removed and the player is notified.</td></tr>
               <tr><td>Sell shop NPC</td><td>Proximity-spawned NPC ped with a custom NUI sell panel. Players can sell individual ore types or an entire tab (raw or refined) in one click.</td></tr>
-              <tr><td>Refinery NPC &amp; queue</td><td>Second NPC ped opens a refinery UI. Players submit raw ores for processing; the server inserts a queue row and awards the refined item after a configurable timer.</td></tr>
+              <tr><td>Refinery NPC &amp; queue</td><td>Second NPC ped opens a refinery UI. Players submit raw ores for processing; refined units become collectible one at a time as each finishes — no waiting for the full batch.</td></tr>
+              <tr><td>Progressive per-unit collection</td><td>Submit 5× Iron (12 s each) and collect 1 at 12 s, 2 at 24 s, etc. The queue UI shows a live progress bar, an "X / Y ready" counter, and a countdown to the next unit — all updating in real time.</td></tr>
+              <tr><td>Refinery skill check</td><td><code>ox_lib</code> skill check fires when ore is submitted to the refinery. Difficulty is configured per recipe. Global on/off toggle and configurable ore-loss percentage on failure.</td></tr>
               <tr><td>11 refined ore outputs</td><td>Every raw ore has a matching refined counterpart (bars, ingots, cut gems) with a higher sell price than the raw input.</td></tr>
               <tr><td>Server-authoritative sell &amp; refine</td><td>All item checks, distance validation, and inventory operations run server-side. Players farther than 5 m from a shop when a sell event fires are kicked.</td></tr>
               <tr><td>Anti-cheat distance check</td><td>The mine-rock server event verifies the player is within 10 m of the claimed mining area. Exceeding this kicks the player.</td></tr>
@@ -80,7 +82,7 @@
               <tr><td>Multi-framework bridges</td><td>QBX Core, QB-Core, ESX. Active bridge chosen at startup via <code>Config.Framework</code>.</td></tr>
               <tr><td>Multi-inventory bridges</td><td>ox_inventory, qb-inventory, ps-inventory, qs-inventory, tgiann-inventory. Set via <code>Config.Inventory</code>.</td></tr>
               <tr><td>Multi-target bridges</td><td>ox_target, qb-target, ds_target, or proximity E-prompt. Set via <code>Config.UseTarget</code> and <code>Config.TargetResource</code>.</td></tr>
-              <tr><td>Open config files</td><td><code>config.lua</code> and <code>strings.lua</code> are excluded from escrow. All prices, timers, NPC coords, ore definitions, and notification strings are editable.</td></tr>
+              <tr><td>Open config files</td><td><code>config.lua</code> and <code>strings.lua</code> are excluded from escrow. All prices, timers, NPC coords, ore definitions, skill check settings, and notification strings are editable.</td></tr>
             </tbody>
           </table>
         </div>
@@ -110,21 +112,37 @@
         <h3 class="entry-title" id="install-drop">Drop-in</h3>
         <p>Copy the <code>ds_mining</code> folder into your resources directory.</p>
 
-        <h3 class="entry-title" id="install-sql">Database</h3>
+        <h3 class="entry-title" id="install-sql">Database — Fresh Install</h3>
         <p>Import the refinery queue table by running the included SQL file against your database:</p>
         <pre><code><span class="c">-- sql/ds_mining_refining.sql</span>
 CREATE TABLE IF NOT EXISTS `ds_mining_refining` (
-    `id`               INT UNSIGNED   NOT NULL AUTO_INCREMENT,
-    `citizenid`        VARCHAR(50)    NOT NULL,
-    `input_item`       VARCHAR(60)    NOT NULL,
-    `input_quantity`   INT UNSIGNED   NOT NULL DEFAULT 1,
-    `output_item`      VARCHAR(60)    NOT NULL,
-    `output_quantity`  INT UNSIGNED   NOT NULL DEFAULT 1,
-    `ready_at`         BIGINT         NOT NULL,
+    `id`                  INT UNSIGNED   NOT NULL AUTO_INCREMENT,
+    `citizenid`           VARCHAR(50)    NOT NULL,
+    `input_item`          VARCHAR(60)    NOT NULL,
+    `input_quantity`      INT UNSIGNED   NOT NULL DEFAULT 1,
+    `output_item`         VARCHAR(60)    NOT NULL,
+    `output_quantity`     INT UNSIGNED   NOT NULL DEFAULT 1,
+    `started_at`          BIGINT         NOT NULL,
+    `ready_at`            BIGINT         NOT NULL,
+    `collected_quantity`  INT UNSIGNED   NOT NULL DEFAULT 0,
     PRIMARY KEY (`id`),
     INDEX `idx_citizenid` (`citizenid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;</code></pre>
-        <div class="callout tip">Rows are hard-deleted from the table when a player collects their refined item, so the table stays small over time. No periodic cleanup is needed.</div>
+        <div class="callout tip">Rows are hard-deleted once all units have been collected, so the table stays small over time. No periodic cleanup is needed.</div>
+
+        <h3 class="entry-title" id="install-migrate">Database — Upgrading from a Previous Version</h3>
+        <p>If you already have the <code>ds_mining_refining</code> table from a prior install, run the migration file instead of the full schema — it adds only the two new columns and will not affect existing rows:</p>
+        <pre><code><span class="c">-- sql/migration.sql  (safe to run multiple times)</span>
+ALTER TABLE `ds_mining_refining`
+    ADD COLUMN IF NOT EXISTS `started_at` BIGINT NOT NULL DEFAULT 0
+    AFTER `output_quantity`;
+
+UPDATE `ds_mining_refining` SET `started_at` = `ready_at` WHERE `started_at` = 0;
+
+ALTER TABLE `ds_mining_refining`
+    ADD COLUMN IF NOT EXISTS `collected_quantity` INT UNSIGNED NOT NULL DEFAULT 0
+    AFTER `ready_at`;</code></pre>
+        <div class="callout warn">Existing in-progress rows backfilled by the migration will have <code>started_at = ready_at</code>, which means they will appear as fully ready immediately when the player next opens the refinery. This is a one-time safe fallback — new jobs written after the migration will track correctly.</div>
 
         <h3 class="entry-title" id="install-items">Inventory Items</h3>
         <p>Add all mining items to your inventory's item definitions. The ready-to-use definitions are in <code>Install/items.txt</code> (ox_inventory / QBCore / QBX format). For ESX servers, run <code>sql/mining_items-ESX-ONLY.sql</code> instead.</p>
@@ -208,34 +226,56 @@ Config.TargetResource = <span class="s">'ox_target'</span>   <span class="c">-- 
 
         <!-- 4.4 Refined Ores -->
         <h3 class="entry-title" id="config-refined">Refined Ore Definitions — Config.refinedrocks</h3>
-        <p>Maps each raw ore to its refined counterpart. The refinery UI uses these entries to build its recipe list, and the server uses them to validate and process refining jobs.</p>
+        <p>Maps each raw ore to its refined counterpart. The refinery UI uses these entries to build its recipe list, and the server uses them to validate and process refining jobs. Each recipe also carries a <code>skillCheck</code> difficulty used by the refinery skill check system (see <a href="#config-skillcheck">§ 4.5</a>).</p>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>Input Item</th><th>Output Item</th><th>Output Label</th><th>Output Price Range</th><th>Refine Time</th></tr></thead>
+            <thead><tr><th>Input Item</th><th>Output Item</th><th>Output Label</th><th>Output Price Range</th><th>Refine Time</th><th>Skill Check</th></tr></thead>
             <tbody>
-              <tr><td><code>coal_mining</code></td><td><code>coal_refined</code></td><td>Compressed Coal Brick</td><td>$80 – $110</td><td>90 s per unit</td></tr>
-              <tr><td><code>iron_mining</code></td><td><code>iron_refined</code></td><td>Refined Iron Bar</td><td>$180 – $220</td><td>120 s per unit</td></tr>
-              <tr><td><code>steel_mining</code></td><td><code>steel_refined</code></td><td>Refined Steel Bar</td><td>$120 – $160</td><td>120 s per unit</td></tr>
-              <tr><td><code>copper_mining</code></td><td><code>copper_refined</code></td><td>Refined Copper Bar</td><td>$280 – $340</td><td>150 s per unit</td></tr>
-              <tr><td><code>quartz_mining</code></td><td><code>quartz_refined</code></td><td>Polished Quartz</td><td>$200 – $260</td><td>180 s per unit</td></tr>
-              <tr><td><code>silver_mining</code></td><td><code>silver_refined</code></td><td>Silver Bar</td><td>$340 – $420</td><td>240 s per unit</td></tr>
-              <tr><td><code>diamond_mining</code></td><td><code>diamond_refined</code></td><td>Cut Diamond</td><td>$440 – $540</td><td>270 s per unit</td></tr>
-              <tr><td><code>emerald_mining</code></td><td><code>emerald_refined</code></td><td>Cut Emerald</td><td>$500 – $620</td><td>270 s per unit</td></tr>
-              <tr><td><code>gold_mining</code></td><td><code>gold_refined</code></td><td>Gold Bar</td><td>$520 – $640</td><td>300 s per unit</td></tr>
-              <tr><td><code>titanium_mining</code></td><td><code>titanium_refined</code></td><td>Titanium Ingot</td><td>$620 – $780</td><td>configurable</td></tr>
-              <tr><td><code>platinum_mining</code></td><td><code>platinum_refined</code></td><td>Platinum Ingot</td><td>$760 – $940</td><td>420 s per unit</td></tr>
+              <tr><td><code>coal_mining</code></td><td><code>coal_refined</code></td><td>Compressed Coal Brick</td><td>$80 – $110</td><td>12 s per unit</td><td>Easy</td></tr>
+              <tr><td><code>iron_mining</code></td><td><code>iron_refined</code></td><td>Refined Iron Bar</td><td>$180 – $220</td><td>12 s per unit</td><td>Easy</td></tr>
+              <tr><td><code>steel_mining</code></td><td><code>steel_refined</code></td><td>Refined Steel Bar</td><td>$120 – $160</td><td>13 s per unit</td><td>Easy</td></tr>
+              <tr><td><code>copper_mining</code></td><td><code>copper_refined</code></td><td>Refined Copper Bar</td><td>$280 – $340</td><td>14 s per unit</td><td>Medium</td></tr>
+              <tr><td><code>quartz_mining</code></td><td><code>quartz_refined</code></td><td>Polished Quartz</td><td>$200 – $260</td><td>15 s per unit</td><td>Medium</td></tr>
+              <tr><td><code>silver_mining</code></td><td><code>silver_refined</code></td><td>Silver Bar</td><td>$340 – $420</td><td>16 s per unit</td><td>Medium</td></tr>
+              <tr><td><code>emerald_mining</code></td><td><code>emerald_refined</code></td><td>Cut Emerald</td><td>$500 – $620</td><td>17 s per unit</td><td>Medium</td></tr>
+              <tr><td><code>gold_mining</code></td><td><code>gold_refined</code></td><td>Gold Bar</td><td>$520 – $640</td><td>18 s per unit</td><td>Medium</td></tr>
+              <tr><td><code>diamond_mining</code></td><td><code>diamond_refined</code></td><td>Cut Diamond</td><td>$440 – $540</td><td>18 s per unit</td><td>Medium</td></tr>
+              <tr><td><code>titanium_mining</code></td><td><code>titanium_refined</code></td><td>Titanium Ingot</td><td>$620 – $780</td><td>19 s per unit</td><td>Medium</td></tr>
+              <tr><td><code>platinum_mining</code></td><td><code>platinum_refined</code></td><td>Platinum Ingot</td><td>$760 – $940</td><td>20 s per unit</td><td>Medium</td></tr>
             </tbody>
           </table>
         </div>
-        <div class="callout tip">Refine time is multiplied by the quantity submitted. Submitting 5× iron ore at 120 s each gives a ready time of 600 seconds from submission.</div>
+        <div class="callout tip">Refine time is per unit — submitting 5× Iron at 12 s each means the first unit is ready at 12 s, the second at 24 s, and so on. Units can be collected individually as they finish.</div>
         <p>Each entry schema:</p>
         <pre><code>{ <span class="p">inputItem</span>   = <span class="s">'iron_mining'</span>,
   <span class="p">outputItem</span>  = <span class="s">'iron_refined'</span>,
   <span class="p">outputPrice</span> = {<span class="n">180</span>, <span class="n">220</span>},
-  <span class="p">refineTime</span>  = <span class="n">120</span>,           <span class="c">-- seconds per unit</span>
-  <span class="p">image</span>       = <span class="s">'iron_refined.png'</span> }</code></pre>
+  <span class="p">refineTime</span>  = <span class="n">12</span>,            <span class="c">-- seconds per unit</span>
+  <span class="p">image</span>       = <span class="s">'iron_refined.png'</span>,
+  <span class="p">skillCheck</span>  = <span class="s">'easy'</span>         <span class="c">-- 'easy' | 'medium' | 'hard' | {areaSize=n,speedMultiplier=n} | false</span>
+}</code></pre>
 
-        <!-- 4.5 Mining Areas -->
+        <!-- 4.5 Refinery Skill Check -->
+        <h3 class="entry-title" id="config-skillcheck">Refinery Skill Check — Config.refinerySkillCheck</h3>
+        <p>When enabled, an <code>ox_lib</code> skill check fires on the client before the refinery submission event reaches the server. Keys <kbd>1</kbd>–<kbd>4</kbd> are used as inputs. If the check is passed the job is queued normally; if failed the configured penalty is applied.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>enabled</code></td><td><code>true</code></td><td>Master toggle. <code>false</code> skips the skill check entirely for all ores, regardless of per-recipe <code>skillCheck</code> values.</td></tr>
+              <tr><td><code>loseOreOnFail</code></td><td><code>false</code></td><td><code>false</code> — ore is fully returned on failure; player retries freely. <code>true</code> — a percentage of the submitted batch is forfeited (see <code>losePercent</code>).</td></tr>
+              <tr><td><code>losePercent</code></td><td><code>50</code></td><td>Percentage of the submitted quantity to remove on failure (1–100). Rounded down to the nearest whole unit; minimum 1. Only used when <code>loseOreOnFail = true</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">The per-recipe <code>skillCheck</code> key sets individual difficulty. Set it to <code>false</code> on a specific recipe to exempt that ore from the check even when the global <code>enabled</code> flag is <code>true</code>. The custom difficulty form accepts a table: <code>{ areaSize = 30, speedMultiplier = 1.5 }</code> — refer to the <code>ox_lib</code> skill check docs for valid ranges.</div>
+        <pre><code>Config.refinerySkillCheck = {
+    <span class="p">enabled</span>       = <span class="k">true</span>,
+    <span class="p">loseOreOnFail</span> = <span class="k">false</span>,  <span class="c">-- true = forfeit losePercent% of submitted ore on failure</span>
+    <span class="p">losePercent</span>   = <span class="n">50</span>,     <span class="c">-- only used when loseOreOnFail = true</span>
+}</code></pre>
+
+        <!-- 4.6 Mining Areas -->
         <h3 class="entry-title" id="config-areas">Mining Areas — Config.miningAreas</h3>
         <p>A table of <code>vec3</code> world positions. Each entry spawns one rock node (sphere target zone / E-prompt point) and one map blip. The default seven nodes are located near the quarry area.</p>
         <pre><code>Config.miningAreas = {
@@ -245,7 +285,7 @@ Config.TargetResource = <span class="s">'ox_target'</span>   <span class="c">-- 
 }</code></pre>
         <div class="callout">Each area's interaction radius is <strong>1.5 m</strong> (target mode) or <strong>2.0 m</strong> (E-prompt mode). The server's anti-cheat check allows up to <strong>10 m</strong> from the area centre — this accounts for slight position drift during the progress bar animation.</div>
 
-        <!-- 4.6 Sell Shop -->
+        <!-- 4.7 Sell Shop -->
         <h3 class="entry-title" id="config-sell">Sell Shop — Config.sellShop</h3>
         <div class="tbl-wrap">
           <table>
@@ -259,7 +299,7 @@ Config.TargetResource = <span class="s">'ox_target'</span>   <span class="c">-- 
           </table>
         </div>
 
-        <!-- 4.7 Refinery Shop -->
+        <!-- 4.8 Refinery Shop -->
         <h3 class="entry-title" id="config-refinery">Refinery Shop — Config.refineryShop</h3>
         <div class="tbl-wrap">
           <table>
@@ -274,7 +314,7 @@ Config.TargetResource = <span class="s">'ox_target'</span>   <span class="c">-- 
         </div>
         <div class="callout tip">Both NPC peds are proximity-spawned — they only exist in the world when a player is within 30 m. They are deleted and their models released when the player moves away, keeping resource usage minimal.</div>
 
-        <!-- 4.8 Notifications -->
+        <!-- 4.9 Notifications -->
         <h3 class="entry-title" id="config-notify">Notifications</h3>
         <p>Notifications are fired via the <code>ds_customs:notify</code> net event, which calls <code>lib.notify</code> by default. To swap the notification system, edit the <code>RegisterNetEvent</code> handler at the bottom of <code>config.lua</code>:</p>
         <pre><code>RegisterNetEvent(<span class="s">'ds_customs:notify'</span>)
@@ -287,7 +327,7 @@ AddEventHandler(<span class="s">'ds_customs:notify'</span>, <span class="k">func
 <span class="k">end</span>)</code></pre>
         <p>Replace the body with any notification library your server uses. All notification strings are editable in <code>configuration/strings.lua</code>.</p>
 
-        <!-- 4.9 ESX compat -->
+        <!-- 4.10 ESX compat -->
         <h3 class="entry-title" id="config-esx">ESX Legacy Option</h3>
         <div class="tbl-wrap">
           <table>
@@ -298,7 +338,7 @@ AddEventHandler(<span class="s">'ds_customs:notify'</span>, <span class="k">func
           </table>
         </div>
 
-        <!-- 4.10 Debug -->
+        <!-- 4.11 Debug -->
         <h3 class="entry-title" id="config-debug">Debug — Config.Debug</h3>
         <div class="tbl-wrap">
           <table>
@@ -308,7 +348,7 @@ AddEventHandler(<span class="s">'ds_customs:notify'</span>, <span class="k">func
             </tbody>
           </table>
         </div>
-        <div class="callout tip">When debug is enabled you will see prints for every stage of the mining flow: startup config summary, blip and zone registration, pickaxe checks, rock data selection, progress bar start / cancel / complete, axe break rolls, anti-cheat distance checks, inventory add/remove operations, and all DB queries for the refinery queue.</div>
+        <div class="callout tip">When debug is enabled you will see prints for every stage of the mining flow: startup config summary, blip and zone registration, pickaxe checks, rock data selection, progress bar start / cancel / complete, axe break rolls, skill check results and penalty calculations, anti-cheat distance checks, inventory add/remove operations, and all DB queries for the refinery queue.</div>
       </div>
 
       <!-- ── 5. Strings ─────────────────────────────────────────────────── -->
@@ -332,12 +372,15 @@ AddEventHandler(<span class="s">'ds_customs:notify'</span>, <span class="k">func
               <tr><td><code>rewarded</code> / <code>rewarded_desc</code></td><td><code>'Mined Rock'</code></td><td>Success notification when ore is added to inventory.</td></tr>
               <tr><td><code>sold_for</code> / <code>sold_for_desc</code></td><td><code>'Items Sold'</code></td><td>Success notification after a sell. Uses <code>%s</code> format specifiers for count, label, and price.</td></tr>
               <tr><td><code>refine_started</code> / <code>refine_started_desc</code></td><td><code>'Refining Started'</code></td><td>Notification when a refinery job is queued.</td></tr>
-              <tr><td><code>refine_collected</code> / <code>refine_collected_desc</code></td><td><code>'Collected'</code></td><td>Notification when a finished refined item is collected.</td></tr>
+              <tr><td><code>refine_collected</code> / <code>refine_collected_desc</code></td><td><code>'Collected'</code></td><td>Notification when all units of a job are collected (final pick-up).</td></tr>
+              <tr><td><code>refine_collected_partial</code> / <code>refine_collected_partial_desc</code></td><td><code>'Partially Collected'</code></td><td>Notification when some but not all units of a job are collected. Uses <code>%s</code> format specifiers for count collected, label, total collected so far, and total output quantity.</td></tr>
+              <tr><td><code>skillcheck_failed</code> / <code>skillcheck_failed_desc</code></td><td><code>'Refining Failed'</code></td><td>Error shown when the refinery skill check fails and <code>loseOreOnFail = true</code> — ore is lost.</td></tr>
+              <tr><td><code>skillcheck_failed_safe</code> / <code>skillcheck_failed_safe_desc</code></td><td><code>'Refining Failed'</code></td><td>Error shown when the refinery skill check fails and <code>loseOreOnFail = false</code> — ore is kept.</td></tr>
               <tr><td><code>no_pickaxe</code> / <code>no_pickaxe_desc</code></td><td><code>'No Pickaxe'</code></td><td>Error shown when a player has no <code>pickaxe_mining</code> item.</td></tr>
               <tr><td><code>axe_broke</code> / <code>axe_broke_desc</code></td><td><code>'Axe Broke'</code></td><td>Error shown when the pickaxe breaks.</td></tr>
               <tr><td><code>cantcarry</code> / <code>cantcarry_desc</code></td><td><code>'Can't Carry'</code></td><td>Error shown when the player's inventory is full.</td></tr>
               <tr><td><code>not_enough_ore</code></td><td><code>'Not Enough Ore'</code></td><td>Error shown when submitting more ore than the player owns.</td></tr>
-              <tr><td><code>refine_not_ready</code></td><td><code>'Not Ready'</code></td><td>Error shown when trying to collect before the timer expires.</td></tr>
+              <tr><td><code>refine_not_ready</code></td><td><code>'Not Ready'</code></td><td>Error shown when trying to collect before any unit has finished refining.</td></tr>
             </tbody>
           </table>
         </div>
@@ -370,30 +413,36 @@ AddEventHandler(<span class="s">'ds_customs:notify'</span>, <span class="k">func
           <table>
             <thead><tr><th>Step</th><th>Where</th><th>What happens</th></tr></thead>
             <tbody>
-              <tr><td>1 — Open refinery</td><td>Client → Server (callback)</td><td>Player interacts with the refinery NPC. <code>ds_customs:getRefineryData</code> fetches all recipe definitions with the player's current ore counts, plus any pending/ready queue rows from the database.</td></tr>
-              <tr><td>2 — Submit job</td><td>Client → Server (event)</td><td>Player picks a recipe, enters a quantity, and confirms. <code>ds_customs:startRefining</code> validates proximity (&lt;5 m), available ore count, deducts the input ores, and inserts a row into <code>ds_mining_refining</code> with a <code>ready_at</code> Unix timestamp.</td></tr>
-              <tr><td>3 — Timer</td><td>Server (database)</td><td>No active server thread runs for individual jobs — readiness is determined purely by comparing <code>os.time()</code> to <code>ready_at</code> at collection time.</td></tr>
-              <tr><td>4 — Collect</td><td>Client → Server (event)</td><td>Player opens the refinery UI and clicks Collect on a ready row. <code>ds_customs:collectRefined</code> validates proximity, ownership (<code>citizenid</code> match), readiness, and carry capacity. On success, the output items are added and the database row is deleted.</td></tr>
+              <tr><td>1 — Open refinery</td><td>Client → Server (callback)</td><td>Player interacts with the refinery NPC. <code>ds_customs:getRefineryData</code> fetches all recipe definitions with the player's current ore counts, plus any pending/partially-collected queue rows. For each queue row it calculates <code>collectableNow</code> (units done minus already collected) and <code>secondsToNext</code>.</td></tr>
+              <tr><td>2 — Skill check</td><td>Client</td><td>After the player confirms a quantity in the modal, <code>lib.skillCheck</code> fires (if <code>Config.refinerySkillCheck.enabled = true</code> and the recipe has a difficulty set). Keys <kbd>1</kbd>–<kbd>4</kbd> are used as inputs. On failure: if <code>loseOreOnFail = false</code> the ore is returned and the player retries; if <code>loseOreOnFail = true</code> the server event <code>ds_customs:forfeitOre</code> removes <code>losePercent</code>% of the submitted quantity.</td></tr>
+              <tr><td>3 — Submit job</td><td>Client → Server (event)</td><td>On skill check pass (or if check is disabled), <code>ds_customs:startRefining</code> validates proximity (&lt;5 m), available ore count, deducts the input ores, and inserts a row with <code>started_at = os.time()</code> and <code>ready_at = started_at + (refineTime × quantity)</code>.</td></tr>
+              <tr><td>4 — Timer (per unit)</td><td>Server (database) + Client (UI)</td><td>No active server thread runs. The server derives <code>units_done = floor((now − started_at) / refineTime)</code> on demand. The queue UI in the NUI ticks a live countdown to the next unit and updates the "X / Y ready" counter in real time.</td></tr>
+              <tr><td>5 — Collect (partial or full)</td><td>Client → Server (event)</td><td>Player clicks Collect. <code>ds_customs:collectRefined</code> derives <code>collectable = units_done − collected_quantity</code>. If &gt; 0: items are awarded, <code>collected_quantity</code> is updated (or the row deleted when all units are collected). If 0: "Not Ready" notification fires.</td></tr>
             </tbody>
           </table>
         </div>
-        <div class="callout">If the player's inventory is full at collection time, the row is <strong>not</strong> deleted — they can try again after freeing space. The refined items are never lost.</div>
+        <div class="callout">If the player's inventory is full at collection time, the row and its <code>collected_quantity</code> counter are unchanged — they can try again after freeing space. Refined items are never lost.</div>
       </div>
 
       <!-- ── 8. Database Schema ──────────────────────────────────────────── -->
       <div class="section">
         <h2 class="section-title" id="database">8 — Database Schema</h2>
         <pre><code>ds_mining_refining (
-    id               INT UNSIGNED   AUTO_INCREMENT PRIMARY KEY,
-    citizenid        VARCHAR(50)    <span class="c">-- player identifier from the active framework</span>
-    input_item       VARCHAR(60)    <span class="c">-- raw ore item name (e.g. 'iron_mining')</span>
-    input_quantity   INT UNSIGNED   <span class="c">-- how many units were submitted</span>
-    output_item      VARCHAR(60)    <span class="c">-- refined item name (e.g. 'iron_refined')</span>
-    output_quantity  INT UNSIGNED   <span class="c">-- how many units will be awarded (= input_quantity)</span>
-    ready_at         BIGINT         <span class="c">-- Unix timestamp when the job is ready to collect</span>
+    id                  INT UNSIGNED   AUTO_INCREMENT PRIMARY KEY,
+    citizenid           VARCHAR(50)    <span class="c">-- player identifier from the active framework</span>
+    input_item          VARCHAR(60)    <span class="c">-- raw ore item name (e.g. 'iron_mining')</span>
+    input_quantity      INT UNSIGNED   <span class="c">-- how many units were submitted</span>
+    output_item         VARCHAR(60)    <span class="c">-- refined item name (e.g. 'iron_refined')</span>
+    output_quantity     INT UNSIGNED   <span class="c">-- total units to be produced (= input_quantity)</span>
+    started_at          BIGINT         <span class="c">-- Unix timestamp when the job was submitted</span>
+    ready_at            BIGINT         <span class="c">-- Unix timestamp when ALL units are done</span>
+    collected_quantity  INT UNSIGNED   <span class="c">-- units the player has already collected (partial collection)</span>
     INDEX idx_citizenid (citizenid)
 )</code></pre>
-        <div class="callout tip">Rows are hard-deleted on collection. To manually clear a stuck job, run <code>DELETE FROM ds_mining_refining WHERE id = &lt;id&gt;;</code>.</div>
+        <div class="callout tip">
+          Per-unit readiness is derived on demand: <code>units_done = floor((now − started_at) / refineTime)</code>. The <code>refineTime</code> per unit is back-calculated as <code>floor((ready_at − started_at) / output_quantity)</code> — no extra column needed.<br><br>
+          Rows are hard-deleted when <code>collected_quantity = output_quantity</code>. To manually clear a stuck job: <code>DELETE FROM ds_mining_refining WHERE id = &lt;id&gt;;</code>
+        </div>
       </div>
 
       <!-- ── 9. Compatibility Bridges ───────────────────────────────────── -->
@@ -467,7 +516,7 @@ AddEventHandler(<span class="s">'ds_customs:notify'</span>, <span class="k">func
 
       <!-- ── 11. FAQ ────────────────────────────────────────────────────── -->
       <div class="section">
-        <h2 class="section-title" id="faq">11 — FAQ</h2>
+        <h2 class="section-title" id="faq">12 — FAQ</h2>
 
         <h3 class="entry-title" id="faq-no-pickaxe">Players can't start mining — "No Pickaxe" every time.</h3>
         <p>The server callback <code>ds_customs:checkPick</code> checks for the item <code>pickaxe_mining</code> (note the <code>_mining</code> suffix — not plain <code>pickaxe</code>). Confirm the item name in your inventory definitions matches exactly. Also verify the item was added to <code>Install/items.txt</code> (or the ESX SQL file) and that your inventory resource was restarted after the import.</p>
@@ -478,8 +527,17 @@ AddEventHandler(<span class="s">'ds_customs:notify'</span>, <span class="k">func
         <h3 class="entry-title" id="faq-axe-kick">Players are getting kicked when their axe breaks.</h3>
         <p>The <code>ds_customs:axeBroke</code> server event removes <code>pickaxe_mining</code> from the player's inventory. If the item is not found when the event fires, the player is kicked as a potential exploit. This can happen if the item was removed by another script between the client-side check and the server event arriving. Ensure no other resource is consuming the pickaxe item concurrently. You can adjust the anti-cheat tolerance by editing the <code>axeBroke</code> handler in the escrow-protected server file.</p>
 
+        <h3 class="entry-title" id="faq-skillcheck">The skill check fires but nothing happens after it.</h3>
+        <p>The NUI focus is released before <code>lib.skillCheck</code> runs so the overlay can capture key input. If the check appears to silently fail, confirm <code>ox_lib</code> is running and that the per-recipe <code>skillCheck</code> value is a valid string (<code>'easy'</code>, <code>'medium'</code>, <code>'hard'</code>) or a correctly-formed table. Setting it to <code>false</code> disables the check for that recipe only.</p>
+
+        <h3 class="entry-title" id="faq-skillcheck-ore">Player lost ore on a skill check fail but shouldn't have.</h3>
+        <p>Verify <code>Config.refinerySkillCheck.loseOreOnFail</code> is set to <code>false</code>. When <code>false</code>, the server event is never fired on failure and no ore is removed. The notification strings for the two failure modes (<code>skillcheck_failed_safe</code> vs <code>skillcheck_failed</code>) are separate — confirm the correct one is showing to rule out a notification display issue.</p>
+
         <h3 class="entry-title" id="faq-refinery-stuck">Refinery job is stuck — player can't collect.</h3>
-        <p>Connect to your database and check the <code>ds_mining_refining</code> table for the player's <code>citizenid</code>. If the <code>ready_at</code> timestamp is in the past and collection still fails, confirm the player is within 5 m of the refinery ped and that <code>Config.refineryShop.coords</code> matches the actual ped position. To manually clear a stuck row: <code>DELETE FROM ds_mining_refining WHERE id = &lt;id&gt;;</code>.</p>
+        <p>Connect to your database and check the <code>ds_mining_refining</code> table for the player's <code>citizenid</code>. Confirm that <code>started_at</code> is populated (non-zero) — rows migrated from a previous version that lack a real <code>started_at</code> will have it set to <code>ready_at</code>, which means they will show as fully ready. If collection still fails despite the timestamps looking correct, confirm the player is within 5 m of the refinery ped and that <code>Config.refineryShop.coords</code> matches the actual ped position. To manually clear a stuck row: <code>DELETE FROM ds_mining_refining WHERE id = &lt;id&gt;;</code>.</p>
+
+        <h3 class="entry-title" id="faq-partial">Player collected some units but the row is still in the queue.</h3>
+        <p>This is expected behaviour. The row persists until <code>collected_quantity = output_quantity</code> (all units collected). The player can open the refinery again to collect more units as they finish. The Collect button shows the exact count available and is disabled while zero are ready.</p>
 
         <h3 class="entry-title" id="faq-cancarry">Getting a <code>canCarryItem</code> error on ESX.</h3>
         <p>Set <code>Config.oldESX = true</code> in <code>config.lua</code>. This switches the carry check to the legacy ESX weight/limit API instead of the modern <code>canCarryItem</code> export.</td></p>
