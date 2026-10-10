@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS CAD — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+    <a class="topbar-link" href="https://discord.gg/WRfVqsrAVC" target="_blank" rel="noopener">Discord ↗</a>
+  </header>
+
+  <div class="shell">
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <main class="content">
+
+      <div class="doc-header">
+        <h1>DS CAD</h1>
+        <p class="subtitle">In-world 3D police Computer-Aided Dispatch — a physical laptop mounted inside your patrol vehicle — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.0.0</span>
+          <span class="badge badge-blue">Qbox</span>
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-green">ESX</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-red">Escrow</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ─────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS CAD spawns a physical laptop prop inside any law-enforcement vehicle and renders the CAD interface onto it as a live 3D DUI panel — powered by the <strong>CR3D</strong> (Cerulean 3D NUI) library. The panel follows the vehicle perfectly as it moves. Officers interact via a cursor that appears inside the 3D screen; the rest of the game world receives input normally.</p>
+        <p>The CAD feeds its data directly from <strong>DS MDT</strong>: active dispatch calls are pulled live via the <code>GetActiveDispatchCalls</code> export, and vehicle BOLO checks query <code>GetVehicleBolo</code>. DS CAD is the physical in-car companion to the DS MDT tablet.</p>
+        <div class="callout tip">This is a v1.0.0 beta release. Core systems are stable and production-ready. Additional features are actively being added.</div>
+      </div>
+
+      <!-- ── 2. Requirements ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="requirements">2 — Requirements</h2>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Resource</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>oxmysql</code></td><td>Required for session persistence (call assignments, resolved calls) and report storage.</td></tr>
+            <tr><td><code>qbx_core</code> <em>or</em> <code>qb-core</code> <em>or</em> <code>es_extended</code></td><td>One framework must be running. Auto-detected at startup — no manual setting required.</td></tr>
+            <tr><td><code>ds_mdt</code></td><td>Required. Active dispatch calls and vehicle BOLOs are pulled from DS MDT exports at runtime.</td></tr>
+            <tr><td><code>/assetpacks</code></td><td>Required FiveM asset dependency for the laptop prop model.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- ── 3. Escrow & Open Files ──────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="escrow">3 — Escrow &amp; Open Files</h2>
+        <p>DS CAD is protected with <strong>FiveM Escrow</strong>. Only <code>config.lua</code> is excluded — everything else is encrypted.</p>
+        <div class="escrow-row">
+          <div class="escrow-card open-card">
+            <h4 style="color:var(--green)">Open — editable by you</h4>
+            <ul>
+              <li><code>config.lua</code></li>
+            </ul>
+          </div>
+          <div class="escrow-card closed-card">
+            <h4 style="color:var(--red)">Encrypted — Escrow protected</h4>
+            <ul>
+              <li><code>client/main.lua</code></li>
+              <li><code>client/lib_3dnui.lua</code></li>
+              <li><code>client/light.lua</code></li>
+              <li><code>server/main.lua</code></li>
+              <li><code>server/light.lua</code></li>
+              <li><code>ui/*</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 4. Installation ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">4 — Installation</h2>
+
+        <h3 class="entry-title" id="install-db">Database</h3>
+        <p>DS CAD auto-creates its tables on first start via <code>MySQL.ready</code>. No SQL file needs to be imported manually.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Table</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>ds_cad_data</code></td><td>Persistent session data (call assignments and resolved calls) stored as JSON. Survives server restarts.</td></tr>
+            <tr><td><code>ds_cad_reports</code></td><td>Arrest reports, citations, and other forms submitted from the CAD panel.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3 class="entry-title" id="install-cfg">server.cfg Start Order</h3>
+        <pre><code>ensure oxmysql
+ensure qbx_core        <span class="c"># or qb-core / es_extended</span>
+ensure ds_mdt          <span class="c"># must start before ds_cad</span>
+ensure ds_cad
+</code></pre>
+        <div class="callout warn">DS CAD calls <code>exports.ds_mdt:GetActiveDispatchCalls()</code> and <code>exports.ds_mdt:GetVehicleBolo()</code> at runtime. If <code>ds_mdt</code> is not started first these calls will silently return nothing.</div>
+      </div>
+
+      <!-- ── 5. Configuration ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">5 — Configuration — config.lua</h2>
+
+        <h4>Framework &amp; notifications</h4>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>Config.Framework</code></td><td><code>"AUTO"</code></td><td>Force a specific framework: <code>"QB"</code>, <code>"ESX"</code>, or <code>"AUTO"</code> (recommended). Auto-detects qbx_core → qb-core → es_extended.</td></tr>
+            <tr><td><code>Config.NotifyType</code></td><td><code>"AUTO"</code></td><td>Notification style: <code>"qb"</code>, <code>"esx"</code>, <code>"chat"</code>, or <code>"AUTO"</code>. Auto-derived from the detected framework.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>UI header</h4>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>Config.HeaderLeftText</code></td><td><code>"POLICE DEPT."</code></td><td>Text shown in the top-left of the CAD header bar.</td></tr>
+            <tr><td><code>Config.HeaderRightText</code></td><td><code>"MDT SYSTEM V1.2"</code></td><td>Text shown in the top-right of the CAD header bar.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>Performance</h4>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>Config.RenderDistance</code></td><td><code>10.0</code></td><td>Maximum distance in metres from the panel at which cursor interaction remains active. Beyond this, interaction is automatically disabled.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>Commands</h4>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Default command</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>Config.Commands.open</code></td><td><code>cad</code></td><td>Opens the in-world 3D CAD. Player must be in a vehicle with an authorised job.</td></tr>
+            <tr><td><code>Config.Commands.close</code></td><td><code>cadclose</code></td><td>Closes the CAD and cleans up the prop and panel.</td></tr>
+            <tr><td><code>Config.Commands.key</code></td><td><code>cadkey</code></td><td>Toggles mouse cursor interaction with the 3D panel. Default key binding: <kbd>J</kbd>.</td></tr>
+            <tr><td><code>Config.Commands.test</code></td><td><code>cad2d</code></td><td>Opens a flat 2D NUI overlay version of the CAD for UI testing — no vehicle required.</td></tr>
+            <tr><td><code>Config.Commands.edit</code></td><td><code>cadedit</code></td><td>Activates edit mode to reposition the laptop prop and panel using arrow keys.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>Discord webhook</h4>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>Config.Webhook</code></td><td>Discord webhook URL. Reports filed from the CAD are posted as embeds to this webhook.</td></tr>
+            <tr><td><code>Config.WebhookName</code></td><td>Display name used in webhook embeds. Default: <code>"LSPD Records"</code>.</td></tr>
+            <tr><td><code>Config.WebhookIcon</code></td><td>Avatar image URL used in webhook embeds.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h4>Access control</h4>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>Config.Jobs</code></td><td><code>{ "police", "sheriff", "fib", "bcso", "sasp" }</code></td><td>Job names allowed to open the CAD. Any player whose framework job name is in this list can use the <code>/cad</code> command.</td></tr>
+            <tr><td><code>Config.AddFakeOfficers</code></td><td><code>true</code></td><td>Injects two dummy officers into the Unit Status panel for UI testing. <strong>Set to <code>false</code> in production.</strong></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- ── 6. Using the CAD ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="usage">6 — Using the CAD In-Game</h2>
+
+        <h3 class="entry-title">Opening the CAD</h3>
+        <ol style="padding-left:22px;line-height:2.2">
+          <li>Get in any vehicle.</li>
+          <li>Run <code>/cad</code>. The laptop prop spawns on the passenger seat and the 3D panel appears on-screen.</li>
+          <li>Press <kbd>J</kbd> (or your configured key binding) to enable cursor interaction. Your camera stops moving and a cursor appears on the panel.</li>
+          <li>Click, scroll, and interact with the CAD UI normally.</li>
+          <li>Press <kbd>ESC</kbd> or <kbd>Backspace</kbd> to exit cursor mode without closing the CAD.</li>
+          <li>Run <code>/cadclose</code> to fully close and clean up.</li>
+        </ol>
+
+        <h3 class="entry-title">CAD panels</h3>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Panel</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>Unit Status</td><td>Live list of all online officers in authorised jobs, showing name, callsign, status (AVAILABLE / BUSY / UNAVAILABLE), and agency. Officers update their own status from the CAD.</td></tr>
+            <tr><td>Dispatch Calls</td><td>Active calls pulled from DS MDT. Click a call to see details; click <em>Assign</em> to self-assign your unit; click <em>Resolve</em> to close the call.</td></tr>
+            <tr><td>Vehicle Scan</td><td>Casts a ray forward from the vehicle. Returns plate, owner name, model, and BOLO status for the nearest vehicle in front.</td></tr>
+            <tr><td>Records</td><td>Browse and view the 50 most recent reports filed by any officer through the CAD.</td></tr>
+            <tr><td>File Report</td><td>Submit a new report (arrest, citation, etc.) with custom form fields. Posted to the <code>ds_cad_reports</code> table and fired to the configured Discord webhook.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3 class="entry-title">Edit mode</h3>
+        <p>Run <code>/cadedit</code> while the CAD is open to enter edit mode. The laptop prop and panel can then be repositioned together:</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Keys</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>←</kbd> / <kbd>→</kbd></td><td>Move prop on the X axis.</td></tr>
+            <tr><td><kbd>↑</kbd> / <kbd>↓</kbd></td><td>Move prop on the Z axis (up/down).</td></tr>
+            <tr><td><kbd>Num+</kbd> / <kbd>Num-</kbd></td><td>Move prop on the Y axis (forward/back).</td></tr>
+            <tr><td><kbd>Shift</kbd> + arrow keys</td><td>Rotate the prop.</td></tr>
+            <tr><td><kbd>Enter</kbd></td><td>Print the updated coordinates to the F8 console. Copy them to the top of <code>client/main.lua</code>.</td></tr>
+            <tr><td>Hold <kbd>Shift</kbd></td><td>5× movement / 2× rotation speed modifier.</td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout tip">Edit mode is provided to let you dial in the prop placement for custom vehicles. Once you have the right values, paste them into the <code>DASH_PROP_OFFSET</code> and <code>DASH_PROP_ROT</code> globals at the top of <code>client/main.lua</code> (this file is escrow-excluded on request if needed).</div>
+      </div>
+
+      <!-- ── 7. Developer API ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="developer-api">7 — Developer API</h2>
+
+        <h3 class="entry-title" id="server-exports">Server Export</h3>
+
+        <hr class="divider">
+        <h3 class="entry-title"><code>RefreshData()</code></h3>
+        <p>Forces an immediate broadcast of the current officer list and active call list to all connected clients. Useful if you change officer data from another resource and want the CAD to reflect it without waiting for the next 1-second polling tick.</p>
+        <pre><code>exports[<span class="s">'ds_cad'</span>]:RefreshData()</code></pre>
+
+        <h3 class="entry-title" id="server-events">Net Events — Server-side</h3>
+
+        <hr class="divider">
+        <h3 class="entry-title"><code>ds_cad:updateStatus</code> <code style="color:var(--muted);font-size:12px">(status)</code></h3>
+        <p>Fired by an officer to set their unit status. Valid values: <code>"AVAILABLE"</code>, <code>"BUSY"</code>, <code>"UNAVAILABLE"</code>. Triggers an immediate data broadcast to all clients.</p>
+
+        <hr class="divider">
+        <h3 class="entry-title"><code>ds_cad:assignCall</code> <code style="color:var(--muted);font-size:12px">(callId)</code></h3>
+        <p>Assigns the calling officer's unit (resolved from their callsign metadata) to the specified call. Also notifies DS MDT via <code>exports.ds_mdt:AssignUnitToCall()</code>.</p>
+
+        <hr class="divider">
+        <h3 class="entry-title"><code>ds_cad:resolveCall</code> <code style="color:var(--muted);font-size:12px">(callId)</code></h3>
+        <p>Marks a call as resolved. Persisted to <code>ds_cad_data</code> and forwarded to DS MDT via <code>exports.ds_mdt:ResolveCall()</code>.</p>
+
+        <h3 class="entry-title" id="mdt-events">DS MDT event listeners</h3>
+        <p>DS CAD automatically re-broadcasts updated CAD data whenever DS MDT fires these server-side events:</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Event</th><th>Trigger</th></tr></thead>
+          <tbody>
+            <tr><td><code>ds_mdt:server:newCall</code></td><td>A new dispatch call was created in DS MDT.</td></tr>
+            <tr><td><code>ds_mdt:server:updateCall</code></td><td>An existing dispatch call was updated.</td></tr>
+            <tr><td><code>ds_mdt:server:deleteCall</code></td><td>A dispatch call was deleted.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- ── 8. FAQ ──────────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="faq">8 — FAQ &amp; Troubleshooting</h2>
+
+        <h4>The laptop prop doesn't appear when I run /cad</h4>
+        <p>The prop model is streamed via <code>/assetpacks</code>. Ensure <code>ensure /assetpacks</code> is in your <code>server.cfg</code> above <code>ds_cad</code>. If the model still fails to load, the <code>loadModel</code> function has a 5-second timeout and will continue without the prop — the panel will still appear anchored to the vehicle.</p>
+
+        <h4>/cad says "Access Denied: Authorized Jobs Only"</h4>
+        <p>The player's framework job name must exactly match one of the entries in <code>Config.Jobs</code>. The check is case-sensitive. Verify the exact job name via <code>QBCore.Functions.GetPlayer(source).PlayerData.job.name</code> in the server console.</p>
+
+        <h4>The 3D panel doesn't follow the vehicle correctly after I customise prop placement</h4>
+        <p>After changing <code>DASH_PROP_OFFSET</code> / <code>DASH_PROP_ROT</code> and restarting the resource, re-open the CAD for the changes to take effect. The CR3D attachment is computed once per <code>/cad</code> open.</p>
+
+        <h4>Dispatch calls aren't appearing on the CAD</h4>
+        <p>DS CAD pulls calls via <code>exports.ds_mdt:GetActiveDispatchCalls()</code>. Make sure DS MDT is running and started before DS CAD. If there are no active calls in DS MDT there will be nothing to show.</p>
+
+        <h4>Vehicle scans return "UNREGISTERED" for a vehicle I own</h4>
+        <p>The scan queries <code>player_vehicles</code> (QB/QBX) or <code>owned_vehicles</code> (ESX) by the vehicle's number plate text. Ensure the plate on the in-game vehicle matches the plate stored in your database exactly, including any spaces.</p>
+
+        <h4>Reports aren't posting to Discord</h4>
+        <p>Check that <code>Config.Webhook</code> is set to a valid Discord webhook URL. The resource skips the POST if the value is an empty string. Also confirm the webhook channel is in a server where the webhook is still active.</p>
+      </div>
+
+      <footer class="site-footer"><p>&copy; DS Customs. All rights reserved.</p></footer>
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+  <script src="../script.js"></script>
+</body>
+</html>

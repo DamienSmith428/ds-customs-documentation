@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Police (Qbx Police Enhanced) — DS Customs Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="topbar-logo" href="../index.html"><span class="logo-chip">DS</span><span class="logo-text">Customs Docs</span></a>
+    <span class="topbar-sep"></span>
+    <a class="topbar-link" href="https://ds-customs.tebex.io" target="_blank" rel="noopener">Tebex Store ↗</a>
+    <a class="topbar-link" href="https://discord.gg/WRfVqsrAVC" target="_blank" rel="noopener">Discord ↗</a>
+  </header>
+
+  <div class="shell">
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link" href="../index.html">Home</a>
+
+      <div class="sidebar-section">Resources</div>
+      <div id="sidebar-resources"></div>
+
+      <div class="sidebar-section" style="margin-top:20px">On this page</div>
+      <div id="sidebar-toc"></div>
+    </nav>
+
+    <main class="content">
+
+      <div class="doc-header">
+        <h1>DS Police <span style="font-weight:400;color:var(--muted);font-size:0.7em">(Qbx Police Enhanced)</span></h1>
+        <p class="subtitle">Full-featured, multi-framework police job — armory, garage, evidence, ANPR, breathalyzer, trackers, security cameras, and more — by DS Customs</p>
+        <div class="badge-row">
+          <span class="badge badge-gray">v1.0.0</span>
+          <span class="badge badge-blue">Qbox</span>
+          <span class="badge badge-green">QBCore</span>
+          <span class="badge badge-green">ESX</span>
+          <span class="badge badge-purple">ox_inventory</span>
+          <span class="badge badge-purple">qb-inventory</span>
+          <span class="badge badge-purple">qs-inventory</span>
+          <span class="badge badge-orange">Lua 5.4</span>
+          <span class="badge badge-red">Escrow</span>
+        </div>
+      </div>
+
+      <!-- ── 1. Overview ─────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="overview">1 — Overview</h2>
+        <p>DS Police (Qbx Police Enhanced) is a fully modular police job built on top of the open-source <a href="https://github.com/Qbox-project/qbx_policejob" target="_blank" rel="noopener">qbx_policejob</a> base and heavily extended by DS Customs. It ships with a bridge layer that auto-detects your framework, inventory system, and target resource — no manual wiring required in most cases.</p>
+        <p>It is designed as the third leg of the DS law-enforcement package, alongside <strong>DS MDT</strong> and <strong>DS CAD</strong>. All three can be used together or independently.</p>
+        <div class="callout tip">This is a v1.0.0 beta release. Core systems are stable and production-ready. Additional features are actively being added.</div>
+      </div>
+
+      <!-- ── 2. Requirements ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="requirements">2 — Requirements</h2>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Resource</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>oxmysql</code></td><td>Required for evidence, fingerprints, DNA, weapon registry, and location data.</td></tr>
+            <tr><td><code>ox_lib</code></td><td>Required for UI menus, animations, zones (PolyZone replacement), and the locale system. Must start before <code>qbx_police</code>.</td></tr>
+            <tr><td><code>qbx_core</code> <em>or</em> <code>qb-core</code> <em>or</em> <code>es_extended</code></td><td>Set in <code>config/shared.lua → Framework</code>. Defaults to <code>'qbx_core'</code>.</td></tr>
+            <tr><td><code>ox_inventory</code> <em>or</em> <code>qb-inventory</code> <em>or</em> <code>qs-inventory</code> <em>or</em> <code>ps-inventory</code> <em>or</em> <code>tgiann-inventory</code></td><td>Set in <code>config/shared.lua → Inventory</code>. Defaults to <code>'ox_inventory'</code>.</td></tr>
+            <tr><td><code>ox_target</code> <em>or</em> <code>qb-target</code> <em>or</em> <code>ds_target</code></td><td>Set in <code>config/shared.lua → Target</code>. Ignored when <code>useTarget = false</code> in <code>config/client.lua</code>.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- ── 3. Escrow & Open Files ──────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="escrow">3 — Escrow &amp; Open Files</h2>
+        <p>DS Police is protected with <strong>FiveM Escrow</strong>. All config files are excluded so you can fully customise the resource.</p>
+        <div class="escrow-row">
+          <div class="escrow-card open-card">
+            <h4 style="color:var(--green)">Open — editable by you</h4>
+            <ul>
+              <li><code>config/shared.lua</code></li>
+              <li><code>config/client.lua</code></li>
+              <li><code>config/server.lua</code></li>
+            </ul>
+          </div>
+          <div class="escrow-card closed-card">
+            <h4 style="color:var(--red)">Encrypted — Escrow protected</h4>
+            <ul>
+              <li><code>client/*.lua</code></li>
+              <li><code>server/*.lua</code></li>
+              <li><code>bridges/**/*.lua</code></li>
+              <li><code>html/*</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 4. Installation ─────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="installation">4 — Installation</h2>
+
+        <h3 class="entry-title" id="install-cfg">server.cfg Start Order</h3>
+        <pre><code>ensure oxmysql
+ensure ox_lib
+ensure qbx_core        <span class="c"># or qb-core / es_extended</span>
+ensure ox_inventory    <span class="c"># or your chosen inventory</span>
+ensure ox_target       <span class="c"># or qb-target / ds_target</span>
+ensure qbx_police
+</code></pre>
+
+        <h3 class="entry-title" id="install-items">Required Items</h3>
+        <p>Register these items in your inventory resource. The exact method depends on your inventory — for <code>ox_inventory</code> place them in <code>ox_inventory/data/items.lua</code>; for <code>qb-core</code> add them to <code>QBCore/shared/items.lua</code>.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Item name</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>handcuffs</code></td><td>Required for the <code>/cuff</code> command and soft cuff (<code>/sc</code>) system. Must be <code>useable</code>.</td></tr>
+            <tr><td><code>breathalyzer</code></td><td>Required to run a BAC test on a player. Must be in the officer's inventory.</td></tr>
+            <tr><td><code>empty_evidence_bag</code></td><td>Used by evidence collection interactions. Filled bags are stored to an ox_inventory evidence stash.</td></tr>
+            <tr><td><code>police_stormram</code></td><td>Deployable breaching tool used to open locked doors.</td></tr>
+            <tr><td><code>heavyarmor</code></td><td>Spawned in patrol vehicle item stashes via <code>carItems</code> config.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3 class="entry-title" id="install-perms">Admin permissions</h3>
+        <p>The <code>/policelocations</code> admin command (used to place PD database terminals in-game) is restricted by ace permissions. Grant access:</p>
+        <pre><code>add_ace group.admin command.policelocations allow</code></pre>
+      </div>
+
+      <!-- ── 5. Configuration ────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="configuration">5 — Configuration</h2>
+
+        <h3 class="entry-title">config/shared.lua — Bridge settings</h3>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Options</th><th>Default</th></tr></thead>
+          <tbody>
+            <tr><td><code>Framework</code></td><td><code>'qbx_core'</code> · <code>'qb-core'</code> · <code>'esx'</code></td><td><code>'qbx_core'</code></td></tr>
+            <tr><td><code>Inventory</code></td><td><code>'ox_inventory'</code> · <code>'qb-inventory'</code> · <code>'qs-inventory'</code> · <code>'ps-inventory'</code> · <code>'tgiann-inventory'</code></td><td><code>'ox_inventory'</code></td></tr>
+            <tr><td><code>Target</code></td><td><code>'ox_target'</code> · <code>'qb-target'</code> · <code>'ds_target'</code></td><td><code>'ox_target'</code></td></tr>
+          </tbody>
+        </table></div>
+
+        <h3 class="entry-title">config/shared.lua — Locations</h3>
+        <p>The <code>locations</code> table defines all interaction points. Each entry is a <code>vec3</code> (or <code>vec4</code> for spawns). You can add multiple entries per location type.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>duty</code></td><td>Clock-in / clock-out interaction zones.</td></tr>
+            <tr><td><code>vehicle</code></td><td>Vehicle spawner locations (<code>vec4</code> with heading).</td></tr>
+            <tr><td><code>impound</code></td><td>Where impounded vehicles are sent.</td></tr>
+            <tr><td><code>helicopter</code></td><td>Helicopter spawner locations (<code>vec4</code>).</td></tr>
+            <tr><td><code>database</code></td><td>PD database terminal locations. Leave empty and place in-game with <code>/policelocations</code>.</td></tr>
+            <tr><td><code>fingerprint</code></td><td>Fingerprint scanner interaction location.</td></tr>
+            <tr><td><code>trash</code></td><td>Trash duty location used by the jail task system.</td></tr>
+            <tr><td><code>stations</code></td><td>Named station labels and coords used for the station menu and map blips.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3 class="entry-title">config/shared.lua — Breathalyzer</h3>
+        <p>Full BAC simulation with per-item alcohol levels, decay rates, visual effects, and verdict thresholds.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>breathalyzer.item</code></td><td><code>'breathalyzer'</code></td><td>Inventory item the officer must hold to run a test.</td></tr>
+            <tr><td><code>breathalyzer.decayInterval</code></td><td><code>60</code> s</td><td>How often (in seconds) all players' BAC values decay.</td></tr>
+            <tr><td><code>breathalyzer.alcoholItems</code></td><td>beer, wine, whiskey…</td><td>Keyed by item name. Each entry sets <code>alcoholLevel</code> (BAC added on use) and <code>decayRate</code> (BAC removed per tick).</td></tr>
+            <tr><td><code>breathalyzer.thresholds</code></td><td>0.04 · 0.08 · 0.15</td><td>BAC cutoffs for Sober → Impaired → Drunk → Heavily Intoxicated verdicts.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3 class="entry-title">config/shared.lua — Speed Radars</h3>
+        <p><code>radars.speedFines</code> is an ordered array of fine tiers. Fines are applied when the vehicle speed-over-limit falls within the corresponding <code>maxSpeed</code> bracket.</p>
+
+        <h3 class="entry-title">config/client.lua — Client settings</h3>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>useTarget</code></td><td><code>true</code></td><td>Use the configured target resource for interactions. Set <code>false</code> to fall back to ox_lib proximity zones.</td></tr>
+            <tr><td><code>handcuffItems</code></td><td><code>'handcuffs'</code></td><td>Item name for standard handcuffs.</td></tr>
+            <tr><td><code>policeHelicopter</code></td><td><code>'polmav'</code></td><td>Vehicle model name spawned at helicopter locations.</td></tr>
+            <tr><td><code>breakCuffs</code></td><td><code>true</code></td><td>Allow cuffed players to attempt to break free via a key-sequence minigame.</td></tr>
+            <tr><td><code>breakCuffsDifficulty</code></td><td><code>{ "medium", "hard", "medium" }</code></td><td>ox_lib skill-check difficulty sequence for the break-cuffs minigame.</td></tr>
+            <tr><td><code>radars.enableRadars</code></td><td><code>false</code></td><td>Enable automatic speed radar fines. Change to <code>true</code> to activate. Radar locations are defined in <code>radars.locations</code>.</td></tr>
+            <tr><td><code>radars.useMPH</code></td><td><code>true</code></td><td>Speed unit — <code>true</code> for mph, <code>false</code> for km/h.</td></tr>
+            <tr><td><code>authorizedVehicles</code></td><td>see config</td><td>Per-grade vehicle whitelist for the police garage. Each grade key maps vehicle spawn names to display labels.</td></tr>
+            <tr><td><code>carItems</code></td><td>heavyarmor, evidence bags, stormram</td><td>Items spawned in the patrol vehicle stash when an officer takes out a car.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3 class="entry-title">config/server.lua — Server settings</h3>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>licenseRank</code></td><td><code>2</code></td><td>Minimum job grade required to issue weapon licenses via <code>/grantlicense</code>.</td></tr>
+            <tr><td><code>towPay</code></td><td><code>500</code></td><td>Amount paid to a tow driver via <code>/paytow</code>.</td></tr>
+            <tr><td><code>lawyerPay</code></td><td><code>500</code></td><td>Amount paid to a lawyer via <code>/paylawyer</code>.</td></tr>
+            <tr><td><code>validLicenses</code></td><td><code>{ driver, weapon }</code></td><td>Which license types officers can grant / revoke.</td></tr>
+            <tr><td><code>towJobs</code></td><td><code>{ tow = true }</code></td><td>Job names that count as tow jobs for the <code>/paytow</code> command.</td></tr>
+            <tr><td><code>lawyerJobs</code></td><td><code>{ lawyer = true }</code></td><td>Job names that count as lawyer jobs for the <code>/paylawyer</code> command.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- ── 6. Features ─────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="features">6 — Features</h2>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Feature</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>On / Off Duty</td><td>Clock in and out at configured duty zones. Duty status syncs with the framework and is visible in DS MDT.</td></tr>
+            <tr><td>Police Garage</td><td>Grade-restricted vehicle whitelist. Officers can only spawn vehicles their rank authorises. Vehicle extras are pre-configured per model.</td></tr>
+            <tr><td>Armory</td><td>Citizen-ID-based armory (whitelisted). Officers can only retrieve weapons if their citizenid is on the approved list.</td></tr>
+            <tr><td>Stash / Evidence Locker</td><td>Persistent ox_inventory evidence stash per station. Evidence bags collected at crime scenes are stored here.</td></tr>
+            <tr><td>Handcuffs / Soft Cuffs</td><td>Hard cuffs (<code>/cuff</code>) and soft plastic cuffs (<code>/sc</code>). Cuffed players can attempt a break-free skill-check if <code>breakCuffs = true</code>.</td></tr>
+            <tr><td>Escort</td><td><code>/escort</code> — drag a nearby player while walking.</td></tr>
+            <tr><td>Breathalyzer</td><td>Full BAC simulation. Officers test suspects with the <code>breathalyzer</code> item. BAC decays over time. Visual shake/distortion effects applied to drunk players.</td></tr>
+            <tr><td>ANPR / Speed Radars</td><td>Automatic Number Plate Recognition radar triggers. Flags vehicles with BOLOs and fines speeding drivers. Configurable per-location speed limits.</td></tr>
+            <tr><td>Evidence System</td><td>Collect bullet casings, blood drops, and GSR at crime scenes. Clear casings or blood with <code>/clearcasings</code> / <code>/clearblood</code>.</td></tr>
+            <tr><td>Fingerprint Scanner</td><td>In-station terminal at the configured <code>fingerprint</code> location. Officers can run fingerprint queries linked to the PD database.</td></tr>
+            <tr><td>DNA Sampling</td><td><code>/takedna [id]</code> — collect a DNA sample from a player. Sample stored to the PD database.</td></tr>
+            <tr><td>Security Cameras</td><td>View pre-configured CCTV feeds from shops, banks, and other locations via <code>/cam [cam]</code>.</td></tr>
+            <tr><td>Spike Strips</td><td><code>/spikestrip</code> — place a spike strip on the road. Maximum strips configurable (<code>maxSpikes</code>).</td></tr>
+            <tr><td>Stormram</td><td>Deployable breaching tool (<code>police_stormram</code> item). Used to force open locked doors.</td></tr>
+            <tr><td>Impound / Depot</td><td><code>/impound</code> — permanently impound a vehicle. <code>/depot [price]</code> — depot for a fine; the owner can reclaim it after paying.</td></tr>
+            <tr><td>Ankle Tracker</td><td><code>/anklet</code> — attach a GPS tracking device to a nearby player. Query their live location with <code>/ankletlocation [citizenId]</code>.</td></tr>
+            <tr><td>Police Radar Gun</td><td>In-vehicle or on-foot radar gun to check the speed of a nearby vehicle.</td></tr>
+            <tr><td>Seize Cash</td><td><code>/seizecash</code> — remove cash from a nearby player and place it in a money bag item.</td></tr>
+            <tr><td>Licence Management</td><td><code>/grantlicense</code> / <code>/revokelicense</code> — give or revoke driver or weapon licences. Requires <code>licenseRank</code> grade or above.</td></tr>
+            <tr><td>Callsign</td><td><code>/callsign [text]</code> — set the officer's callsign in the database. Displayed in DS MDT and DS CAD.</td></tr>
+            <tr><td>Jail System</td><td><code>/jail [id] [time]</code> · <code>/unjail [id]</code> — send or release a player from jail. Integrates with DS MDT's internal jail if <code>UseInternalJailSystem = true</code>.</td></tr>
+            <tr><td>Plate Flagging</td><td><code>/flagplate [plate] [reason]</code> / <code>/unflagplate</code> / <code>/plateinfo</code> — flag a vehicle in the PD database.</td></tr>
+            <tr><td>Road Objects</td><td><code>/pobject [cone/barrier/roadsign/tent/light/delete]</code> — place or remove road objects.</td></tr>
+            <tr><td>Tow / Lawyer Payments</td><td><code>/paytow [id]</code> · <code>/paylawyer [id]</code> — transfer the configured fee to a tow driver or lawyer.</td></tr>
+            <tr><td>Emergency Map Sync</td><td>All on-duty emergency services (police, EMS, fire) can see each other on the minimap.</td></tr>
+            <tr><td>911 Integration</td><td><code>/911p [message]</code> — civilians send a report to police. Integrates with DS MDT dispatch via the <code>ds_mdt:server:addDispatchCall</code> event.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- ── 7. Commands ─────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="commands">7 — Commands</h2>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Command</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>/cuff</code></td><td>Cuff or uncuff the nearest player.</td></tr>
+            <tr><td><code>/sc</code></td><td>Apply soft (plastic) cuffs to the nearest player.</td></tr>
+            <tr><td><code>/escort</code></td><td>Escort the nearest player.</td></tr>
+            <tr><td><code>/callsign [text]</code></td><td>Set your callsign in the database.</td></tr>
+            <tr><td><code>/spikestrip</code></td><td>Place a spike strip on the ground.</td></tr>
+            <tr><td><code>/pobject [type]</code></td><td>Place or delete a road object. Types: <code>cone</code>, <code>barrier</code>, <code>roadsign</code>, <code>tent</code>, <code>light</code>, <code>delete</code>.</td></tr>
+            <tr><td><code>/jail [id] [time]</code></td><td>Send a player to jail for the specified time (months).</td></tr>
+            <tr><td><code>/unjail [id]</code></td><td>Release a player from jail immediately.</td></tr>
+            <tr><td><code>/clearcasings</code></td><td>Clear nearby bullet casings.</td></tr>
+            <tr><td><code>/clearblood</code></td><td>Clear nearby blood drops.</td></tr>
+            <tr><td><code>/seizecash</code></td><td>Seize a nearby player's cash into a money bag item.</td></tr>
+            <tr><td><code>/cam [cam]</code></td><td>View the specified security camera feed.</td></tr>
+            <tr><td><code>/flagplate [plate] [reason]</code></td><td>Flag a vehicle plate in the PD database.</td></tr>
+            <tr><td><code>/unflagplate [plate]</code></td><td>Remove the flag from a vehicle plate.</td></tr>
+            <tr><td><code>/plateinfo [plate]</code></td><td>Check whether a vehicle plate is currently flagged.</td></tr>
+            <tr><td><code>/depot [price]</code></td><td>Depot the nearest vehicle. The owner can reclaim it after paying.</td></tr>
+            <tr><td><code>/impound</code></td><td>Permanently impound the nearest vehicle.</td></tr>
+            <tr><td><code>/paytow [id]</code></td><td>Pay a tow driver the configured fee.</td></tr>
+            <tr><td><code>/paylawyer [id]</code></td><td>Pay a lawyer the configured fee.</td></tr>
+            <tr><td><code>/anklet</code></td><td>Attach a GPS ankle tracker to the nearest player.</td></tr>
+            <tr><td><code>/ankletlocation [citizenId]</code></td><td>Get the current GPS location of a tracked player.</td></tr>
+            <tr><td><code>/takedna [id]</code></td><td>Take a DNA sample from the specified player.</td></tr>
+            <tr><td><code>/grantlicense [id] [type]</code></td><td>Grant a licence to the specified player. Requires grade ≥ <code>licenseRank</code>.</td></tr>
+            <tr><td><code>/revokelicense [id] [type]</code></td><td>Revoke a licence from the specified player.</td></tr>
+            <tr><td><code>/911p [message]</code></td><td>Civilian command — sends a police dispatch report visible in DS MDT.</td></tr>
+            <tr><td><code>/policelocations</code> <em>(admin)</em></td><td>Open the in-game location placement tool to add PD database terminal spots. Requires ace permission.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- ── 8. Police Package Integration ─────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="integration">8 — Integration with DS MDT &amp; DS CAD</h2>
+        <p>DS Police is built to work as part of the DS law-enforcement package. Here is how the three resources interact:</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Integration point</th><th>How it works</th></tr></thead>
+          <tbody>
+            <tr><td>Callsign sync</td><td><code>/callsign</code> writes to the <code>players</code> table. DS MDT and DS CAD both read the <code>callsign</code> column and display it on officer cards and the live map.</td></tr>
+            <tr><td><code>/911p</code> → Dispatch</td><td>The <code>/911p</code> command fires the <code>ds_mdt:server:addDispatchCall</code> net event. DS MDT receives it and shows a live dispatch alert to all on-duty officers with the MDT open.</td></tr>
+            <tr><td>Duty state</td><td>Clock-in/out calls the framework's duty API (<code>SetJobDuty</code> for Qbox/QBCore). DS MDT reads <code>player.job.onduty</code> to determine officer visibility on the live map.</td></tr>
+            <tr><td>Jail integration</td><td>When DS MDT's <code>UseInternalJailSystem</code> is enabled, DS Police's <code>/jail</code> command writes the sentence to the <code>mdt_jail</code> table. DS MDT then handles the countdown, task system, and release teleport.</td></tr>
+            <tr><td>ANPR / BOLO check</td><td>DS Police's ANPR radar calls <code>exports['ds_mdt']:HasActiveBolo(plate)</code> to check whether a scanned plate has an active BOLO, and notifies the officer accordingly.</td></tr>
+          </tbody>
+        </table></div>
+        <pre><code>ensure oxmysql
+ensure ox_lib
+ensure qbx_core
+ensure ox_inventory
+ensure ox_target
+ensure ds_mdt
+ensure ds_cad
+ensure qbx_police   <span class="c"># starts last; all dependencies must be running first</span>
+</code></pre>
+      </div>
+
+      <!-- ── 9. FAQ ──────────────────────────────────────────────────────── -->
+      <div class="section">
+        <h2 class="section-title" id="faq">9 — FAQ &amp; Troubleshooting</h2>
+
+        <h4>Officers can't clock in / clock out</h4>
+        <p>Check that the <code>duty</code> coords in <code>config/shared.lua → locations.duty</code> match somewhere accessible in your map. The interaction appears as an ox_lib target zone or proximity prompt depending on <code>useTarget</code>.</p>
+
+        <h4>The garage shows no vehicles</h4>
+        <p>Verify that the player's job grade level matches a key in <code>authorizedVehicles</code> (grades start at <code>[0]</code>). Also confirm the vehicle spawn names exist in your server's vehicle database.</p>
+
+        <h4>Handcuffs / cuff commands don't work</h4>
+        <p>The <code>handcuffs</code> item (or whatever you set in <code>config.handcuffItems</code>) must be registered in your inventory. For hard cuffs the item must be in the officer's inventory. The <code>/sc</code> soft-cuff command does not require an item.</p>
+
+        <h4>Breathalyzer test returns nothing</h4>
+        <p>Ensure the <code>breathalyzer</code> item is registered and the officer has it in their inventory. The test only works within the interaction range of the target player.</td></p>
+
+        <h4>Speed radars aren't triggering</h4>
+        <p>Set <code>radars.enableRadars = true</code> in <code>config/client.lua</code>. Radars are disabled by default. Also confirm <code>radars.locations</code> contains valid <code>vec4</code> entries.</p>
+
+        <h4>ANPR isn't checking BOLOs</h4>
+        <p>ANPR calls <code>exports['ds_mdt']:HasActiveBolo()</code>. DS MDT must be running and started before <code>qbx_police</code>. If DS MDT is not present, the export will return <code>nil</code> and the BOLO check is silently skipped.</p>
+      </div>
+
+      <footer class="site-footer"><p>&copy; DS Customs. All rights reserved.</p></footer>
+    </main>
+  </div>
+
+  <div id="back-top" title="Back to top">&#8593;</div>
+  <script src="../script.js"></script>
+</body>
+</html>

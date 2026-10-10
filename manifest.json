@@ -120,26 +120,23 @@
     {
       "name": "DS MDT",
       "path": "docs/ds_mdt.html",
-      "status": "coming soon",
-      "hidden": true,
-      "description": "Full-featured Mobile Data Terminal for law enforcement. Reports, warrants, BOLOs, dispatch, live map, citations, licenses, and more.",
-      "tags": ["QBCore", "FiveM", "Escrow"]
+      "status": "release",
+      "description": "Unified multi-framework Mobile Data Terminal for law enforcement. Dashboard, citizen profiles, vehicle records, incidents, warrants, criminal code, live dispatch, live map, CCTV, officer roster, and built-in jail system.",
+      "tags": ["Qbox", "QBCore", "ESX", "FiveM", "oxmysql", "Escrow"]
     },
     {
-      "name": "DS MDT — DOJ",
-      "path": "docs/ds_mdt_doj.html",
-      "status": "coming soon",
-      "hidden": true,
-      "description": "Department of Justice terminal for judges, prosecutors, and defense attorneys. Warrant review, motions, hearings, verdicts, court orders, and client management.",
-      "tags": ["QBCore", "FiveM", "Requires ds_mdt", "Escrow"]
+      "name": "DS CAD",
+      "path": "docs/ds_cad.html",
+      "status": "release",
+      "description": "In-world 3D police Computer-Aided Dispatch. A physical laptop prop mounts inside your patrol vehicle and renders a live DUI panel — officer unit status, active dispatch calls, vehicle scan, reports, and Discord logging.",
+      "tags": ["Qbox", "QBCore", "ESX", "FiveM", "oxmysql", "Requires ds_mdt", "Escrow"]
     },
     {
-      "name": "Enhanced QB Police Job",
-      "path": "docs/qb_policejob.html",
-      "status": "coming soon",
-      "hidden": true,
-      "description": "Full-featured Enhanced police job with armory, garage, evidence collection, ANPR, fingerprint DB, file cabinet, weapon registry, security cameras, and dispatch exports.",
-      "tags": ["QBCore", "FiveM", "qs-inventory", "ox_inventory", "qb-inventory", "Escrow"]
+      "name": "DS Police (Qbx Police Enhanced)",
+      "path": "docs/ds_police.html",
+      "status": "release",
+      "description": "Full-featured multi-framework police job — armory, grade-gated garage, evidence collection, ANPR, breathalyzer, DNA, fingerprints, ankle trackers, security cameras, spike strips, stormram, impound, and integrated jail.",
+      "tags": ["Qbox", "QBCore", "ESX", "FiveM", "ox_lib", "ox_inventory", "qb-inventory", "qs-inventory", "Escrow"]
     },
     {
       "name": "DS Prison Creator",
